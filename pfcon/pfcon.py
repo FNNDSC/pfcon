@@ -18,6 +18,7 @@ import  socket
 import  psutil
 import  os
 import  multiprocessing
+import  pfurl
 
 import  pudb
 
@@ -33,30 +34,32 @@ G_b_httpResponse            = False
 Gd_internalvar  = {
 
     'service':  {
-        'data': {
-            'addr':         'localhost:5055',
-            'baseURLpath':  '/api/v1/cmd/',
+        'pangea': {
+            'data': {
+                'addr':         '10.17.24.163:5055',
+                'baseURLpath':  '/api/v1/cmd/',
 
-            'storeAccess.tokenSet':  {
-                "action":   "internalctl",
-                "meta": {
-                       "var":          "key",
-                       "set":          "setKeyValueHere"
-                   }
-            },
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
 
-            'storeAccess.addrGet':  {
-                "action":   "internalctl",
-                "meta": {
-                    "var":          "storeAddress",
-                    "compute":      "address"
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
                 }
-            }
 
-        },
-        'compute': {
-            'addr':         'localhost:5010',
-            'baseURLpath':  '/api/v1/cmd/'
+            },
+            'compute': {
+                'addr':         '10.17.24.163:5010',
+                'baseURLpath':  '/api/v1/cmd/'
+            }
         }
     }
 }
@@ -216,6 +219,69 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_ret   = self.internalctl_varprocess(d_meta = d_meta)
         return d_ret
 
+    def hello_process_remote(self, *args, **kwargs):
+        """
+        Process the 'hello' call on the remote services
+
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        global Gd_tree
+        b_status    = False
+
+        self.qprint("hello_process_remote()", comms = 'status')
+
+        d_request   = {}
+        d_meta      = {}
+        d_ret       = {}
+        for k,v in kwargs.items():
+            if k == 'request':          d_request           = v
+
+        d_meta                  = d_request['meta']
+        str_remoteService       = d_meta['service']
+
+        str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
+        str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURL'    % str_remoteService)
+        str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'    % str_remoteService)
+        str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURL' % str_remoteService)
+
+
+        # pudb.set_trace()
+        dataComs = pfurl.Pfurl(
+            msg                         = json.dumps(d_request),
+            verb                        = 'POST',
+            http                        = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
+            b_quiet                     = True,
+            b_raw                       = True,
+            b_httpResponseBodyParse     = True,
+            jsonwrapper                 = 'payload'
+        )
+        # Remember, 'pman' responses do NOT need to http-body parsed!
+        computeComs = pfurl.Pfurl(
+            msg                         = json.dumps(d_request),
+            verb                        = 'POST',
+            http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
+            b_quiet                     = True,
+            b_raw                       = True,
+            b_httpResponseBodyParse     = False,
+            jsonwrapper                 = 'payload'
+        )
+
+        self.qprint("Calling remote data service...",   comms = 'rx')
+        d_dataResponse                          = json.loads(dataComs())
+        d_ret['%s-data' % str_remoteService]    = d_dataResponse
+
+        self.qprint("Calling remote compute service...", comms = 'rx')
+        d_computeResponse                       = json.loads(computeComs())
+        d_ret['%s-compute' % str_remoteService] = d_computeResponse
+
+        return {
+            'd_ret':    d_ret,
+            'status':   True
+        }
+
+
     def hello_process(self, *args, **kwargs):
         """
 
@@ -235,6 +301,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         b_status            = False
         d_ret               = {}
         d_request           = {}
+        d_remote            = {}
         for k, v in kwargs.items():
             if k == 'request':      d_request   = v
 
@@ -264,8 +331,12 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_ret['echoBack']['msg']        = d_meta['echoBack']
                 b_status                        = True
 
-        return { 'd_ret':   d_ret,
-                 'status':  b_status}
+        # pudb.set_trace()
+        d_remote    = self.hello_process_remote(request = d_request)
+
+        return { 'd_ret':       d_ret,
+                 'd_remote':    d_remote,
+                 'status':      b_status}
 
     def do_POST(self, **kwargs):
 
@@ -377,6 +448,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         :return:
         """
         global Gd_internalvar
+        global Gd_tree
         HTTPServer.__init__(self, *args, **kwargs)
         self.LC             = 40
         self.RC             = 40
