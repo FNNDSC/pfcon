@@ -11,18 +11,18 @@ def readme():
         return f.read()
 
 setup(
-      name             =   'pfurl',
-      version          =   '1.0.3',
-      description      =   '(Python) Process Manager',
+      name             =   'pfcon',
+      version          =   '0.99.1',
+      description      =   '(Python) Process and File Controller',
       long_description =   readme(),
       author           =   'Rudolph Pienaar',
       author_email     =   'rudolph.pienaar@gmail.com',
-      url              =   'https://github.com/FNNDSC/pfurl',
-      packages         =   ['pfurl'],
-      install_requires =   ['pycurl', 'pyzmq', 'webob', 'pudb', 'psutil'],
+      url              =   'https://github.com/FNNDSC/pfcon',
+      packages         =   ['pfcon'],
+      install_requires =   ['pycurl', 'pyzmq', 'webob', 'pudb', 'psutil', 'pfurl'],
       test_suite       =   'nose.collector',
       tests_require    =   ['nose'],
-      scripts          =   ['bin/pfurl'],
+      scripts          =   ['bin/pfcon'],
       license          =   'MIT',
       zip_safe         =   False
      )
