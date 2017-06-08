@@ -14,7 +14,7 @@ import  pfcon
 import  socket
 from    argparse            import RawTextHelpFormatter
 from    argparse            import ArgumentParser
-from    distutils.sysconfig import get_python_lib
+#from    distutils.sysconfig import get_python_lib
 
 import  pudb
 
@@ -81,20 +81,20 @@ parser.add_argument(
     default = '5005',
     help    = 'Port to use.'
 )
-parser.add_argument(
-    '--pman',
-    action  = 'store',
-    dest    = 'pmanSpec',
-    default = "%s:5010" % str_defIP,
-    help    = 'pman address in <ip>[:<port>] format.'
-)
-parser.add_argument(
-    '--pfioh',
-    action  = 'store',
-    dest    = 'pfiohSpec',
-    default = "%s:5055" % str_defIP,
-    help    = 'pfioh address in <ip>[:<port>] format.'
-)
+# parser.add_argument(
+#     '--pman',
+#     action  = 'store',
+#     dest    = 'pmanSpec',
+#     default = "%s:5010" % str_defIP,
+#     help    = 'pman address in <ip>[:<port>] format.'
+# )
+# parser.add_argument(
+#     '--pfioh',
+#     action  = 'store',
+#     dest    = 'pfiohSpec',
+#     default = "%s:5055" % str_defIP,
+#     help    = 'pfioh address in <ip>[:<port>] format.'
+# )
 parser.add_argument(
     '--version',
     help    = 'if specified, print version number',
