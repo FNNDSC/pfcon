@@ -38,6 +38,7 @@ Gd_internalvar  = {
             'data': {
                 'addr':         '10.17.24.163:5055',
                 'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
                     "action":   "internalctl",
@@ -58,7 +59,8 @@ Gd_internalvar  = {
             },
             'compute': {
                 'addr':         '10.17.24.163:5010',
-                'baseURLpath':  '/api/v1/cmd/'
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined'
             }
         }
     }
@@ -219,6 +221,96 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_ret   = self.internalctl_varprocess(d_meta = d_meta)
         return d_ret
 
+    def dataRequest_process(self, *args, **kwargs):
+        """
+        Method for talking to the data handling service.
+
+        :param args:
+        :param kwargs:
+        :return: JSON object from the 'pfioh' call.
+        """
+
+        global  Gd_tree
+        b_status    = False
+
+        self.qprint("dataRequest_prcoess()", comms = 'status')
+
+        d_request   = {}
+        d_meta      = {}
+        d_ret       = {}
+        for k,v in kwargs.items():
+            if k == 'request':          d_request           = v
+
+        d_meta                  = d_request['meta']
+        str_remoteService       = d_meta['service']
+        str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
+        str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURL'    % str_remoteService)
+
+        dataComs = pfurl.Pfurl(
+            msg                         = json.dumps(d_request),
+            verb                        = 'POST',
+            http                        = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
+            b_quiet                     = True,
+            b_raw                       = True,
+            b_httpResponseBodyParse     = True,
+            jsonwrapper                 = 'payload'
+        )
+
+        self.qprint("Calling remote data service...",   comms = 'rx')
+        d_dataResponse                          = json.loads(dataComs())
+        d_ret['%s-data' % str_remoteService]    = d_dataResponse
+
+        return {
+            'd_ret':        d_dataResponse,
+            'serviceName':  str_remoteService,
+            'status':       True
+        }
+
+    def computeRequest_process(self, *args, **kwargs):
+        """
+        Method for talking to the data handling service.
+
+        :param args:
+        :param kwargs:
+        :return: JSON object from the 'pfioh' call.
+        """
+
+        global  Gd_tree
+        b_status    = False
+
+        self.qprint("computeRequest_process()", comms = 'status')
+
+        d_request   = {}
+        d_meta      = {}
+        d_ret       = {}
+        for k,v in kwargs.items():
+            if k == 'request':          d_request           = v
+
+        d_meta                  = d_request['meta']
+        str_remoteService       = d_meta['service']
+        str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'    % str_remoteService)
+        str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURL' % str_remoteService)
+
+        # Remember, 'pman' responses do NOT need to http-body parsed!
+        computeComs = pfurl.Pfurl(
+            msg                         = json.dumps(d_request),
+            verb                        = 'POST',
+            http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
+            b_quiet                     = True,
+            b_raw                       = True,
+            b_httpResponseBodyParse     = False,
+            jsonwrapper                 = 'payload'
+        )
+
+        self.qprint("Calling remote compute service...", comms = 'rx')
+        d_computeResponse                       = json.loads(computeComs())
+
+        return {
+            'd_ret':        d_computeResponse,
+            'serviceName':  str_remoteService,
+            'status':       True
+        }
+
     def hello_process_remote(self, *args, **kwargs):
         """
         Process the 'hello' call on the remote services
@@ -233,54 +325,22 @@ class StoreHandler(BaseHTTPRequestHandler):
         self.qprint("hello_process_remote()", comms = 'status')
 
         d_request   = {}
-        d_meta      = {}
         d_ret       = {}
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
 
-        d_meta                  = d_request['meta']
-        str_remoteService       = d_meta['service']
+        d_dataResponse      = self.dataRequest_process(request      = d_request)
+        d_ret['%s-data'     % d_dataResponse['serviceName']]        = d_dataResponse
 
-        str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
-        str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURL'    % str_remoteService)
-        str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'    % str_remoteService)
-        str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURL' % str_remoteService)
-
-
-        # pudb.set_trace()
-        dataComs = pfurl.Pfurl(
-            msg                         = json.dumps(d_request),
-            verb                        = 'POST',
-            http                        = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
-            b_quiet                     = True,
-            b_raw                       = True,
-            b_httpResponseBodyParse     = True,
-            jsonwrapper                 = 'payload'
-        )
-        # Remember, 'pman' responses do NOT need to http-body parsed!
-        computeComs = pfurl.Pfurl(
-            msg                         = json.dumps(d_request),
-            verb                        = 'POST',
-            http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
-            b_quiet                     = True,
-            b_raw                       = True,
-            b_httpResponseBodyParse     = False,
-            jsonwrapper                 = 'payload'
-        )
-
-        self.qprint("Calling remote data service...",   comms = 'rx')
-        d_dataResponse                          = json.loads(dataComs())
-        d_ret['%s-data' % str_remoteService]    = d_dataResponse
-
-        self.qprint("Calling remote compute service...", comms = 'rx')
-        d_computeResponse                       = json.loads(computeComs())
-        d_ret['%s-compute' % str_remoteService] = d_computeResponse
+        d_computeResponse   = self.computeRequest_process(request   = d_request)
+        d_ret['%s-compute'  % d_computeResponse['serviceName']]     = d_computeResponse
 
         return {
-            'd_ret':    d_ret,
-            'status':   True
+            'd_ret':                d_ret,
+            'serviceNameData':      d_dataResponse['serviceName'],
+            'serviceNameCompute':   d_computeResponse['serviceName'],
+            'status':               True
         }
-
 
     def hello_process(self, *args, **kwargs):
         """
@@ -338,64 +398,95 @@ class StoreHandler(BaseHTTPRequestHandler):
                  'd_remote':    d_remote,
                  'status':      b_status}
 
-    def do_POST(self, **kwargs):
+    def coordinate_process(self, *args, **kwargs):
+        """
+        The main coordination method entry point.
 
-        b_skipInit  = False
-        d_msg       = {}
+        This method (and sub-methods) is responsible for copying data to remote,
+        calling the remote process, and copying results back.
+
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        self.qprint("coordinate_process()", comms = 'status')
+        d_request   = {}
         for k,v in kwargs.items():
-            if k == 'd_msg':
-                d_msg       = v
-                b_skipInit  = True
+            if k == 'request':      d_request   = v
 
-        if not b_skipInit:
-            # Parse the form data posted
-            self.qprint(str(self.headers), comms = 'rx')
+        self.qprint("d_request = %s" % d_request)
+        d_metaData      = d_request['meta-data']
+        d_metaCompute   = d_request['meta-compute']
+        d_metaStore     = d_request['meta-store']
 
-            length              = self.headers['content-length']
-            data                = self.rfile.read(int(length))
-            form                = self.form_get('POST', data)
-            d_form              = {}
-            d_ret               = {
-                'msg':      'In do_POST',
-                'status':   True,
-                'formsize': sys.getsizeof(form)
-            }
+        str_storeMeta   = d_metaStore['meta']
+        str_storeKey    = d_metaStore['key']
 
-            self.qprint('data length = %d' % len(data),   comms = 'status')
-            self.qprint('form length = %d' % len(form), comms = 'status')
+        str_key         = d_request[str_storeMeta][str_storeKey]
+        self.qprint("key = %s" % str_key)
 
-            if len(form):
-                self.qprint("Unpacking multi-part form message...", comms = 'status')
-                for key in form:
-                    self.qprint("\tUnpacking field '%s..." % key, comms = 'status')
-                    d_form[key]     = form.getvalue(key)
-                d_msg               = json.loads((d_form['d_msg']))
-            else:
-                self.qprint("Parsing JSON data...", comms = 'status')
-                d_data              = json.loads(data.decode())
-                d_msg               = d_data['payload']
+    def do_POST(self, *args, **kwargs):
+        """
+        Main dispatching method for coordination service.
+
+        The following actions are available:
+
+            * hello
+            * coordinate
+            * status
+            * servicectl
+
+        :param kwargs:
+        :return:
+        """
+
+        d_msg       = {}
+        d_done      = {}
+
+        # Parse the form data posted
+        self.qprint(str(self.headers), comms = 'rx')
+
+        length              = self.headers['content-length']
+        data                = self.rfile.read(int(length))
+        form                = self.form_get('POST', data)
+        d_form              = {}
+        d_ret               = {
+            'msg':      'In do_POST',
+            'status':   True,
+            'formsize': sys.getsizeof(form)
+        }
+
+        self.qprint('data length = %d' % len(data),   comms = 'status')
+        self.qprint('form length = %d' % len(form), comms = 'status')
+
+        if len(form):
+            self.qprint("Unpacking multi-part form message...", comms = 'status')
+            for key in form:
+                self.qprint("\tUnpacking field '%s..." % key, comms = 'status')
+                d_form[key]     = form.getvalue(key)
+            d_msg               = json.loads((d_form['d_msg']))
+        else:
+            self.qprint("Parsing JSON data...", comms = 'status')
+            d_data              = json.loads(data.decode())
+            d_msg               = d_data['payload']
 
         self.qprint('d_msg = %s' % d_msg, comms = 'status')
-        d_meta              = d_msg['meta']
 
         if 'action' in d_msg:
             self.qprint("verb: %s detected." % d_msg['action'], comms = 'status')
-            if 'Path' not in d_msg['action']:
-                str_method      = '%s_process' % d_msg['action']
-                self.qprint("method to call: %s(request = d_msg) " % str_method, comms = 'status')
-                d_done          = {'status': False}
-                try:
-                    method      = getattr(self, str_method)
-                    d_done      = method(request = d_msg)
-                except  AttributeError:
-                    raise NotImplementedError("Class `{}` does not implement `{}`".format(self.__class__.__name__, method))
-                self.qprint(d_done, comms = 'tx')
-                d_ret = d_done
+            str_method      = '%s_process' % d_msg['action']
+            self.qprint("method to call: %s(request = d_msg) " % str_method, comms = 'status')
+            d_done          = {'status': False}
+            try:
+                method      = getattr(self, str_method)
+                d_done      = method(request = d_msg)
+            except  AttributeError:
+                raise NotImplementedError("Class `{}` does not implement `{}`".format(self.__class__.__name__, method))
+            self.qprint(d_done, comms = 'tx')
+            d_ret = d_done
 
-        if 'ctl' in d_meta:
-            self.do_POST_serverctl(d_meta)
-
-        if not b_skipInit: self.ret_client(d_ret)
+        self.ret_client(d_ret)
         return d_ret
 
     def do_POST_serverctl(self, d_meta):
