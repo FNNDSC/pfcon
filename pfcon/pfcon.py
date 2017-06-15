@@ -233,15 +233,17 @@ class StoreHandler(BaseHTTPRequestHandler):
         global  Gd_tree
         b_status    = False
 
-        self.qprint("dataRequest_prcoess()", comms = 'status')
+        self.qprint("dataRequest_process()", comms = 'status')
 
-        d_request   = {}
-        d_meta      = {}
-        d_ret       = {}
+        d_request       = {}
+        d_meta          = {}
+        d_ret           = {}
+        str_metaHeader  = 'meta'
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
+            if k == 'metaHeader':       str_metaHeader      = v
 
-        d_meta                  = d_request['meta']
+        d_meta                  = d_request[str_metaHeader]
         str_remoteService       = d_meta['service']
         str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
         str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURL'    % str_remoteService)
@@ -250,20 +252,23 @@ class StoreHandler(BaseHTTPRequestHandler):
             msg                         = json.dumps(d_request),
             verb                        = 'POST',
             http                        = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
-            b_quiet                     = True,
+            b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = True,
-            jsonwrapper                 = 'payload'
+            jsonwrapper                 = ''
         )
 
+        # pudb.set_trace()
+
         self.qprint("Calling remote data service...",   comms = 'rx')
-        d_dataResponse                          = json.loads(dataComs())
+        d_dataComs                              = dataComs()
+        d_dataResponse                          = json.loads(d_dataComs)
         d_ret['%s-data' % str_remoteService]    = d_dataResponse
 
         return {
-            'd_ret':        d_dataResponse,
+            'd_ret':        d_ret,
             'serviceName':  str_remoteService,
-            'status':       True
+            'status':       d_dataResponse['stdout']['status']
         }
 
     def computeRequest_process(self, *args, **kwargs):
@@ -280,13 +285,15 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         self.qprint("computeRequest_process()", comms = 'status')
 
-        d_request   = {}
-        d_meta      = {}
-        d_ret       = {}
+        d_request       = {}
+        d_meta          = {}
+        d_ret           = {}
+        str_metaHeader  = 'meta'
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
+            if k == 'metaHeader':       str_metaHeader      = v
 
-        d_meta                  = d_request['meta']
+        d_meta                  = d_request[str_metaHeader]
         str_remoteService       = d_meta['service']
         str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'    % str_remoteService)
         str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURL' % str_remoteService)
@@ -299,16 +306,18 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_quiet                     = True,
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
-            jsonwrapper                 = 'payload'
+            jsonwrapper                 = ''
         )
 
         self.qprint("Calling remote compute service...", comms = 'rx')
-        d_computeResponse                       = json.loads(computeComs())
+        d_computeComs                           = computeComs()
+        d_computeResponse                       = json.loads(d_computeComs)
+        d_ret['%s-compute' % str_remoteService] = d_computeResponse
 
         return {
-            'd_ret':        d_computeResponse,
+            'd_ret':        d_ret,
             'serviceName':  str_remoteService,
-            'status':       True
+            'status':       d_computeResponse['stdout']['status']
         }
 
     def hello_process_remote(self, *args, **kwargs):
@@ -405,6 +414,62 @@ class StoreHandler(BaseHTTPRequestHandler):
         This method (and sub-methods) is responsible for copying data to remote,
         calling the remote process, and copying results back.
 
+        PRECONDITIONS:
+
+        Input JSON is assumed to be:
+
+        pfurl --verb POST --raw --http 10.17.24.163:5005/api/v1/cmd --jsonwrapper 'payload' --msg '
+        {   "action": "coordinate",
+
+            "meta-store": {
+                        "meta":         "meta-compute",
+                        "key":          "jid"
+            },
+
+            "meta-data": {
+                "remote": {
+                        "key":          "%meta-store"
+                },
+                "local": {
+                        "path":         "/neuro/users/rudolphpienaar/Pictures"
+                },
+                "transport": {
+                    "mechanism":    "compress",
+                    "compress": {
+                        "encoding": "base64",
+                        "archive":  "zip",
+                        "unpack":   true,
+                        "cleanup":  true
+                    }
+                },
+                "service":              "pangea"
+            },
+
+            "meta-compute":  {
+                "cmd":      "$execshell $selfpath/$selfexec --prefix test- --sleepLength 0 /share/incoming /share/outgoing",
+                "auid":     "rudolphpienaar",
+                "jid":      "simpledsapp-1",
+                "threaded": true,
+                "container":   {
+                        "target": {
+                            "image":            "fnndsc/pl-simpledsapp",
+                            "cmdParse":         true
+                        },
+                        "manager": {
+                            "image":            "fnndsc/swarm",
+                            "app":              "swarm.py",
+                            "env":  {
+                                "meta-store":   "key",
+                                "serviceType":  "docker",
+                                "serviceName":  "testService"
+                            }
+                        }
+                },
+                "service":              "pangea"
+            }
+        }
+        '
+
         :param args:
         :param kwargs:
         :return:
@@ -425,6 +490,22 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         str_key         = d_request[str_storeMeta][str_storeKey]
         self.qprint("key = %s" % str_key)
+
+        if 'remote' in d_metaData.keys():
+            if 'key' in d_metaData['remote'].keys():
+                d_metaData['remote']['key'] = str_key
+
+        self.qprint('metaData = %s' % d_metaData, comms = 'status')
+        d_dataRequest   = {
+            'action':   'pushPath',
+            'meta':     d_metaData
+        }
+        d_dataRequestProcess = self.dataRequest_process(request = d_dataRequest)
+
+        return {
+            'status':                   True,
+            'd_dataRequestProcess':     d_dataRequestProcess
+        }
 
     def do_POST(self, *args, **kwargs):
         """
