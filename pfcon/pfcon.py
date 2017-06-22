@@ -62,6 +62,34 @@ Gd_internalvar  = {
                 'baseURLpath':  '/api/v1/cmd/',
                 'status':       'undefined'
             }
+        },
+        'megalodon': {
+            'data': {
+                'addr':         '10.23.131.164:5055',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined',
+
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+            },
+            'compute': {
+                'addr':         '10.23.131.164:5010',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined'
+            }
         }
     }
 }
@@ -303,10 +331,10 @@ class StoreHandler(BaseHTTPRequestHandler):
             msg                         = json.dumps(d_request),
             verb                        = 'POST',
             http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
-            b_quiet                     = True,
+            b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
-            jsonwrapper                 = ''
+            jsonwrapper                 = 'payload'
         )
 
         self.qprint("Calling remote compute service...", comms = 'rx')
@@ -317,7 +345,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         return {
             'd_ret':        d_ret,
             'serviceName':  str_remoteService,
-            'status':       d_computeResponse['stdout']['status']
+            # 'status':       d_computeResponse['stdout']['status']
         }
 
     def hello_process_remote(self, *args, **kwargs):
@@ -481,19 +509,23 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'request':      d_request   = v
 
         self.qprint("d_request = %s" % d_request)
-        d_metaData      = d_request['meta-data']
-        d_metaCompute   = d_request['meta-compute']
-        d_metaStore     = d_request['meta-store']
 
+        d_metaStore     = d_request['meta-store']
         str_storeMeta   = d_metaStore['meta']
         str_storeKey    = d_metaStore['key']
 
         str_key         = d_request[str_storeMeta][str_storeKey]
         self.qprint("key = %s" % str_key)
 
-        if 'remote' in d_metaData.keys():
-            if 'key' in d_metaData['remote'].keys():
-                d_metaData['remote']['key'] = str_key
+        # pudb.set_trace()
+        str_flatDict    = json.dumps(d_request)
+        d_request       = json.loads(str_flatDict.replace('%meta-store', str_key))
+        d_metaData      = d_request['meta-data']
+        d_metaCompute   = d_request['meta-compute']
+
+        # if 'remote' in d_metaData.keys():
+        #     if 'key' in d_metaData['remote'].keys():
+        #         d_metaData['remote']['key'] = str_key
 
         self.qprint('metaData = %s' % d_metaData, comms = 'status')
         d_dataRequest   = {
@@ -502,9 +534,22 @@ class StoreHandler(BaseHTTPRequestHandler):
         }
         d_dataRequestProcess = self.dataRequest_process(request = d_dataRequest)
 
+        pudb.set_trace()
+        str_serviceName = d_dataRequestProcess['serviceName']
+        str_shareDir    = d_dataRequestProcess['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['shareDir']
+
+        d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
+        self.qprint('metaCompute = %s' % d_metaCompute, comms = 'status')
+        d_computeRequest   = {
+            'action':   'run',
+            'meta':     d_metaCompute
+        }
+        d_computeRequestProcess = self.computeRequest_process(request = d_computeRequest)
+        
         return {
             'status':                   True,
-            'd_dataRequestProcess':     d_dataRequestProcess
+            'd_dataRequestProcess':     d_dataRequestProcess,
+            'd_computeRequestProcess':  d_computeRequest
         }
 
     def do_POST(self, *args, **kwargs):
