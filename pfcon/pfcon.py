@@ -12,6 +12,7 @@ import  urllib
 import  ast
 import  shutil
 import  datetime
+import  time
 
 import  platform
 import  socket
@@ -274,7 +275,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_meta                  = d_request[str_metaHeader]
         str_remoteService       = d_meta['service']
         str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
-        str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURL'    % str_remoteService)
+        str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURLpath'% str_remoteService)
 
         dataComs = pfurl.Pfurl(
             msg                         = json.dumps(d_request),
@@ -323,8 +324,8 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_meta                  = d_request[str_metaHeader]
         str_remoteService       = d_meta['service']
-        str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'    % str_remoteService)
-        str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURL' % str_remoteService)
+        str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'        % str_remoteService)
+        str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURLpath' % str_remoteService)
 
         # Remember, 'pman' responses do NOT need to http-body parsed!
         computeComs = pfurl.Pfurl(
@@ -523,21 +524,20 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_metaData      = d_request['meta-data']
         d_metaCompute   = d_request['meta-compute']
 
-        # if 'remote' in d_metaData.keys():
-        #     if 'key' in d_metaData['remote'].keys():
-        #         d_metaData['remote']['key'] = str_key
-
+        # Push data to remote location        
+        d_metaData['local'] = d_metaData['localSource']
         self.qprint('metaData = %s' % d_metaData, comms = 'status')
         d_dataRequest   = {
             'action':   'pushPath',
             'meta':     d_metaData
         }
-        d_dataRequestProcess = self.dataRequest_process(request = d_dataRequest)
+        d_dataRequestProcessPush = self.dataRequest_process(request = d_dataRequest)
 
-        pudb.set_trace()
-        str_serviceName = d_dataRequestProcess['serviceName']
-        str_shareDir    = d_dataRequestProcess['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['shareDir']
-
+        # Process data at remote location
+        str_serviceName = d_dataRequestProcessPush['serviceName']
+        str_shareDir    = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['shareDir']
+        str_outDirPath  = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['outgoingPath']
+        str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
         d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
         self.qprint('metaCompute = %s' % d_metaCompute, comms = 'status')
         d_computeRequest   = {
@@ -545,11 +545,31 @@ class StoreHandler(BaseHTTPRequestHandler):
             'meta':     d_metaCompute
         }
         d_computeRequestProcess = self.computeRequest_process(request = d_computeRequest)
+
+        # wait for processing...
+        time.sleep(10)
+
+        d_dataRequestProcessPull = {}
+        # Pull data from remote location
+        pudb.set_trace()
+        str_localDestination                = d_metaData['localTarget']['path']
+        str_localParentPath, str_localDest  = os.path.split(str_localDestination)        
+        d_metaData['local']                 = {'path': str_localParentPath}
+        d_metaData['transport']['compress']['name']   = str_localDest
+        self.qprint('metaData = %s' % d_metaData, comms = 'status')
+        d_dataRequest   = {
+            'action':   'pullPath',
+            'meta':     d_metaData
+        }
+        d_dataRequestProcessPull = self.dataRequest_process(request = d_dataRequest)
+        shutil.move(os.path.join(str_localParentPath,   str_outDirOnly), 
+                    os.path.join(str_localParentPath,   str_localDest))
         
         return {
-            'status':                   True,
-            'd_dataRequestProcess':     d_dataRequestProcess,
-            'd_computeRequestProcess':  d_computeRequest
+            'status':   True,
+            'pushData': d_dataRequestProcessPush,
+            'compute':  d_computeRequest,
+            'pullData': d_dataRequestProcessPull
         }
 
     def do_POST(self, *args, **kwargs):
