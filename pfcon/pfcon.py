@@ -447,6 +447,26 @@ class StoreHandler(BaseHTTPRequestHandler):
                  'd_remote':    d_remote,
                  'status':      b_status}
 
+    def data_asyncHandler(self, *args, **kwargs):
+        """
+        The data handler. This method performs the push/pull (depending on the 
+        JSON input payload). Significantly, this method threads the actual data
+        IO operation and thus returns to caller immediately.
+
+        Status of a particular data IO operation is stored in a global identifier
+        which is indexed by some 'key' (typically a job id, 'jid' parameter) in
+        the JSON directive supplied by the calling process.
+
+        Downstream processing should block where appropriate based on examining
+        the global status.
+        """
+
+        t_dataSync_handler  = threading.Thread( target      = self.dataRequest_process,
+                                                args        = (),
+                                                kwargs      = kwargs)
+        
+
+
     def coordinate_process(self, *args, **kwargs):
         """
         The main coordination method entry point.
