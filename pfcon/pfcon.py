@@ -14,6 +14,7 @@ import  shutil
 import  datetime
 import  time
 
+import  threading
 import  platform
 import  socket
 import  psutil
@@ -33,6 +34,16 @@ from   .C_snode         import *
 G_b_httpResponse            = False
 
 Gd_internalvar  = {
+
+    'jobstatus': {
+        'purpose':  'this structure keeps track of job status: pathPush/pull and compute.',
+        'organization': 'the tree is /jobstatus/<someKey>/info',
+        'info': {
+            'pushPath': 'statusString',
+            'compute':  'statusString',
+            'pullPath': 'statusString'
+        }
+    },
 
     'service':  {
         'pangea': {
