@@ -459,13 +459,60 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         Downstream processing should block where appropriate based on examining
         the global status.
+
+        'jobstatus': {
+            'purpose':  'this structure keeps track of job status: pathPush/pull and compute.',
+            'organization': 'the tree is /jobstatus/<someKey>/info',
+            'info': {
+                'pushPath': 'statusString',
+                'compute':  'statusString',
+                'pullPath': 'statusString'
+            }
+        }
+
         """
 
+        global Gd_tree
         t_dataSync_handler  = threading.Thread( target      = self.dataRequest_process,
                                                 args        = (),
                                                 kwargs      = kwargs)
-        
 
+        T                   = Gd_tree
+        T.cd('/jobstatus')
+        d_resposne          = t_dataSync_handler.start()
+
+    def key_dereference(self, *args, **kwargs):
+        """
+        Given the input JSON payload, deference the 'key' and return
+        its value in a dictionary.
+
+        {   
+            'status', <status>,
+            key': <val>
+        }
+
+        """
+        b_status    = False
+        d_request   = {}
+        str_key     = ''
+        for k,v in kwargs.items():
+            if k == 'request':      d_request   = v
+
+        self.qprint("d_request = %s" % d_request)
+
+        if 'meta-store' in d_request:
+            d_metaStore     = d_request['meta-store']
+            if 'meta' in d_metaStore:
+                str_storeMeta   = d_metaStore['meta']
+                str_storeKey    = d_metaStore['key']
+                if str_storeKey in d_request[str_storeMeta].keys():
+                    str_key     = d_request[str_storeMeta][str_storeKey]
+                    b_status    = True
+                    self.qprint("key = %s" % str_key)
+        return {
+            'status':   b_status,
+            'key':      str_key
+        }
 
     def coordinate_process(self, *args, **kwargs):
         """
@@ -539,15 +586,16 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_request   = {}
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
-
         self.qprint("d_request = %s" % d_request)
 
-        d_metaStore     = d_request['meta-store']
-        str_storeMeta   = d_metaStore['meta']
-        str_storeKey    = d_metaStore['key']
+        str_key         = self.key_dereference(request = d_request)['key']
 
-        str_key         = d_request[str_storeMeta][str_storeKey]
-        self.qprint("key = %s" % str_key)
+        # d_metaStore     = d_request['meta-store']
+        # str_storeMeta   = d_metaStore['meta']
+        # str_storeKey    = d_metaStore['key']
+
+        # str_key         = d_request[str_storeMeta][str_storeKey]
+        # self.qprint("key = %s" % str_key)
 
         # pudb.set_trace()
         str_flatDict    = json.dumps(d_request)
