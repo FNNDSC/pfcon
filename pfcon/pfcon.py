@@ -46,6 +46,35 @@ Gd_internalvar  = {
     },
 
     'service':  {
+        'gondwanaland': {
+            'data': {
+                'addr':         '192.168.1.189:5055',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined',
+
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+
+            },
+            'compute': {
+                'addr':         '192.168.1.189:5010',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined'
+            }
+        },
         'pangea': {
             'data': {
                 'addr':         '10.17.24.163:5055',
@@ -473,6 +502,11 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
 
         global Gd_tree
+        d_request   = {}
+
+        for k,v in kwargs.items():
+            if k == 'request':  d_request  = v
+
         t_dataSync_handler  = threading.Thread( target      = self.dataRequest_process,
                                                 args        = (),
                                                 kwargs      = kwargs)
