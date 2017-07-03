@@ -106,7 +106,7 @@ Gd_internalvar  = {
         },
         'megalodon': {
             'data': {
-                'addr':         '10.23.131.164:5055',
+                'addr':         '10.23.131.183:5055',
                 'baseURLpath':  '/api/v1/cmd/',
                 'status':       'undefined',
 
@@ -127,7 +127,7 @@ Gd_internalvar  = {
                 }
             },
             'compute': {
-                'addr':         '10.23.131.164:5010',
+                'addr':         '10.23.131.183:5010',
                 'baseURLpath':  '/api/v1/cmd/',
                 'status':       'undefined'
             }
@@ -476,6 +476,42 @@ class StoreHandler(BaseHTTPRequestHandler):
                  'd_remote':    d_remote,
                  'status':      b_status}
 
+    def jobOperation_set(self, *args, **kwargs):
+        """
+        Sets the status of a specific operation in a given job.
+        """
+        global  Gd_tree 
+        b_status    = False
+        d_status    = {}
+        str_keyID   = 'none'
+        str_op      = 'none'
+        str_status  = 'none'
+
+        for k,v in kwargs.items():
+            if k == 'key':      str_keyID   = v
+            if k == 'op':       str_op      = v
+            if k == 'status':   str_status  = v
+
+        if str_keyID != 'none':
+            T           = Gd_tree
+            T.cd('/jobstatus')
+            T.mkcd(str_keyID)
+            if T.exists('status'):
+                d_status    = T.cat('status')
+            if str_op != 'none':
+                if str_op == 'all':
+                    l_opKey = ['pushPath', 'compute', 'pullPath']
+                else:
+                    if str_op in ['pushPath', 'compute', 'pullPath']:
+                        l_opKey = [str_op]
+                for k in l_opKey:
+                    d_status[k] = str_status
+                T.touch('status', d_status)
+        return {
+            'status':   b_status,
+            'd_status': d_status
+        }
+
     def data_asyncHandler(self, *args, **kwargs):
         """
         The data handler. This method performs the push/pull (depending on the 
@@ -500,20 +536,29 @@ class StoreHandler(BaseHTTPRequestHandler):
         }
 
         """
-
-        global Gd_tree
         d_request   = {}
+        str_key     = ""
 
         for k,v in kwargs.items():
-            if k == 'request':  d_request  = v
+            if k == 'request':  d_request   = v
+            if k == 'key':      str_key     = v
 
         t_dataSync_handler  = threading.Thread( target      = self.dataRequest_process,
                                                 args        = (),
                                                 kwargs      = kwargs)
 
-        T                   = Gd_tree
-        T.cd('/jobstatus')
-        d_resposne          = t_dataSync_handler.start()
+        pudb.set_trace()
+        self.jobOperation_set(  key         = str_key,
+                                op          = 'all',
+                                status      = 'init'
+                            )
+
+        d_response          = t_dataSync_handler.start()
+        self.jobOperation_set(  key         = str_key,
+                                op          = 'pushPath',
+                                status      = 'pushing'
+        )
+        return d_response
 
     def key_dereference(self, *args, **kwargs):
         """
@@ -644,7 +689,9 @@ class StoreHandler(BaseHTTPRequestHandler):
             'action':   'pushPath',
             'meta':     d_metaData
         }
-        d_dataRequestProcessPush = self.dataRequest_process(request = d_dataRequest)
+        pudb.set_trace()
+        # d_dataRequestProcessPush = self.dataRequest_process(request = d_dataRequest)
+        d_dataRequestProcessPush = self.data_asyncHandler(request = d_dataRequest, key = str_key)
 
         # Process data at remote location
         str_serviceName = d_dataRequestProcessPush['serviceName']
