@@ -656,13 +656,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                 args        = (),
                                                 kwargs      = kwargs)
 
-        # Set the status of all job operations to 'init'...
-        self.jobOperation_do(   action      = 'set',
-                                key         = str_key,
-                                op          = 'all',
-                                status      = 'init'
-                            )
-        # and then set the state of the actual data jobOperation being called to 'pushing'...
+        # Set the state of the actual data jobOperation being called to 'pushing'...
         self.jobOperation_do(   action      = 'set',
                                 key         = str_key,
                                 op          = str_op,
@@ -677,7 +671,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
     def key_dereference(self, *args, **kwargs):
         """
-        Given the input JSON payload, deference the 'key' and return
+        Given the 'coordinate' JSON payload, deference the 'key' and return
         its value in a dictionary.
 
         {   
@@ -721,9 +715,9 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         Input JSON is assumed to be:
 
-        pfurl --verb POST --raw --http 10.17.24.163:5005/api/v1/cmd --jsonwrapper 'payload' --msg '
-        {   "action": "coordinate",
-
+        pfurl --verb POST --raw --http 10.17.24.163:5005/api/v1/cmd --httpResponseBodyParse --jsonwrapper 'payload' --msg '
+        {   "action":           "coordinate",
+            "threadAction":     true,
             "meta-store": {
                         "meta":         "meta-compute",
                         "key":          "jid"
@@ -733,19 +727,25 @@ class StoreHandler(BaseHTTPRequestHandler):
                 "remote": {
                         "key":          "%meta-store"
                 },
-                "local": {
-                        "path":         "/neuro/users/rudolphpienaar/Pictures"
+                "localSource": {
+                        "path":         "/home/rudolph/Pictures"
+                },
+                "localTarget": {
+                        "path":         "/home/tmp/Pictures"
+                },
+                "specialHandling": {
+                        "op":           "dsplugin"
                 },
                 "transport": {
                     "mechanism":    "compress",
                     "compress": {
-                        "encoding": "base64",
+                        "encoding": "none",
                         "archive":  "zip",
                         "unpack":   true,
                         "cleanup":  true
                     }
                 },
-                "service":              "pangea"
+                "service":              "megalodon"
             },
 
             "meta-compute":  {
@@ -764,11 +764,12 @@ class StoreHandler(BaseHTTPRequestHandler):
                             "env":  {
                                 "meta-store":   "key",
                                 "serviceType":  "docker",
+                                "shareDir":     "%shareDir",
                                 "serviceName":  "testService"
                             }
                         }
                 },
-                "service":              "pangea"
+                "service":              "megalodon"
             }
         }
         '
@@ -798,6 +799,13 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_request       = json.loads(str_flatDict.replace('%meta-store', str_key))
         d_metaData      = d_request['meta-data']
         d_metaCompute   = d_request['meta-compute']
+
+        # Set the status of all job operations to 'init'...
+        self.jobOperation_do(   action      = 'set',
+                                key         = str_key,
+                                op          = 'all',
+                                status      = 'init'
+                            )
 
         # Push data to remote location        
         d_metaData['local'] = d_metaData['localSource']
@@ -880,6 +888,44 @@ class StoreHandler(BaseHTTPRequestHandler):
             'pullData': d_dataRequestProcessPull
         }
 
+    def status_process(self, *args, **kwargs):
+        """
+        Simply returns to caller the 'info' dictionary structure for a give remote
+        key store.
+
+        JSON query:
+
+        pfurl --verb POST --raw --http 10.17.24.163:5005/api/v1/cmd --httpResponseBodyParse --jsonwrapper 'payload' --msg '
+        {   "action":           "status",
+            "threadAction":     false,
+            "meta": {
+                "remote": {
+                        "key":          "simpledsapp-1"
+                }
+            }
+        }'
+
+        """
+        self.qprint("status_process()", comms = 'status')
+        d_request                   = {}
+        d_meta                      = {}
+        d_jobOperation              = {}
+
+        for k,v in kwargs.items():
+            if k == 'request':      d_request   = v
+        
+        d_meta      = d_request['meta']
+        str_keyID   = d_meta['remote']['key']
+
+        d_jobOperation      = self.jobOperation_do(     key     = str_keyID,
+                                                        action  = 'getInfo',
+                                                        op      = 'all')
+        return {
+            'status':       True,
+            'jobOperation': d_jobOperation
+        }
+
+
     def do_POST(self, *args, **kwargs):
         """
         Main dispatching method for coordination service.
@@ -897,6 +943,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_msg       = {}
         d_done      = {}
+        b_threaded  = False
 
         # Parse the form data posted
         self.qprint(str(self.headers), comms = 'rx')
@@ -933,12 +980,23 @@ class StoreHandler(BaseHTTPRequestHandler):
             self.qprint("method to call: %s(request = d_msg) " % str_method, comms = 'status')
             d_done          = {'status': False}
             try:
-                method      = getattr(self, str_method)
-                d_done      = method(request = d_msg)
+                pf_method   = getattr(self, str_method)
             except  AttributeError:
-                raise NotImplementedError("Class `{}` does not implement `{}`".format(self.__class__.__name__, method))
-            self.qprint(d_done, comms = 'tx')
-            d_ret = d_done
+                raise NotImplementedError("Class `{}` does not implement `{}`".format(self.__class__.__name__, pf_method))
+            
+            if 'threadAction' in d_msg:
+                b_threaded  = int(d_msg['threadAction'])
+
+            if not b_threaded:
+                d_done      = pf_method(request = d_msg)
+                self.qprint(d_done, comms = 'tx')
+                d_ret       = d_done
+            else:
+                t_process   = threading.Thread( target  = pf_method,
+                                                args    = (),
+                                                kwargs  = {'request': d_msg})
+                t_process.start()
+                time.sleep(0.1)
 
         self.ret_client(d_ret)
         return d_ret
