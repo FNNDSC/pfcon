@@ -39,9 +39,18 @@ Gd_internalvar  = {
         'purpose':  'this structure keeps track of job status: pathPush/pull and compute.',
         'organization': 'the tree is /jobstatus/<someKey>/info',
         'info': {
-            'pushPath': 'statusString',
-            'compute':  'statusString',
-            'pullPath': 'statusString'
+            'pushPath': {
+                'status':   '<statusString>',
+                'return':   '<d_ret>'
+                },
+            'compute':  {
+                'status':   '<statusString>',
+                'return':   '<d_ret>'
+                },
+            'pullPath': {
+                'status':   '<statusString>',
+                'return':   '<d_ret>'
+                }
         }
     },
 
@@ -294,6 +303,9 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         Method for talking to the data handling service.
 
+        Return JSON information from remote process is returned directly by this method,
+        and also stored in the internal key_ID tree.
+
         :param args:
         :param kwargs:
         :return: JSON object from the 'pfioh' call.
@@ -306,11 +318,19 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_request       = {}
         d_meta          = {}
+        # The return from the remote call
         d_ret           = {}
+        # The return from this method
+        d_return        = {}
         str_metaHeader  = 'meta'
+        str_key         = ''
+        str_op          = ''
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
             if k == 'metaHeader':       str_metaHeader      = v
+            if k == 'return':           d_return            = v
+            if k == 'key':              str_key             = v
+            if k == 'op':               str_op              = v
 
         d_meta                  = d_request[str_metaHeader]
         str_remoteService       = d_meta['service']
@@ -334,15 +354,26 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_dataResponse                          = json.loads(d_dataComs)
         d_ret['%s-data' % str_remoteService]    = d_dataResponse
 
-        return {
+        d_return = {
             'd_ret':        d_ret,
             'serviceName':  str_remoteService,
             'status':       d_dataResponse['stdout']['status']
         }
 
+        self.jobOperation_do(   action      = 'set',
+                                key         = str_key,
+                                op          = str_op,
+                                status      = 'done',
+                                jobReturn   = d_return)
+
+        return d_return
+
     def computeRequest_process(self, *args, **kwargs):
         """
         Method for talking to the data handling service.
+
+        Return JSON information from remote process is returned directly by this method,
+        and also stored in the internal key_ID tree.
 
         :param args:
         :param kwargs:
@@ -356,11 +387,19 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_request       = {}
         d_meta          = {}
+        # The return from the remote call
         d_ret           = {}
+        # The return from this method
+        d_return        = {}
         str_metaHeader  = 'meta'
+        str_key         = ''
+        str_op          = ''
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
             if k == 'metaHeader':       str_metaHeader      = v
+            if k == 'return':           d_return            = v
+            if k == 'key':              str_key             = v
+            if k == 'op':               str_op              = v
 
         d_meta                  = d_request[str_metaHeader]
         str_remoteService       = d_meta['service']
@@ -476,28 +515,43 @@ class StoreHandler(BaseHTTPRequestHandler):
                  'd_remote':    d_remote,
                  'status':      b_status}
 
-    def jobOperation_set(self, *args, **kwargs):
+    def jobOperation_do(self, *args, **kwargs):
         """
         Sets the status of a specific operation in a given job.
         """
         global  Gd_tree 
+        # return status of this method
         b_status    = False
-        d_status    = {}
+        # the info dictionary for all the jobs per key
+        d_info      = {}
         str_keyID   = 'none'
         str_op      = 'none'
         str_status  = 'none'
+        str_action  = 'none'
+        b_jobReturn = False
+        d_jobReturn = {}
 
+        # pudb.set_trace()
         for k,v in kwargs.items():
-            if k == 'key':      str_keyID   = v
-            if k == 'op':       str_op      = v
-            if k == 'status':   str_status  = v
+            if k == 'key':          str_keyID   = v
+            if k == 'op':           str_op      = v
+            if k == 'status':       str_status  = v
+            if k == 'jobReturn':
+                b_jobReturn                     = True    
+                d_jobReturn                     = v 
+            if k == 'action':       str_action  = v
 
+        # pudb.set_trace()
         if str_keyID != 'none':
             T           = Gd_tree
             T.cd('/jobstatus')
-            T.mkcd(str_keyID)
-            if T.exists('status'):
-                d_status    = T.cat('status')
+            b_status    = True
+            if not T.exists(str_keyID):
+                T.mkcd(str_keyID)
+            else:
+                T.cd(str_keyID)
+            if T.exists('info'):
+                d_info  = T.cat('info')
             if str_op != 'none':
                 if str_op == 'all':
                     l_opKey = ['pushPath', 'compute', 'pullPath']
@@ -505,12 +559,55 @@ class StoreHandler(BaseHTTPRequestHandler):
                     if str_op in ['pushPath', 'compute', 'pullPath']:
                         l_opKey = [str_op]
                 for k in l_opKey:
-                    d_status[k] = str_status
-                T.touch('status', d_status)
+                    if str_action == 'set':
+                        if not k in d_info.keys():
+                            d_info[k]           = {}
+                            d_info[k]['return'] = {}
+                            d_info[k]['status'] = ''
+                        d_info[k]['status'] = str_status
+                        if b_jobReturn:
+                            d_info[k]['return'] = d_jobReturn
+                    T.touch('info', d_info)
         return {
             'status':   b_status,
-            'd_status': d_status
+            'info':     d_info
         }
+
+    def jobOperation_blockUntil(self, *args, **kwargs):
+        """
+        Block until a given job operation reaches a given status,
+        or optionally until a timeout has passed.
+        """
+        b_jobStatusCheck    = False
+        d_status            = {}
+        str_keyID           = 'none'
+        str_op              = 'none'
+        str_status          = 'none'
+        str_action          = 'none'
+        timeout             = 60
+        pollInterval        = 1
+
+        for k,v in kwargs.items():
+            if k == 'key':      str_keyID   = v
+            if k == 'op':       str_op      = v
+            if k == 'status':   str_status  = v
+            if k == 'timeout':  timeout     = v
+
+        kwargs['action']    = 'get'
+
+        while not b_jobStatusCheck:
+            # pudb.set_trace()
+            d_jobOperation      = self.jobOperation_do(     key     = str_keyID,
+                                                            action  = 'getInfo',
+                                                            op      = str_op)
+            str_jobStatus       = d_jobOperation['info'][str_op]['status']
+            d_jobReturn         = d_jobOperation['info'][str_op]['return']
+            if str_jobStatus == str_status:
+                b_jobStatusCheck    = True
+            self.qprint('blocking on %s' % str_op, comms = 'status')
+            time.sleep(pollInterval)
+        self.qprint('return from %s' % str_op, comms = 'status')
+        self.qprint(d_jobReturn)
 
     def data_asyncHandler(self, *args, **kwargs):
         """
@@ -529,36 +626,54 @@ class StoreHandler(BaseHTTPRequestHandler):
             'purpose':  'this structure keeps track of job status: pathPush/pull and compute.',
             'organization': 'the tree is /jobstatus/<someKey>/info',
             'info': {
-                'pushPath': 'statusString',
-                'compute':  'statusString',
-                'pullPath': 'statusString'
+                'pushPath': {
+                    'status':   '<statusString>',
+                    'return':   <d_ret>
+                    },
+                'compute':  {
+                    'status':   '<statusString>',
+                    'return':   <d_ret>
+                    },
+                'pullPath': {
+                    'status':   '<statusString>',
+                    'return':   <d_ret>
+                    }
             }
         }
 
         """
         d_request   = {}
-        str_key     = ""
+        d_ret       = {}
+        str_key     = ''
+        str_op      = ''
 
         for k,v in kwargs.items():
             if k == 'request':  d_request   = v
             if k == 'key':      str_key     = v
+            if k == 'op':       str_op      = v
 
         t_dataSync_handler  = threading.Thread( target      = self.dataRequest_process,
                                                 args        = (),
                                                 kwargs      = kwargs)
 
-        pudb.set_trace()
-        self.jobOperation_set(  key         = str_key,
+        # Set the status of all job operations to 'init'...
+        self.jobOperation_do(   action      = 'set',
+                                key         = str_key,
                                 op          = 'all',
                                 status      = 'init'
                             )
-
-        d_response          = t_dataSync_handler.start()
-        self.jobOperation_set(  key         = str_key,
-                                op          = 'pushPath',
+        # and then set the state of the actual data jobOperation being called to 'pushing'...
+        self.jobOperation_do(   action      = 'set',
+                                key         = str_key,
+                                op          = str_op,
                                 status      = 'pushing'
         )
-        return d_response
+
+        # and start the thread about the actual push
+        t_dataSync_handler.start()
+
+        # finally return a True
+        return True
 
     def key_dereference(self, *args, **kwargs):
         """
@@ -571,13 +686,15 @@ class StoreHandler(BaseHTTPRequestHandler):
         }
 
         """
+        self.qprint("key_deference()", comms = 'status')
+        
         b_status    = False
         d_request   = {}
         str_key     = ''
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
 
-        self.qprint("d_request = %s" % d_request)
+        # self.qprint("d_request = %s" % d_request)
 
         if 'meta-store' in d_request:
             d_metaStore     = d_request['meta-store']
@@ -662,19 +779,19 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
 
         self.qprint("coordinate_process()", comms = 'status')
-        d_request   = {}
+        d_request                   = {}
+        d_jobOperation              = {}
+        d_dataRequest               = {}
+        d_dataRequestProcessPush    = {}
+        d_computeRequest            = {}
+        d_computeRequestProcess     = {}
+        d_dataRequestProcessPull    = {}
+
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
-        self.qprint("d_request = %s" % d_request)
+        # self.qprint("d_request = %s" % d_request)
 
         str_key         = self.key_dereference(request = d_request)['key']
-
-        # d_metaStore     = d_request['meta-store']
-        # str_storeMeta   = d_metaStore['meta']
-        # str_storeKey    = d_metaStore['key']
-
-        # str_key         = d_request[str_storeMeta][str_storeKey]
-        # self.qprint("key = %s" % str_key)
 
         # pudb.set_trace()
         str_flatDict    = json.dumps(d_request)
@@ -689,9 +806,23 @@ class StoreHandler(BaseHTTPRequestHandler):
             'action':   'pushPath',
             'meta':     d_metaData
         }
-        pudb.set_trace()
-        # d_dataRequestProcessPush = self.dataRequest_process(request = d_dataRequest)
-        d_dataRequestProcessPush = self.data_asyncHandler(request = d_dataRequest, key = str_key)
+
+        # self.dataRequest_process(       request = d_dataRequest,
+        #                                 key     = str_key,
+        #                                 op      = 'pushPath')
+
+        self.data_asyncHandler(         request = d_dataRequest, 
+                                        key     = str_key,
+                                        op      = 'pushPath')
+
+        self.jobOperation_blockUntil(   key     = str_key,
+                                        op      = 'pushPath',
+                                        status  = 'done'
+                                    )
+        d_jobOperation              = self.jobOperation_do( key     = str_key,
+                                                            action  = 'getInfo',
+                                                            op      = 'pushPath')
+        d_dataRequestProcessPush    = d_jobOperation['info']['pushPath']['return']
 
         # Process data at remote location
         str_serviceName = d_dataRequestProcessPush['serviceName']
@@ -704,24 +835,41 @@ class StoreHandler(BaseHTTPRequestHandler):
             'action':   'run',
             'meta':     d_metaCompute
         }
-        d_computeRequestProcess = self.computeRequest_process(request = d_computeRequest)
+
+        d_computeRequestProcess = self.computeRequest_process(  request     = d_computeRequest,
+                                                                key         = str_key,
+                                                                op          = 'compute')
 
         # wait for processing...
         time.sleep(10)
 
-        d_dataRequestProcessPull = {}
         # Pull data from remote location
-        pudb.set_trace()
+        # pudb.set_trace()
         str_localDestination                = d_metaData['localTarget']['path']
         str_localParentPath, str_localDest  = os.path.split(str_localDestination)        
         d_metaData['local']                 = {'path': str_localParentPath}
         d_metaData['transport']['compress']['name']   = str_localDest
         self.qprint('metaData = %s' % d_metaData, comms = 'status')
+
         d_dataRequest   = {
             'action':   'pullPath',
             'meta':     d_metaData
         }
-        d_dataRequestProcessPull = self.dataRequest_process(request = d_dataRequest)
+        # d_dataRequestProcessPull = self.dataRequest_process(request = d_dataRequest)
+        self.data_asyncHandler(         request = d_dataRequest, 
+                                        key     = str_key,
+                                        op      = 'pullPath')
+
+        self.jobOperation_blockUntil(   key     = str_key,
+                                        op      = 'pullPath',
+                                        status  = 'done'
+                                    )
+        d_jobOperation              = self.jobOperation_do( key     = str_key,
+                                                            action  = 'getInfo',
+                                                            op      = 'pullPath')
+        d_dataRequestProcessPull    = d_jobOperation['info']['pullPath']['return']
+
+
         shutil.move(os.path.join(str_localParentPath,   str_outDirOnly), 
                     os.path.join(str_localParentPath,   str_localDest))
         
