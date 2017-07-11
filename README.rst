@@ -1,15 +1,15 @@
 ##############
-pfcon  v0.99.1
+pfcon  v0.99.2
 ##############
 
-.. image:: https://badge.fury.io/py/pman.svg
-    :target: https://badge.fury.io/py/pman
+.. image:: https://badge.fury.io/py/pfcon.svg
+    :target: https://badge.fury.io/py/pfcon
 
-.. image:: https://travis-ci.org/FNNDSC/pman.svg?branch=master
-    :target: https://travis-ci.org/FNNDSC/pman
+.. image:: https://travis-ci.org/FNNDSC/pfcon.svg?branch=master
+    :target: https://travis-ci.org/FNNDSC/pfcon
 
 .. image:: https://img.shields.io/badge/python-3.5%2B-blue.svg
-    :target: https://badge.fury.io/py/pman
+    :target: https://badge.fury.io/py/pfcon
 
 .. contents:: Table of Contents
 
@@ -17,38 +17,18 @@ pfcon  v0.99.1
 Overview
 ********
 
-This repository provides several python scripts that can be used as either standalone executables or as modules in python code. The common theme of this respository is *process* (and *file*) **management**. The following scripts/modules are provided:
+This repository provides ``pfcon`` -- a controlling service that speaks to remote ``pman`` and ``pfioh`` services.
 
-- ``pman``: a *process* manager;
-- ``pfioh``: a *file* IO manager;
-- ``purl``: a tool to transfer data using HTTP (similar to ``curl``);
-- ``crunner``: a low-level encapsulator that runs commands (and is used by ``pman``).
+pfcon
+=====
 
-pman
-====
+Most simply, ``pfcon`` pushes local data to a remote location (by talking to a remote ``pfioh`` service), runs some process on this data in the remote space using ``pman``, and then copies the resultant data back to a local target space.
 
-Most simply, ``pman`` manages processes, i.e. programs or applications that are run by an underlying system. Typically, these processes are command line applications (i.e. have no GUI) and usually do not interact really with a user at all. The primary purpose of ``pman`` is to provide other software agents the ability to execute processes via ``http``. In addition, ``pman`` keeps a record of the current and historical state of processes that it has executed and is thus able to respond to queries about the processes. Some of the queries that ``pman`` can address are
+It can be used to query and control the following (for example):
 
 - *state*: Is job <XYZ> still running?
 - *result*: What is the stdout (or stderr) from job <XYZ>?
 - *control*: Kill job <XYZ>
-
-``pman`` also maintains a persistent human-readable/friendly database-in-the-filesystem of jobs and states of jobs.
-
-pfioh
-=====
-
-While ``pman`` is a service that runs other programs (and provides information about them), ``pfioh`` is a service that pushes/pulls files and directories between different locations.
-
-purl
-====
-
-Since both ``pman`` and ``pfioh`` are services that listen for messages transported via ``http`` , a companion client application called ``purl`` is provided that can be used to speak to both ``pman`` and ``pfioh``.
-
-crunner
-=======
-
-``crunner`` is the actual "shim" or "wrapper" around an underlying system process. Most users will not need nor want necessarily to use ``crunner`` directly, although in many respects ``pman`` is a thin layer above ``crunner``.
 
 ************
 Installation
@@ -118,52 +98,43 @@ Now, install ``pman`` and friends using ``pip``
 
    apt update && \
    apt install -y libssl-dev libcurl4-openssl-dev librtmp-dev && \
-   pip install pman
+   pip install pfcon
    
 **If you do the above, remember to** ``commit`` **your changes to the docker image otherwise they'll be lost when you remove the dock instance!**
 
 .. code-block:: bash
 
-  docker commit <container-ID> local/ubuntu-python3-pman
+  docker commit <container-ID> local/ubuntu-python3-pfcon
   
  where ``<container-ID>`` is the ID of the above container.
   
 
-Using the ``fnndsc/pman`` dock
-==============================
+Using the ``fnndsc/pfcon`` dock
+===============================
 
-The easiest option however, is to just use the ``fnndsc/pman`` dock.
+The easiest option however, is to just use the ``fnndsc/pfcon`` dock.
 
 .. code-block:: bash
 
-    docker pull fnndsc/pman
+    docker pull fnndsc/pfcon
     
 and then run
 
 .. code-block:: bash
 
-    docker run --name pman -v /home:/Users --rm -ti fnndsc/pman pman --rawmode 1 --http --port 5010 --listeners 12
+    docker run --name pfcon -v /home:/Users --rm -ti fnndsc/pfcon --forever --httpResponse
 
 *****
 Usage
 *****
 
-For usage of the individual components, ``pman``, ``pfioh``, and ``purl``, consult the relevant wiki pages.
+For usage of  ``pfcon``, consult the relevant wiki pages.
 
-``pman`` usage
+``pfcon`` usage
 ===============
 
-For ``pman`` detailed information, see the `pman wiki page <https://github.com/FNNDSC/pman/wiki/pman-overview>`_.
+For ``pfcon`` detailed information, see the `pfcon wiki page <https://github.com/FNNDSC/pfcon/wiki/pfcon-overview>`_.
 
-``pfioh`` usage
-===============
-
-For ``pfioh`` detailed information, see the `pfioh wiki page <https://github.com/FNNDSC/pman/wiki/pfioh-overview>`_.
-
-``purl`` usage
-==============
-
-For ``purl`` detailed information, see the `purl wiki page <https://github.com/FNNDSC/pman/wiki/purl-overview>`_.
 
 
 
