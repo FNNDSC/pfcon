@@ -19,7 +19,7 @@ MAINTAINER fnndsc "dev@babymri.org"
 
 RUN apt-get update \
   && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils \
-  && pip3 install pfurl==1.2.0
+  && pip3 install pfurl==1.2.7
   && pip3 install pfcon==0.99.1
 
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
