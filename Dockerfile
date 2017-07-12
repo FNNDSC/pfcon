@@ -25,3 +25,5 @@ RUN apt-get update \
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
 RUN chmod 777 /dock && chmod 777 /dock/docker-entrypoint.py
 ENTRYPOINT ["/dock/docker-entrypoint.py"]
+EXPOSE 5005
+
