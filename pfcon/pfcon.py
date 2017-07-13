@@ -325,7 +325,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         # The return from this method
         d_return        = {}
         str_metaHeader  = 'meta'
-        str_key         = ''
+        str_key         = 'none'
         str_op          = ''
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
