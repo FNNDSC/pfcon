@@ -34,6 +34,10 @@ from   .C_snode         import *
 G_b_httpResponse            = False
 
 Gd_internalvar  = {
+    'self': {
+        'name':         'pfcon',
+        'version':      'undefined',
+    },
 
     'jobstatus': {
         'purpose':  'this structure keeps track of job status: pathPush/pull and compute.',
@@ -55,6 +59,65 @@ Gd_internalvar  = {
     },
 
     'service':  {
+        'chris-docker-dev': {
+            'data': {
+                'addr':         '172.17.0.5:5055',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined',
+
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+
+            },
+            'compute': {
+                'addr':         '172.17.0.2',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined'
+            }
+        },
+        
+        'moc': {
+            'data': {
+                'addr':         'pfioh-radiology.apps.osh.massopen.cloud',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined',
+
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+
+            },
+            'compute': {
+                'addr':         'pman-radiology.apps.osh.massopen.cloud',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined'
+            }
+        },
         'gondwanaland': {
             'data': {
                 'addr':         '192.168.1.189:5055',
@@ -475,6 +538,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return:
         """
+        global Gd_internalvar
 
         self.qprint("hello_process()", comms = 'status')
         b_status            = False
@@ -487,6 +551,8 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_meta  = d_request['meta']
         if 'askAbout' in d_meta.keys():
             str_askAbout    = d_meta['askAbout']
+            d_ret['name']       = Gd_internalvar['self']['name']
+            d_ret['version']    = Gd_internalvar['self']['version']
             if str_askAbout == 'timestamp':
                 str_timeStamp   = datetime.datetime.today().strftime('%Y%m%d%H%M%S.%f')
                 d_ret['timestamp']              = {}
@@ -504,6 +570,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_ret['sysinfo']['loadavg']     = os.getloadavg()
                 d_ret['sysinfo']['cpu_percent'] = psutil.cpu_percent()
                 d_ret['sysinfo']['hostname']    = socket.gethostname()
+                d_ret['sysinfo']['inet']        = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
                 b_status                        = True
             if str_askAbout == 'echoBack':
                 d_ret['echoBack']               = {}
@@ -929,6 +996,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_shareDir    = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['shareDir']
         str_outDirPath  = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['outgoingPath']
         str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
+        # pudb.set_trace()
         d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
         self.qprint('metaCompute = %s' % d_metaCompute, comms = 'status')
         d_computeRequest   = {
@@ -939,7 +1007,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_computeRequestProcess = self.computeRequest_process(  request     = d_computeRequest,
                                                                 key         = str_key,
                                                                 op          = 'compute')
-        time.sleep(5)
+        time.sleep(10)
         self.jobOperation_blockUntil(   request = d_computeRequest,
                                         key     = str_key,
                                         op      = 'compute',
@@ -1149,30 +1217,37 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         self.LC             = 40
         self.RC             = 40
         self.args           = None
-        self.str_desc       = 'pfcon\n\n'
+        self.str_desc       = 'pfcon'
+        self.str_name       = self.str_desc
+        self.str_version    = ''
 
         self.dp             = debug(verbosity=0, level=-1)
 
-        Gd_tree.initFromDict(Gd_internalvar)
 
     def setup(self, **kwargs):
         global G_b_httpResponse
         global Gd_tree
 
         for k,v in kwargs.items():
-            if k == 'args': self.args       = v
-            if k == 'desc': self.str_desc   = v
+            if k == 'args': self.args           = v
+            if k == 'desc': self.str_desc       = v
+            if k == 'ver':  self.str_version    = v
 
         G_b_httpResponse = self.args['b_httpResponse']
         print(self.str_desc)
+
+        Gd_internalvar['self']['name']                  = self.str_name
+        Gd_internalvar['self']['version']               = self.str_version
 
         self.col2_print("Listening on address:",    self.args['ip'])
         self.col2_print("Listening on port:",       self.args['port'])
         self.col2_print("Server listen forever:",   self.args['b_forever'])
         self.col2_print("Return HTTP responses:",   G_b_httpResponse)
 
+        Gd_tree.initFromDict(Gd_internalvar)
         print(Colors.YELLOW + "\n\t\tInternal data tree:")
         print(C_snode.str_blockIndent(str(Gd_tree), 3, 8))
 
         print(Colors.LIGHT_GREEN + "\n\n\tWaiting for incoming data..." + Colors.NO_COLOUR)
+
 
