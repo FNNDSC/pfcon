@@ -31,7 +31,7 @@ import  pudb
 from    pfcon._colors             import Colors
 
 str_defIP = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-str_version = "1.0.2"
+str_version = "1.0.3"
 str_desc = Colors.CYAN + """
 
         __                
@@ -140,10 +140,10 @@ if args.b_version:
 
 # pudb.set_trace()
 server          = pfcon.ThreadedHTTPServer((args.ip, args.port), pfcon.StoreHandler)
-server.setup(args = vars(args), desc = str_desc)
+server.setup(args = vars(args), desc = str_desc, ver = str_version)
 
 if args.b_test:
-    handler     = pfioh.StoreHandler(test = True)
+    handler     = pfcon.StoreHandler(test = True)
     handler.do_POST(
         d_msg = {
             "action": "hello",
