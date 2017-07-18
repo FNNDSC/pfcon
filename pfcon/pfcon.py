@@ -1007,13 +1007,12 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_computeRequestProcess = self.computeRequest_process(  request     = d_computeRequest,
                                                                 key         = str_key,
                                                                 op          = 'compute')
-        time.sleep(10)
-        self.jobOperation_blockUntil(   request = d_computeRequest,
-                                        key     = str_key,
-                                        op      = 'compute',
-                                        status  = 'done')                                                                
         # wait for processing...
-        # time.sleep(10)
+        time.sleep(10)
+        # self.jobOperation_blockUntil(   request = d_computeRequest,
+        #                                 key     = str_key,
+        #                                 op      = 'compute',
+        #                                 status  = 'done')                                                                
 
         # Pull data from remote location
         # pudb.set_trace()
