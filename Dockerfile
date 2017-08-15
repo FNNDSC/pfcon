@@ -20,9 +20,9 @@ MAINTAINER fnndsc "dev@babymri.org"
 RUN apt-get update \
   && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils \
   && apt-get install python3-webob \
-  && pip3 install pfurl==1.2.7 \
+  && pip3 install pfurl==1.2.8 \
   && pip3 install webob \
-  && pip3 install pfcon==1.0.5
+  && pip3 install pfcon==1.0.6
 
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
 RUN chmod 777 /dock && chmod 777 /dock/docker-entrypoint.py
