@@ -13,6 +13,7 @@ import  ast
 import  shutil
 import  datetime
 import  time
+import  inspect
 
 import  threading
 import  platform
@@ -178,7 +179,7 @@ Gd_internalvar  = {
         },
         'megalodon': {
             'data': {
-                'addr':         '10.23.131.183:5055',
+                'addr':         '10.23.131.204:5055',
                 'baseURLpath':  '/api/v1/cmd/',
                 'status':       'undefined',
 
@@ -199,11 +200,39 @@ Gd_internalvar  = {
                 }
             },
             'compute': {
-                'addr':         '10.23.131.183:5010',
+                'addr':         '10.23.131.204:5010',
                 'baseURLpath':  '/api/v1/cmd/',
                 'status':       'undefined'
             }
-        }
+        },
+        'localhost': {
+            'data': {
+                'addr':         '127.0.0.1:5055',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined',
+
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+            },
+            'compute': {
+                'addr':         '127.0.0.1:5010',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined'
+            }
+        }        
     }
 }
 
@@ -218,6 +247,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         """
         b_test  = False
+        self.__name__ = 'StoreHandler'
 
         for k,v in kwargs.items():
             if k == 'test': b_test  = True
@@ -233,12 +263,14 @@ class StoreHandler(BaseHTTPRequestHandler):
         for k,v in kwargs.items():
             if k == 'comms':    str_comms  = v
 
+        str_caller  = inspect.stack()[1][3]
+
         if not StoreHandler.b_quiet:
             if str_comms == 'status':   print(Colors.PURPLE,    end="")
             if str_comms == 'error':    print(Colors.RED,       end="")
             if str_comms == "tx":       print(Colors.YELLOW + "<----")
             if str_comms == "rx":       print(Colors.GREEN  + "---->")
-            print('%s' % datetime.datetime.now() + " | ",       end="")
+            print('%s' % datetime.datetime.now() + " | "  + self.__name__ + "." + str_caller + '() | ', end="")
             print(msg)
             if str_comms == "tx":       print(Colors.YELLOW + "<----")
             if str_comms == "rx":       print(Colors.GREEN  + "---->")
@@ -836,7 +868,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         }
 
         """
-        self.qprint("key_deference()", comms = 'status')
+        self.qprint("key_dereference()", comms = 'status')
         
         b_status    = False
         d_request   = {}
@@ -854,7 +886,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 if str_storeKey in d_request[str_storeMeta].keys():
                     str_key     = d_request[str_storeMeta][str_storeKey]
                     b_status    = True
-                    self.qprint("key = %s" % str_key)
+                    self.qprint("key = %s" % str_key, comms = 'status')
         return {
             'status':   b_status,
             'key':      str_key
@@ -1009,10 +1041,10 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                                 op          = 'compute')
         # wait for processing...
         time.sleep(10)
-        # self.jobOperation_blockUntil(   request = d_computeRequest,
-        #                                 key     = str_key,
-        #                                 op      = 'compute',
-        #                                 status  = 'done')                                                                
+        self.jobOperation_blockUntil(   request = d_computeRequest,
+                                        key     = str_key,
+                                        op      = 'compute',
+                                        status  = 'done')                                                                
 
         # Pull data from remote location
         # pudb.set_trace()
