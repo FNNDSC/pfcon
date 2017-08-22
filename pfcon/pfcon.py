@@ -270,7 +270,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             if str_comms == 'error':    print(Colors.RED,       end="")
             if str_comms == "tx":       print(Colors.YELLOW + "<----")
             if str_comms == "rx":       print(Colors.GREEN  + "---->")
-            print('%s' % datetime.datetime.now() + " | "  + self.__name__ + "." + str_caller + '() | ', end="")
+            print('%s' % datetime.datetime.now() + " | "  + os.path.basename(__file__) + ':' + self.__name__ + "." + str_caller + '() | ', end="")
             print(msg)
             if str_comms == "tx":       print(Colors.YELLOW + "<----")
             if str_comms == "rx":       print(Colors.GREEN  + "---->")
@@ -1052,6 +1052,8 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_localParentPath, str_localDest  = os.path.split(str_localDestination)        
         # d_metaData['local']                 = {'path': str_localParentPath}
         d_metaData['local']                 = {'path': str_localDestination}
+        if 'createDir' in d_metaData['localTarget']:
+            d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
         d_metaData['transport']['compress']['name']   = str_localDest
         self.qprint('metaData = %s' % d_metaData, comms = 'status')
 
