@@ -39,7 +39,7 @@ RUN apt-get update \
   && apt-get install python3-webob \
   && pip3 install pfurl==1.3.0 \
   && pip3 install webob \
-  && pip3 install pfcon==1.1.0
+  && pip3 install pfcon==1.1.1
 
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
 RUN chmod 777 /dock                                                   \
