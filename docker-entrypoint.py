@@ -29,7 +29,8 @@ def pfcon_do(args, unknown):
 
     str_otherArgs   = ' '.join(unknown)
 
-    str_CMD = "/usr/local/pfcon/bin/pfcon %s" % (str_otherArgs)
+    # str_CMD = "/usr/local/pfcon/bin/pfcon %s" % (str_otherArgs)
+    str_CMD = "/usr/local/bin/pfcon %s" % (str_otherArgs)
     return str_CMD
 
 
