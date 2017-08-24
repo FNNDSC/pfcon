@@ -205,6 +205,34 @@ Gd_internalvar  = {
                 'status':       'undefined'
             }
         },
+        'host': {
+            'data': {
+                'addr':         '%HOST_IP:5055',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined',
+
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+            },
+            'compute': {
+                'addr':         '%HOST_IP:5010',
+                'baseURLpath':  '/api/v1/cmd/',
+                'status':       'undefined'
+            }
+        },
         'localhost': {
             'data': {
                 'addr':         '127.0.0.1:5055',
@@ -1256,10 +1284,35 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         self.dp             = debug(verbosity=0, level=-1)
 
+    def leaf_process(self, **kwargs):
+        """
+        Process the global Gd_tree and perform possible env substitutions.
+        """
+        global Gd_tree
+        str_path    = ''
+        str_target  = ''
+        str_newVal  = ''
+
+        for k,v in kwargs.items():
+            if k == 'where':    str_path    = v
+            if k == 'replace':  str_target  = v
+            if k == 'newVal':   str_newVal  = v
+
+        str_parent, str_file    = os.path.split(str_path)
+        str_pwd                 = Gd_tree.cwd()
+        if Gd_tree.cd(str_parent)['status']:
+            str_origVal     = Gd_tree.cat(str_file)
+            str_replacement = str_origVal.replace(str_target, str_newVal)
+            Gd_tree.touch(str_path, str_replacement)
+        Gd_tree.cd(str_pwd)
 
     def setup(self, **kwargs):
         global G_b_httpResponse
         global Gd_tree
+        str_defIP = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
+
+        if 'HOST_IP' in os.environ:
+            str_defIP   = os.environ['HOST_IP']
 
         for k,v in kwargs.items():
             if k == 'args': self.args           = v
@@ -1278,6 +1331,12 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         self.col2_print("Return HTTP responses:",   G_b_httpResponse)
 
         Gd_tree.initFromDict(Gd_internalvar)
+
+        for location in ['/service/host/data/addr', '/service/host/compute/addr']:
+            self.leaf_process(  where   = location, 
+                                replace = '%HOST_IP', 
+                                newVal  = str_defIP)
+
         print(Colors.YELLOW + "\n\t\tInternal data tree:")
         print(C_snode.str_blockIndent(str(Gd_tree), 3, 8))
 
