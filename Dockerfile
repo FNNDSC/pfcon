@@ -50,4 +50,4 @@ ENTRYPOINT ["/dock/docker-entrypoint.py"]
 EXPOSE 5055
 
 # Start as user $UID
-USER $UID
+# USER $UID
