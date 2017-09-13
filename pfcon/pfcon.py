@@ -14,6 +14,7 @@ import  shutil
 import  datetime
 import  time
 import  inspect
+import  pprint
 
 import  threading
 import  platform
@@ -274,8 +275,9 @@ class StoreHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         """
         """
-        b_test  = False
-        self.__name__ = 'StoreHandler'
+        b_test          = False
+        self.__name__   = 'StoreHandler'
+        self.pp         = pprint.PrettyPrinter(indent=4)
 
         for k,v in kwargs.items():
             if k == 'test': b_test  = True
@@ -440,6 +442,8 @@ class StoreHandler(BaseHTTPRequestHandler):
         b_status    = False
 
         self.qprint("dataRequest_process()", comms = 'status')
+
+        # pudb.set_trace()
 
         d_request       = {}
         d_meta          = {}
@@ -749,7 +753,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         self.qprint("Calling remote compute service...", comms = 'rx')
         d_computeStatus                         = computeStatus()
         d_computeResponse                       = json.loads(d_computeStatus)
-        self.qprint("d_computeResponse = %s" % d_computeResponse, comms = 'status')
+        self.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'status')
         return d_computeResponse
 
     """
@@ -822,7 +826,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             self.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
         self.qprint('return from %s' % str_op, comms = 'status')
-        self.qprint(d_jobReturn)
+        self.qprint(self.pp.pformat(d_jobReturn).strip(), comms = 'status')
         return d_jobReturn
 
     def data_asyncHandler(self, *args, **kwargs):
@@ -947,10 +951,12 @@ class StoreHandler(BaseHTTPRequestHandler):
                         "path":         "/home/rudolph/Pictures"
                 },
                 "localTarget": {
-                        "path":         "/home/tmp/Pictures"
+                        "path":         "/home/tmp/Pictures",
+                        "createDir":    true
                 },
                 "specialHandling": {
-                        "op":           "dsplugin"
+                        "op":           "dsplugin",
+                        "cleanUp":      true
                 },
                 "transport": {
                     "mechanism":    "compress",
@@ -1069,6 +1075,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                                 op          = 'compute')
         # wait for processing...
         time.sleep(10)
+        # pudb.set_trace()
         self.jobOperation_blockUntil(   request = d_computeRequest,
                                         key     = str_key,
                                         op      = 'compute',
