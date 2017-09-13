@@ -1201,7 +1201,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_data              = json.loads(data.decode())
             d_msg               = d_data['payload']
 
-        self.qprint('d_msg = %s' % d_msg, comms = 'status')
+        self.qprint('d_msg = %s' % self.pp.pformat(d_msg).strip(), comms = 'status')
 
         if 'action' in d_msg:
             self.qprint("verb: %s detected." % d_msg['action'], comms = 'status')
@@ -1218,7 +1218,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
             if not b_threaded:
                 d_done      = pf_method(request = d_msg)
-                self.qprint(d_done, comms = 'tx')
+                self.qprint(self.pp.pformat(d_done).strip(), comms = 'tx')
                 d_ret       = d_done
             else:
                 t_process   = threading.Thread( target  = pf_method,
