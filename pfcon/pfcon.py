@@ -956,7 +956,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 },
                 "specialHandling": {
                         "op":           "dsplugin",
-                        "cleanUp":      true
+                        "cleanup":      true
                 },
                 "transport": {
                     "mechanism":    "compress",
@@ -1032,7 +1032,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         # Push data to remote location        
         #
         d_metaData['local'] = d_metaData['localSource']
-        self.qprint('metaData = %s' % d_metaData, comms = 'status')
+        self.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
         d_dataRequest   = {
             'action':   'pushPath',
             'meta':     d_metaData
@@ -1064,7 +1064,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
         # pudb.set_trace()
         d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
-        self.qprint('metaCompute = %s' % d_metaCompute, comms = 'status')
+        self.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
         d_computeRequest   = {
             'action':   'run',
             'meta':     d_metaCompute
@@ -1090,7 +1090,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         if 'createDir' in d_metaData['localTarget']:
             d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
         d_metaData['transport']['compress']['name']   = str_localDest
-        self.qprint('metaData = %s' % d_metaData, comms = 'status')
+        self.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
 
         d_dataRequest   = {
             'action':   'pullPath',
