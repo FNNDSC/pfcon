@@ -823,7 +823,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                             b_jobStatusCheck
                     self.qprint('compute job status check = %d' % b_jobStatusCheck)
                 d_jobReturn         = d_jobOperation['d_ret']
-            self.qprint('blocking on %s' % str_op, comms = 'status')
+            # self.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
         self.qprint('return from %s' % str_op, comms = 'status')
         self.qprint(self.pp.pformat(d_jobReturn).strip(), comms = 'status')
