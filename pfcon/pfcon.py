@@ -208,7 +208,7 @@ Gd_internalvar  = {
         },
         'host': {
             'data': {
-                'addr':         '%HOST_IP:5055',
+                'addr':         '%PFIOH_IP:5055',
                 'baseURLpath':  '/api/v1/cmd/',
                 'status':       'undefined',
 
@@ -229,7 +229,7 @@ Gd_internalvar  = {
                 }
             },
             'compute': {
-                'addr':         '%HOST_IP:5010',
+                'addr':         '%PMAN_IP:5010',
                 'baseURLpath':  '/api/v1/cmd/',
                 'status':       'undefined'
             }
@@ -1319,7 +1319,14 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         str_defIP = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
         if 'HOST_IP' in os.environ:
-            str_defIP   = os.environ['HOST_IP']
+            str_defIP       = os.environ['HOST_IP']
+            str_defIPpman   = os.environ['HOST_IP']
+            str_defIPpfioh  = os.environ['HOST_IP']
+
+        if 'PMAN_PORT_5010_TCP_ADDR' in os.environ:
+            str_defIPpman   = os.environ['PMAN_PORT_5010_TCP_ADDR']
+        if 'PFIOH_PORT_5055_TCP_ADDR' in os.environ:
+            str_defIPpfioh  = os.environ['PFIOH_PORT_5055_TCP_ADDR']
 
         for k,v in kwargs.items():
             if k == 'args': self.args           = v
@@ -1339,10 +1346,12 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         Gd_tree.initFromDict(Gd_internalvar)
 
-        for location in ['/service/host/data/addr', '/service/host/compute/addr']:
-            self.leaf_process(  where   = location, 
-                                replace = '%HOST_IP', 
-                                newVal  = str_defIP)
+        self.leaf_process(  where   = '/service/host/data/addr', 
+                            replace = '%PFIOH_IP', 
+                            newVal  = str_defIPpfioh)
+        self.leaf_process(  where   = '/service/host/compute/addr', 
+                            replace = '%PMAN_IP', 
+                            newVal  = str_defIPpman)
 
         print(Colors.YELLOW + "\n\t\tInternal data tree:")
         print(C_snode.str_blockIndent(str(Gd_tree), 3, 8))
