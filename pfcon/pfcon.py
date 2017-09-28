@@ -683,11 +683,11 @@ class StoreHandler(BaseHTTPRequestHandler):
                 T.cd(str_keyID)
             if T.exists('info'):
                 d_info  = T.cat('info')
+                # self.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
                 if not d_info['compute']['status']  or \
                    not d_info['pullPath']['status'] or \
                    not d_info['pushPath']['status']:
                     b_status = False
-                # self.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
             if str_op != 'none':
                 if str_op == 'all':
                     l_opKey = ['pushPath', 'compute', 'pullPath']
@@ -757,7 +757,8 @@ class StoreHandler(BaseHTTPRequestHandler):
         self.qprint("Calling remote compute service...", comms = 'rx')
         d_computeStatus                         = computeStatus()
         d_computeResponse                       = json.loads(d_computeStatus)
-        self.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'status')
+        d_computeResponse['d_ret']['status']    = True 
+        # self.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'status')
         return d_computeResponse
 
     """
@@ -830,7 +831,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             # self.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
         self.qprint('return from %s' % str_op, comms = 'status')
-        self.qprint(self.pp.pformat(d_jobReturn).strip(), comms = 'status')
+        self.qprint('d_jobReturn = \n%s' % self.pp.pformat(d_jobReturn).strip(), comms = 'status')
         return d_jobReturn
 
     def data_asyncHandler(self, *args, **kwargs):
@@ -1097,6 +1098,8 @@ class StoreHandler(BaseHTTPRequestHandler):
                                             key     = str_key,
                                             op      = 'compute',
                                             status  = 'done')
+            self.qprint('compute d_jobBlock = %s' % self.pp.pformat(d_jobBlock).strip(), comms = 'status')
+            b_status                    = d_jobBlock['status']
             if not b_status:
                 self.jobOperation_do(
                                             action  = 'set',
@@ -1104,7 +1107,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                             op      = 'compute',
                                             status  = False
                 )
-            if d_jobBlock['status']:
+            if b_status:
                 #######
                 # Pull data from remote location
                 #######                                                                
