@@ -37,9 +37,9 @@ RUN apt-get update \
   && adduser localuser sudo                                           \
   && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils vim net-tools inetutils-ping \
   && apt-get install python3-webob \
-  && pip3 install pfurl==1.3.4 \
+  && pip3 install pfurl==1.3.5 \
   && pip3 install webob \
-  && pip3 install pfcon==1.2.7
+  && pip3 install pfcon==1.3.0
 
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
 RUN chmod 777 /dock                                                   \
