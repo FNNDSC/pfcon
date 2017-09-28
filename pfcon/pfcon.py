@@ -476,8 +476,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             jsonwrapper                 = ''
         )
 
-        pudb.set_trace()
-
         self.qprint("Calling remote data service...",   comms = 'rx')
         d_dataComs                              = dataComs()
         d_dataResponse                          = json.loads(d_dataComs)
