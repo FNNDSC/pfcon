@@ -476,7 +476,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             jsonwrapper                 = ''
         )
 
-        # pudb.set_trace()
+        pudb.set_trace()
 
         self.qprint("Calling remote data service...",   comms = 'rx')
         d_dataComs                              = dataComs()
@@ -685,6 +685,11 @@ class StoreHandler(BaseHTTPRequestHandler):
                 T.cd(str_keyID)
             if T.exists('info'):
                 d_info  = T.cat('info')
+                if not d_info['compute']['status']  or \
+                   not d_info['pullPath']['status'] or \
+                   not d_info['pushPath']['status']:
+                    b_status = False
+                # self.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
             if str_op != 'none':
                 if str_op == 'all':
                     l_opKey = ['pushPath', 'compute', 'pullPath']
@@ -698,6 +703,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                             d_info[k]['return'] = {}
                             d_info[k]['status'] = ''
                         d_info[k]['status'] = str_status
+                        b_status            = str_status
                         if b_jobReturn:
                             d_info[k]['return'] = d_jobReturn
                     T.touch('info', d_info)
@@ -1002,6 +1008,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
 
         self.qprint("coordinate_process()", comms = 'status')
+        b_status                    = False
         d_request                   = {}
         d_jobOperation              = {}
         d_dataRequest               = {}
@@ -1028,9 +1035,9 @@ class StoreHandler(BaseHTTPRequestHandler):
                                 op          = 'all',
                                 status      = 'init'
                             )
-        #
+        #######
         # Push data to remote location        
-        #
+        #######
         d_metaData['local'] = d_metaData['localSource']
         self.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
         d_dataRequest   = {
@@ -1038,80 +1045,109 @@ class StoreHandler(BaseHTTPRequestHandler):
             'meta':     d_metaData
         }
 
-        # self.dataRequest_process(       request = d_dataRequest,
-        #                                 key     = str_key,
-        #                                 op      = 'pushPath')
-
         self.data_asyncHandler(         request = d_dataRequest, 
                                         key     = str_key,
                                         op      = 'pushPath')
 
-        self.jobOperation_blockUntil(   key     = str_key,
+        d_jobBlock                  = self.jobOperation_blockUntil(   
+                                        key     = str_key,
                                         op      = 'pushPath',
                                         status  = 'done'
                                     )
-        d_jobOperation              = self.jobOperation_do( key     = str_key,
-                                                            action  = 'getInfo',
-                                                            op      = 'pushPath')
-        d_dataRequestProcessPush    = d_jobOperation['info']['pushPath']['return']
+        b_status                    = d_jobBlock['status']
 
-        #
-        # Process data at remote location
-        #
-        str_serviceName = d_dataRequestProcessPush['serviceName']
-        str_shareDir    = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['shareDir']
-        str_outDirPath  = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['outgoingPath']
-        str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
-        # pudb.set_trace()
-        d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
-        self.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
-        d_computeRequest   = {
-            'action':   'run',
-            'meta':     d_metaCompute
-        }
-
-        d_computeRequestProcess = self.computeRequest_process(  request     = d_computeRequest,
-                                                                key         = str_key,
-                                                                op          = 'compute')
-        # wait for processing...
-        time.sleep(10)
-        # pudb.set_trace()
-        self.jobOperation_blockUntil(   request = d_computeRequest,
+        if not b_status:
+            self.jobOperation_do(
+                                        action  = 'set',
                                         key     = str_key,
-                                        op      = 'compute',
-                                        status  = 'done')                                                                
+                                        op      = 'pushPath',
+                                        status  = False
+            )
 
-        # Pull data from remote location
-        # pudb.set_trace()
-        str_localDestination                = d_metaData['localTarget']['path']
-        str_localParentPath, str_localDest  = os.path.split(str_localDestination)        
-        # d_metaData['local']                 = {'path': str_localParentPath}
-        d_metaData['local']                 = {'path': str_localDestination}
-        if 'createDir' in d_metaData['localTarget']:
-            d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
-        d_metaData['transport']['compress']['name']   = str_localDest
-        self.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
-
-        d_dataRequest   = {
-            'action':   'pullPath',
-            'meta':     d_metaData
-        }
-        # d_dataRequestProcessPull = self.dataRequest_process(request = d_dataRequest)
-        self.data_asyncHandler(         request = d_dataRequest, 
+        if b_status:
+            d_jobOperation          = self.jobOperation_do( 
                                         key     = str_key,
-                                        op      = 'pullPath')
+                                        action  = 'getInfo',
+                                        op      = 'pushPath')
+            self.qprint('d_jobOperation = %s' % self.pp.pformat(d_jobOperation).strip(), comms = 'status')
+                                            
+            d_dataRequestProcessPush    = d_jobOperation['info']['pushPath']['return']
 
-        self.jobOperation_blockUntil(   key     = str_key,
-                                        op      = 'pullPath',
-                                        status  = 'done'
-                                    )
-        d_jobOperation              = self.jobOperation_do( key     = str_key,
-                                                            action  = 'getInfo',
-                                                            op      = 'pullPath')
-        d_dataRequestProcessPull    = d_jobOperation['info']['pullPath']['return']
+            #######
+            # Process data at remote location
+            #######
+            str_serviceName = d_dataRequestProcessPush['serviceName']
+            str_shareDir    = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['shareDir']
+            str_outDirPath  = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['outgoingPath']
+            str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
+            # pudb.set_trace()
+            d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
+            self.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
+            d_computeRequest   = {
+                'action':   'run',
+                'meta':     d_metaCompute
+            }
+
+            d_computeRequestProcess = self.computeRequest_process(  request     = d_computeRequest,
+                                                                    key         = str_key,
+                                                                    op          = 'compute')
+            # wait for processing...
+            time.sleep(10)
+            # pudb.set_trace()
+            d_jobBlock                  = self.jobOperation_blockUntil(   
+                                            request = d_computeRequest,
+                                            key     = str_key,
+                                            op      = 'compute',
+                                            status  = 'done')
+            if not b_status:
+                self.jobOperation_do(
+                                            action  = 'set',
+                                            key     = str_key,
+                                            op      = 'compute',
+                                            status  = False
+                )
+            if d_jobBlock['status']:
+                #######
+                # Pull data from remote location
+                #######                                                                
+                # pudb.set_trace()
+                str_localDestination                = d_metaData['localTarget']['path']
+                str_localParentPath, str_localDest  = os.path.split(str_localDestination)        
+                d_metaData['local']                 = {'path': str_localDestination}
+                if 'createDir' in d_metaData['localTarget']:
+                    d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
+                d_metaData['transport']['compress']['name']   = str_localDest
+                self.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
+
+                d_dataRequest   = {
+                    'action':   'pullPath',
+                    'meta':     d_metaData
+                }
+                self.data_asyncHandler(         request = d_dataRequest, 
+                                                key     = str_key,
+                                                op      = 'pullPath')
+
+                d_jobBlock                  = self.jobOperation_blockUntil(   
+                                                key     = str_key,
+                                                op      = 'pullPath',
+                                                status  = 'done'
+                                            )
+                b_status                    = d_jobBlock['status']
+                if not b_status:
+                    self.jobOperation_do(
+                                                action  = 'set',
+                                                key     = str_key,
+                                                op      = 'pullPath',
+                                                status  = False
+                    )
+                if b_status:
+                    d_jobOperation              = self.jobOperation_do( key     = str_key,
+                                                                        action  = 'getInfo',
+                                                                        op      = 'pullPath')
+                    d_dataRequestProcessPull    = d_jobOperation['info']['pullPath']['return']
 
         return {
-            'status':   True,
+            'status':   b_status,
             'pushData': d_dataRequestProcessPush,
             'compute':  d_computeRequest,
             'pullData': d_dataRequestProcessPull
@@ -1139,6 +1175,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_request                   = {}
         d_meta                      = {}
         d_jobOperation              = {}
+        b_status                    = False
 
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
@@ -1149,8 +1186,10 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_jobOperation      = self.jobOperation_do(     key     = str_keyID,
                                                         action  = 'getInfo',
                                                         op      = 'all')
+        self.qprint('d_status = %s' % self.pp.pformat(d_jobOperation).strip(), comms = 'status')
+
         return {
-            'status':       True,
+            'status':       d_jobOperation['status'],
             'jobOperation': d_jobOperation
         }
 
