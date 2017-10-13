@@ -37,7 +37,7 @@ RUN apt-get update \
   && adduser localuser sudo                                           \
   && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils vim net-tools inetutils-ping \
   && apt-get install python3-webob \
-  && pip3 install pfurl==1.3.6 \
+  && pip3 install pfurl==1.3.7 \
   && pip3 install webob \
   && pip3 install pfcon==1.3.2
 
