@@ -758,7 +758,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_computeStatus                         = computeStatus()
         d_computeResponse                       = json.loads(d_computeStatus)
         d_computeResponse['d_ret']['status']    = True 
-        # self.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'status')
+        self.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'tx')
         return d_computeResponse
 
     """
@@ -820,7 +820,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                                 key     = str_keyID,
                                                                 request = d_request)
                 l_remoteStatus      = list(StoreHandler.gen_dict_extract('Status', d_jobOperation))
-                self.qprint('remoteStatus = %s' % l_remoteStatus)
+                self.qprint('remoteStatus = %s' % l_remoteStatus, comms = 'tx')
                 b_jobStatusCheck    = True
                 for hit in l_remoteStatus:
                     b_jobStatusCheck    =   hit['Message']  == 'finished' and \
