@@ -24,6 +24,8 @@ import  os
 import  multiprocessing
 import  pfurl
 
+import  pfmisc
+
 import  pudb
 
 # pfcon local dependencies
@@ -275,9 +277,17 @@ class StoreHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         """
         """
-        b_test          = False
-        self.__name__   = 'StoreHandler'
-        self.pp         = pprint.PrettyPrinter(indent=4)
+        b_test                  = False
+        self.__name__           = 'StoreHandler'
+        self.b_useDebug         = False
+        self.str_debugFile      = '/tmp/pfioh-log.txt'
+        self.b_quiet            = True
+        self.dp                 = pfmisc.debug(    
+                                            verbosity   = 0,
+                                            level       = -1,
+                                            within      = self.__name__
+                                            )
+        self.pp                 = pprint.PrettyPrinter(indent=4)
 
         for k,v in kwargs.items():
             if k == 'test': b_test  = True
@@ -319,7 +329,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_msg               = {'action': d_server['action'], 'meta': d_meta}
         d_ret               = {}
-        self.qprint(self.path, comms = 'rx')
+        self.dp.qprint(self.path, comms = 'rx')
 
         return d_ret
 
@@ -441,7 +451,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         global  Gd_tree
         b_status    = False
 
-        self.qprint("dataRequest_process()", comms = 'status')
+        self.dp.qprint("dataRequest_process()", comms = 'status')
 
         # pudb.set_trace()
 
@@ -476,7 +486,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             jsonwrapper                 = ''
         )
 
-        self.qprint("Calling remote data service...",   comms = 'rx')
+        self.dp.qprint("Calling remote data service...",   comms = 'rx')
         d_dataComs                              = dataComs()
         d_dataResponse                          = json.loads(d_dataComs)
         d_ret['%s-data' % str_remoteService]    = d_dataResponse
@@ -510,7 +520,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         global  Gd_tree
         b_status    = False
 
-        self.qprint("computeRequest_process()", comms = 'status')
+        self.dp.qprint("computeRequest_process()", comms = 'status')
 
         d_request       = {}
         d_meta          = {}
@@ -544,7 +554,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             jsonwrapper                 = 'payload'
         )
 
-        self.qprint("Calling remote compute service...", comms = 'rx')
+        self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeComs                           = computeComs()
         d_computeResponse                       = json.loads(d_computeComs)
         d_ret['%s-compute' % str_remoteService] = d_computeResponse
@@ -566,7 +576,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         global Gd_tree
         b_status    = False
 
-        self.qprint("hello_process_remote()", comms = 'status')
+        self.dp.qprint("hello_process_remote()", comms = 'status')
 
         d_request   = {}
         d_ret       = {}
@@ -602,7 +612,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         global Gd_internalvar
 
-        self.qprint("hello_process()", comms = 'status')
+        self.dp.qprint("hello_process()", comms = 'status')
         b_status            = False
         d_ret               = {}
         d_request           = {}
@@ -683,7 +693,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 T.cd(str_keyID)
             if T.exists('info'):
                 d_info  = T.cat('info')
-                # self.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
+                # self.dp.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
                 if not d_info['compute']['status']  or \
                    not d_info['pullPath']['status'] or \
                    not d_info['pushPath']['status']:
@@ -754,11 +764,11 @@ class StoreHandler(BaseHTTPRequestHandler):
             jsonwrapper                 = 'payload'
         )
 
-        self.qprint("Calling remote compute service...", comms = 'rx')
+        self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeStatus                         = computeStatus()
         d_computeResponse                       = json.loads(d_computeStatus)
         d_computeResponse['d_ret']['status']    = True 
-        self.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'tx')
+        self.dp.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'tx')
         return d_computeResponse
 
     """
@@ -820,18 +830,18 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                                 key     = str_keyID,
                                                                 request = d_request)
                 l_remoteStatus      = list(StoreHandler.gen_dict_extract('Status', d_jobOperation))
-                self.qprint('remoteStatus = %s' % l_remoteStatus, comms = 'tx')
+                self.dp.qprint('remoteStatus = %s' % l_remoteStatus, comms = 'tx')
                 b_jobStatusCheck    = True
                 for hit in l_remoteStatus:
                     b_jobStatusCheck    =   hit['Message']  == 'finished' and \
                                             hit['State']    == 'complete' and \
                                             b_jobStatusCheck
-                    self.qprint('compute job status check = %d' % b_jobStatusCheck)
+                    self.dp.qprint('compute job status check = %d' % b_jobStatusCheck)
                 d_jobReturn         = d_jobOperation['d_ret']
-            # self.qprint('blocking on %s' % str_op, comms = 'status')
+            # self.dp.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
-        self.qprint('return from %s' % str_op, comms = 'status')
-        self.qprint('d_jobReturn = \n%s' % self.pp.pformat(d_jobReturn).strip(), comms = 'status')
+        self.dp.qprint('return from %s' % str_op, comms = 'status')
+        self.dp.qprint('d_jobReturn = \n%s' % self.pp.pformat(d_jobReturn).strip(), comms = 'status')
         return d_jobReturn
 
     def data_asyncHandler(self, *args, **kwargs):
@@ -905,7 +915,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         }
 
         """
-        self.qprint("key_dereference()", comms = 'status')
+        self.dp.qprint("key_dereference()", comms = 'status')
         
         b_status    = False
         d_request   = {}
@@ -913,7 +923,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
 
-        # self.qprint("d_request = %s" % d_request)
+        # self.dp.qprint("d_request = %s" % d_request)
 
         if 'meta-store' in d_request:
             d_metaStore     = d_request['meta-store']
@@ -923,7 +933,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 if str_storeKey in d_request[str_storeMeta].keys():
                     str_key     = d_request[str_storeMeta][str_storeKey]
                     b_status    = True
-                    self.qprint("key = %s" % str_key, comms = 'status')
+                    self.dp.qprint("key = %s" % str_key, comms = 'status')
         return {
             'status':   b_status,
             'key':      str_key
@@ -1006,7 +1016,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         :return:
         """
 
-        self.qprint("coordinate_process()", comms = 'status')
+        self.dp.qprint("coordinate_process()", comms = 'status')
         b_status                    = False
         d_request                   = {}
         d_jobOperation              = {}
@@ -1018,7 +1028,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
-        # self.qprint("d_request = %s" % d_request)
+        # self.dp.qprint("d_request = %s" % d_request)
 
         str_key         = self.key_dereference(request = d_request)['key']
 
@@ -1038,7 +1048,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         # Push data to remote location        
         #######
         d_metaData['local'] = d_metaData['localSource']
-        self.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
+        self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
         d_dataRequest   = {
             'action':   'pushPath',
             'meta':     d_metaData
@@ -1068,7 +1078,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                         key     = str_key,
                                         action  = 'getInfo',
                                         op      = 'pushPath')
-            self.qprint('d_jobOperation = %s' % self.pp.pformat(d_jobOperation).strip(), comms = 'status')
+            self.dp.qprint('d_jobOperation = %s' % self.pp.pformat(d_jobOperation).strip(), comms = 'status')
                                             
             d_dataRequestProcessPush    = d_jobOperation['info']['pushPath']['return']
 
@@ -1081,7 +1091,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
             # pudb.set_trace()
             d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
-            self.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
+            self.dp.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
             d_computeRequest   = {
                 'action':   'run',
                 'meta':     d_metaCompute
@@ -1098,7 +1108,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                             key     = str_key,
                                             op      = 'compute',
                                             status  = 'done')
-            self.qprint('compute d_jobBlock = %s' % self.pp.pformat(d_jobBlock).strip(), comms = 'status')
+            self.dp.qprint('compute d_jobBlock = %s' % self.pp.pformat(d_jobBlock).strip(), comms = 'status')
             b_status                    = d_jobBlock['status']
             if not b_status:
                 self.jobOperation_do(
@@ -1118,7 +1128,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 if 'createDir' in d_metaData['localTarget']:
                     d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
                 d_metaData['transport']['compress']['name']   = str_localDest
-                self.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
+                self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
 
                 d_dataRequest   = {
                     'action':   'pullPath',
@@ -1172,7 +1182,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         }'
 
         """
-        self.qprint("status_process()", comms = 'status')
+        self.dp.qprint("status_process()", comms = 'status')
         d_request                   = {}
         d_meta                      = {}
         d_jobOperation              = {}
@@ -1187,7 +1197,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_jobOperation      = self.jobOperation_do(     key     = str_keyID,
                                                         action  = 'getInfo',
                                                         op      = 'all')
-        self.qprint('d_status = %s' % self.pp.pformat(d_jobOperation).strip(), comms = 'status')
+        self.dp.qprint('d_status = %s' % self.pp.pformat(d_jobOperation).strip(), comms = 'status')
 
         return {
             'status':       d_jobOperation['status'],
@@ -1215,7 +1225,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         b_threaded  = False
 
         # Parse the form data posted
-        self.qprint(str(self.headers), comms = 'rx')
+        self.dp.qprint(str(self.headers), comms = 'rx')
 
         length              = self.headers['content-length']
         data                = self.rfile.read(int(length))
@@ -1227,26 +1237,26 @@ class StoreHandler(BaseHTTPRequestHandler):
             'formsize': sys.getsizeof(form)
         }
 
-        self.qprint('data length = %d' % len(data),   comms = 'status')
-        self.qprint('form length = %d' % len(form), comms = 'status')
+        self.dp.qprint('data length = %d' % len(data),   comms = 'status')
+        self.dp.qprint('form length = %d' % len(form), comms = 'status')
 
         if len(form):
-            self.qprint("Unpacking multi-part form message...", comms = 'status')
+            self.dp.qprint("Unpacking multi-part form message...", comms = 'status')
             for key in form:
-                self.qprint("\tUnpacking field '%s..." % key, comms = 'status')
+                self.dp.qprint("\tUnpacking field '%s..." % key, comms = 'status')
                 d_form[key]     = form.getvalue(key)
             d_msg               = json.loads((d_form['d_msg']))
         else:
-            self.qprint("Parsing JSON data...", comms = 'status')
+            self.dp.qprint("Parsing JSON data...", comms = 'status')
             d_data              = json.loads(data.decode())
             d_msg               = d_data['payload']
 
-        self.qprint('d_msg = %s' % self.pp.pformat(d_msg).strip(), comms = 'status')
+        self.dp.qprint('d_msg = %s' % self.pp.pformat(d_msg).strip(), comms = 'status')
 
         if 'action' in d_msg:
-            self.qprint("verb: %s detected." % d_msg['action'], comms = 'status')
+            self.dp.qprint("verb: %s detected." % d_msg['action'], comms = 'status')
             str_method      = '%s_process' % d_msg['action']
-            self.qprint("method to call: %s(request = d_msg) " % str_method, comms = 'status')
+            self.dp.qprint("method to call: %s(request = d_msg) " % str_method, comms = 'status')
             d_done          = {'status': False}
             try:
                 pf_method   = getattr(self, str_method)
@@ -1258,7 +1268,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
             if not b_threaded:
                 d_done      = pf_method(request = d_msg)
-                self.qprint(self.pp.pformat(d_done).strip(), comms = 'tx')
+                self.dp.qprint(self.pp.pformat(d_done).strip(), comms = 'tx')
                 d_ret       = d_done
             else:
                 t_process   = threading.Thread( target  = pf_method,
@@ -1274,16 +1284,16 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         """
         d_ctl               = d_meta['ctl']
-        self.qprint('Processing server ctl...', comms = 'status')
-        self.qprint(d_meta, comms = 'rx')
+        self.dp.qprint('Processing server ctl...', comms = 'status')
+        self.dp.qprint(d_meta, comms = 'rx')
         if 'serverCmd' in d_ctl:
             if d_ctl['serverCmd'] == 'quit':
-                self.qprint('Shutting down server', comms = 'status')
+                self.dp.qprint('Shutting down server', comms = 'status')
                 d_ret = {
                     'msg':      'Server shut down',
                     'status':   True
                 }
-                self.qprint(d_ret, comms = 'tx')
+                self.dp.qprint(d_ret, comms = 'tx')
                 self.ret_client(d_ret)
                 os._exit(0)
 
