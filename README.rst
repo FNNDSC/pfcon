@@ -1,5 +1,5 @@
 ###################
-pfcon  v1.3.13.dev0
+pfcon  v1.3.15.dev0
 ###################
 
 .. image:: https://badge.fury.io/py/pfcon.svg
