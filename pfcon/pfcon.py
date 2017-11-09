@@ -829,14 +829,22 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_jobOperation      = self.jobOperation_computeStatusQuery(
                                                                 key     = str_keyID,
                                                                 request = d_request)
-                l_remoteStatus      = list(StoreHandler.gen_dict_extract('Status', d_jobOperation))
-                self.dp.qprint('remoteStatus = %s' % l_remoteStatus, comms = 'tx')
-                b_jobStatusCheck    = True
-                for hit in l_remoteStatus:
-                    b_jobStatusCheck    =   hit['Message']  == 'finished' and \
-                                            hit['State']    == 'complete' and \
-                                            b_jobStatusCheck
-                    self.dp.qprint('compute job status check = %d' % b_jobStatusCheck)
+                # l_remoteStatus      = list(StoreHandler.gen_dict_extract('Status', d_jobOperation))
+                # self.dp.qprint('remoteStatus = %s' % l_remoteStatus, comms = 'tx')
+                # b_jobStatusCheck    = True
+                # for hit in l_remoteStatus:
+                #     b_jobStatusCheck    =   hit['Message']  == 'finished' and \
+                #                             hit['State']    == 'complete' and \
+                #                             b_jobStatusCheck
+                #     self.dp.qprint('compute job status check = %d' % b_jobStatusCheck)
+                l_status            = d_jobOperation['d_ret']['l_status']
+                lb_status           = []
+                for job in l_status:
+                    if 'finished' in job:   lb_status.append(True)
+                    else:                   lb_status.append(False)
+                b_jobStatusCheck    = lb_status[0]
+                for flag in lb_status:
+                    b_jobStatusCheck    = flag and b_jobStatusCheck
                 d_jobReturn         = d_jobOperation['d_ret']
             # self.dp.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
