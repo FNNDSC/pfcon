@@ -39,8 +39,9 @@ G_b_httpResponse            = False
 
 Gd_internalvar  = {
     'self': {
-        'name':         'pfcon',
-        'version':      'undefined',
+        'name':                 'pfcon',
+        'version':              'undefined',
+        'coordBlockSeconds':    10
     },
 
     'jobstatus': {
@@ -881,7 +882,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                     'status':   '<statusString>',
                     'return':   <d_ret>
                     }
-            }
+            }store_true
         }
 
         """
@@ -1024,6 +1025,8 @@ class StoreHandler(BaseHTTPRequestHandler):
         :return:
         """
 
+        global Gd_internalvar
+
         self.dp.qprint("coordinate_process()", comms = 'status')
         b_status                    = False
         d_request                   = {}
@@ -1033,6 +1036,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_computeRequest            = {}
         d_computeRequestProcess     = {}
         d_dataRequestProcessPull    = {}
+        coordBlockSeconds           = Gd_internalvar['self']['coordBlockSeconds']
 
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
@@ -1108,8 +1112,9 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_computeRequestProcess = self.computeRequest_process(  request     = d_computeRequest,
                                                                     key         = str_key,
                                                                     op          = 'compute')
-            # wait for processing...
-            time.sleep(10)
+            # wait 1s for processing...
+            self.dp.qprint('compute job submitted... waiting %ds for transients...' % coordBlockSeconds)
+            time.sleep(coordBlockSeconds)
             # pudb.set_trace()
             d_jobBlock                  = self.jobOperation_blockUntil(   
                                             request = d_computeRequest,
@@ -1398,6 +1403,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         Gd_internalvar['self']['name']                  = self.str_name
         Gd_internalvar['self']['version']               = self.str_version
+        Gd_internalvar['self']['coordBlockSeconds']     = int(self.args['coordBlockSeconds'])
 
         self.col2_print("Listening on address:",    self.args['ip'])
         self.col2_print("Listening on port:",       self.args['port'])
