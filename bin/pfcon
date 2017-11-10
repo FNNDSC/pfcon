@@ -130,6 +130,13 @@ parser.add_argument(
     action  = 'store_true',
     default = False
 )
+parser.add_argument(
+    '--coordBlockSeconds',
+    help    = 'the number of seconds to block internally in the coordination loop',
+    dest    = 'coordBlockSeconds',
+    action  = 'store',
+    default = 5
+)
 
 args            = parser.parse_args()
 args.port       = int(args.port)
