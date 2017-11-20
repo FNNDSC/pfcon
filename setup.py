@@ -12,7 +12,7 @@ def readme():
 
 setup(
       name             =   'pfcon',
-      version          =   '1.5.3.dev0',
+      version          =   '1.5.5.dev0',
       description      =   '(Python) Process and File Controller',
       long_description =   readme(),
       author           =   'Rudolph Pienaar',
