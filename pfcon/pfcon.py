@@ -1505,10 +1505,21 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             str_defIPpman   = os.environ['HOST_IP']
             str_defIPpfioh  = os.environ['HOST_IP']
 
+        # For old docker-compose
         if 'PMAN_PORT_5010_TCP_ADDR' in os.environ:
             str_defIPpman   = os.environ['PMAN_PORT_5010_TCP_ADDR']
         if 'PFIOH_PORT_5055_TCP_ADDR' in os.environ:
             str_defIPpfioh  = os.environ['PFIOH_PORT_5055_TCP_ADDR']
+
+        # For newer docker-compose
+        try:
+            str_defIPpman   = socket.gethostbyname('pman_service')
+        except:
+            pass
+        try:
+            str_defIPpfioh  = socket.gethostbyname('pfioh_service')
+        except:
+            pass
 
         for k,v in kwargs.items():
             if k == 'args': self.args           = v
