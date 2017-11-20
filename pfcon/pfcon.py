@@ -568,11 +568,14 @@ class StoreHandler(BaseHTTPRequestHandler):
             'status':       d_computeResponse['status']
         }
 
-        self.jobStatus_do(      action      = 'set',
-                                key         = str_key,
-                                op          = str_op,
-                                status      = True,
-                                jobSubmit   = d_return)
+        # if there is a key associated with this request, also determine
+        # the jobStatus associated with this key.
+        if len(str_key):
+            self.jobStatus_do(      action      = 'set',
+                                    key         = str_key,
+                                    op          = str_op,
+                                    status      = True,
+                                    jobSubmit   = d_return)
 
         return d_return
 
