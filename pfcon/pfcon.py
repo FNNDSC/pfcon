@@ -64,7 +64,7 @@ Gd_internalvar  = {
         'chris-docker-dev': {
             'data': {
                 'addr':         '172.17.0.5:5055',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
@@ -86,15 +86,14 @@ Gd_internalvar  = {
             },
             'compute': {
                 'addr':         '172.17.0.2',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
         },
-        
         'moc': {
             'data': {
                 'addr':         'pfioh-radiology.apps.osh.massopen.cloud',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
@@ -116,14 +115,43 @@ Gd_internalvar  = {
             },
             'compute': {
                 'addr':         'pman-radiology.apps.osh.massopen.cloud',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
+                'status':       'undefined'
+            }
+        },
+        'openshiftlocal': {
+            'data': {
+                'addr':         'pfioh-myproject.127.0.0.1.nip.io',
+                'baseURLpath':  'api/v1/cmd/',
+                'status':       'undefined',
+
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+
+            },
+            'compute': {
+                'addr':         'pman-myproject.127.0.0.1.nip.io',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
         },
         'gondwanaland': {
             'data': {
                 'addr':         '192.168.1.189:5055',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
@@ -145,14 +173,14 @@ Gd_internalvar  = {
             },
             'compute': {
                 'addr':         '192.168.1.189:5010',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
         },
         'pangea': {
             'data': {
                 'addr':         '10.17.24.163:5055',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
@@ -174,14 +202,14 @@ Gd_internalvar  = {
             },
             'compute': {
                 'addr':         '10.17.24.163:5010',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
         },
         'megalodon': {
             'data': {
                 'addr':         '10.23.131.204:5055',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
@@ -202,14 +230,14 @@ Gd_internalvar  = {
             },
             'compute': {
                 'addr':         '10.23.131.204:5010',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
         },
         'host': {
             'data': {
                 'addr':         '%PFIOH_IP:5055',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
@@ -230,14 +258,14 @@ Gd_internalvar  = {
             },
             'compute': {
                 'addr':         '%PMAN_IP:5010',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
         },
         'localhost': {
             'data': {
                 'addr':         '127.0.0.1:5055',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
@@ -258,7 +286,7 @@ Gd_internalvar  = {
             },
             'compute': {
                 'addr':         '127.0.0.1:5010',
-                'baseURLpath':  '/api/v1/cmd/',
+                'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
         }        
