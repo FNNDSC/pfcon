@@ -849,13 +849,14 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                                 request = d_request)
                 l_remoteStatus      = list(StoreHandler.gen_dict_extract('Status', d_jobOperation))
                 self.qprint('remoteStatus = %s' % l_remoteStatus, comms = 'tx')
-                b_jobStatusCheck    = True
-                for hit in l_remoteStatus:
-                    b_jobStatusCheck    =   hit['Message']  == 'finished' and \
-                                            hit['State']    == 'complete' and \
-                                            b_jobStatusCheck
-                    self.qprint('compute job status check = %d' % b_jobStatusCheck)
-                d_jobReturn         = d_jobOperation['d_ret']
+                if len(l_remoteStatus) > 0:
+                    b_jobStatusCheck    = True
+                    for hit in l_remoteStatus:
+                        b_jobStatusCheck    =   hit['Message']  == 'finished' and \
+                                                hit['State']    == 'complete' and \
+                                                b_jobStatusCheck
+                        self.qprint('compute job status check = %d' % b_jobStatusCheck)
+                    d_jobReturn         = d_jobOperation['d_ret']
             # self.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
         self.qprint('return from %s' % str_op, comms = 'status')
