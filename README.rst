@@ -1,6 +1,6 @@
-##############
-pfcon  v1.3.3
-##############
+###################
+pfcon  v1.5.5.dev0
+###################
 
 .. image:: https://badge.fury.io/py/pfcon.svg
     :target: https://badge.fury.io/py/pfcon
@@ -17,7 +17,7 @@ pfcon  v1.3.3
 Overview
 ********
 
-This repository provides ``pfcon`` -- a controlling service that speaks to remote ``pman`` and ``pfioh`` services.
+This repository provides ``pfcon`` -- a controlling service that speaks to remote ``pman`` and ``pfioh`` services. This is the bleeding edge branch.
 
 pfcon
 =====

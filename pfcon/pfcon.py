@@ -24,6 +24,8 @@ import  os
 import  multiprocessing
 import  pfurl
 
+import  pfmisc
+
 import  pudb
 
 # pfcon local dependencies
@@ -37,8 +39,9 @@ G_b_httpResponse            = False
 
 Gd_internalvar  = {
     'self': {
-        'name':         'pfcon',
-        'version':      'undefined',
+        'name':                 'pfcon',
+        'version':              'undefined',
+        'coordBlockSeconds':    10
     },
 
     'jobstatus': {
@@ -303,9 +306,17 @@ class StoreHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         """
         """
-        b_test          = False
-        self.__name__   = 'StoreHandler'
-        self.pp         = pprint.PrettyPrinter(indent=4)
+        b_test                  = False
+        self.__name__           = 'StoreHandler'
+        self.b_useDebug         = False
+        self.str_debugFile      = '/tmp/pfcon-log.txt'
+        self.b_quiet            = True
+        self.dp                 = pfmisc.debug(    
+                                            verbosity   = 0,
+                                            level       = -1,
+                                            within      = self.__name__
+                                            )
+        self.pp                 = pprint.PrettyPrinter(indent=4)
 
         for k,v in kwargs.items():
             if k == 'test': b_test  = True
@@ -347,7 +358,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_msg               = {'action': d_server['action'], 'meta': d_meta}
         d_ret               = {}
-        self.qprint(self.path, comms = 'rx')
+        self.dp.qprint(self.path, comms = 'rx')
 
         return d_ret
 
@@ -469,7 +480,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         global  Gd_tree
         b_status    = False
 
-        self.qprint("dataRequest_process()", comms = 'status')
+        self.dp.qprint("dataRequest_process()", comms = 'status')
 
         # pudb.set_trace()
 
@@ -504,7 +515,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             jsonwrapper                 = ''
         )
 
-        self.qprint("Calling remote data service...",   comms = 'rx')
+        self.dp.qprint("Calling remote data service...",   comms = 'rx')
         d_dataComs                              = dataComs()
         d_dataResponse                          = json.loads(d_dataComs)
         d_ret['%s-data' % str_remoteService]    = d_dataResponse
@@ -515,10 +526,10 @@ class StoreHandler(BaseHTTPRequestHandler):
             'status':       d_dataResponse['stdout']['status']
         }
 
-        self.jobOperation_do(   action      = 'set',
+        self.jobStatus_do(      action      = 'set',
                                 key         = str_key,
                                 op          = str_op,
-                                status      = 'done',
+                                status      = True,
                                 jobReturn   = d_return)
 
         return d_return
@@ -538,7 +549,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         global  Gd_tree
         b_status    = False
 
-        self.qprint("computeRequest_process()", comms = 'status')
+        self.dp.qprint("computeRequest_process()", comms = 'status')
 
         d_request       = {}
         d_meta          = {}
@@ -572,16 +583,29 @@ class StoreHandler(BaseHTTPRequestHandler):
             jsonwrapper                 = 'payload'
         )
 
-        self.qprint("Calling remote compute service...", comms = 'rx')
+        self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeComs                           = computeComs()
         d_computeResponse                       = json.loads(d_computeComs)
-        d_ret['%s-compute' % str_remoteService] = d_computeResponse
 
-        return {
+        # pudb.set_trace()
+        d_ret['%s-computeRequest' % str_remoteService] = d_computeResponse
+
+        d_return = {
             'd_ret':        d_ret,
             'serviceName':  str_remoteService,
-            # 'status':       d_computeResponse['stdout']['status']
+            'status':       d_computeResponse['status']
         }
+
+        # if there is a key associated with this request, also determine
+        # the jobStatus associated with this key.
+        if len(str_key):
+            self.jobStatus_do(      action      = 'set',
+                                    key         = str_key,
+                                    op          = str_op,
+                                    status      = True,
+                                    jobSubmit   = d_return)
+
+        return d_return
 
     def hello_process_remote(self, *args, **kwargs):
         """
@@ -594,7 +618,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         global Gd_tree
         b_status    = False
 
-        self.qprint("hello_process_remote()", comms = 'status')
+        self.dp.qprint("hello_process_remote()", comms = 'status')
 
         d_request   = {}
         d_ret       = {}
@@ -630,7 +654,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         global Gd_internalvar
 
-        self.qprint("hello_process()", comms = 'status')
+        self.dp.qprint("hello_process()", comms = 'status')
         b_status            = False
         d_ret               = {}
         d_request           = {}
@@ -674,9 +698,9 @@ class StoreHandler(BaseHTTPRequestHandler):
                  'd_remote':    d_remote,
                  'status':      b_status}
 
-    def jobOperation_do(self, *args, **kwargs):
+    def jobStatus_do(self, *args, **kwargs):
         """
-        Sets the status of a specific operation in a given job.
+        Sets/gets the status of a specific operation in a given job.
         """
         global  Gd_tree 
         # return status of this method
@@ -689,12 +713,17 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_action  = 'none'
         b_jobReturn = False
         d_jobReturn = {}
+        b_jobSubmit = False
+        d_jobSubmit = {}
 
         # pudb.set_trace()
         for k,v in kwargs.items():
             if k == 'key':          str_keyID   = v
             if k == 'op':           str_op      = v
             if k == 'status':       str_status  = v
+            if k == 'jobSubmit':
+                b_jobSubmit                     = True
+                d_jobSubmit                     = v
             if k == 'jobReturn':
                 b_jobReturn                     = True    
                 d_jobReturn                     = v 
@@ -707,15 +736,28 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_status    = True
             if not T.exists(str_keyID):
                 T.mkcd(str_keyID)
+                if str_action == 'getInfo':
+                    # Set the status of all job operations to 'not found'...
+                    d_ret = self.jobStatus_do(      action      = 'set',
+                                                    key         = str_keyID,
+                                                    op          = 'all',
+                                                    status      = 'not found'
+                                            )   
+                    b_status    = False
+                    d_info      = d_ret['info']
             else:
                 T.cd(str_keyID)
             if T.exists('info'):
                 d_info  = T.cat('info')
-                # self.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
-                if not d_info['compute']['status']  or \
-                   not d_info['pullPath']['status'] or \
-                   not d_info['pushPath']['status']:
+                # self.dp.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
+                if not isinstance(d_info['compute']['status'], bool)  or \
+                   not isinstance(d_info['pullPath']['status'], bool) or \
+                   not isinstance(d_info['pushPath']['status'], bool):
                     b_status = False
+                else:
+                    b_status =  d_info['compute']['status']     and \
+                                d_info['pullPath']['status']    and \
+                                d_info['pullPath']['status']
             if str_op != 'none':
                 if str_op == 'all':
                     l_opKey = ['pushPath', 'compute', 'pullPath']
@@ -732,6 +774,8 @@ class StoreHandler(BaseHTTPRequestHandler):
                         b_status            = str_status
                         if b_jobReturn:
                             d_info[k]['return'] = d_jobReturn
+                        if b_jobSubmit:
+                            d_info[k]['submit'] = d_jobSubmit
                     T.touch('info', d_info)
         return {
             'status':   b_status,
@@ -782,11 +826,11 @@ class StoreHandler(BaseHTTPRequestHandler):
             jsonwrapper                 = 'payload'
         )
 
-        self.qprint("Calling remote compute service...", comms = 'rx')
+        self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeStatus                         = computeStatus()
         d_computeResponse                       = json.loads(d_computeStatus)
         d_computeResponse['d_ret']['status']    = True 
-        self.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'tx')
+        self.dp.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'tx')
         return d_computeResponse
 
     """
@@ -835,31 +879,43 @@ class StoreHandler(BaseHTTPRequestHandler):
         while not b_jobStatusCheck:
             if str_op == 'pushPath' or str_op == 'pullPath':
                 # pudb.set_trace()
-                d_jobOperation      = self.jobOperation_do(     key     = str_keyID,
+                d_jobStatus      = self.jobStatus_do(           key     = str_keyID,
                                                                 action  = 'getInfo',
                                                                 op      = str_op)
-                str_jobStatus       = d_jobOperation['info'][str_op]['status']
-                d_jobReturn         = d_jobOperation['info'][str_op]['return']
+                str_jobStatus       = d_jobStatus['info'][str_op]['status']
+                d_jobReturn         = d_jobStatus['info'][str_op]['return']
                 if str_jobStatus == str_status: b_jobStatusCheck    = True
 
             if str_op == 'compute':
                 # pudb.set_trace()
-                d_jobOperation      = self.jobOperation_computeStatusQuery(
+                d_jobStatus      = self.jobOperation_computeStatusQuery(
                                                                 key     = str_keyID,
                                                                 request = d_request)
-                l_remoteStatus      = list(StoreHandler.gen_dict_extract('Status', d_jobOperation))
-                self.qprint('remoteStatus = %s' % l_remoteStatus, comms = 'tx')
-                b_jobStatusCheck    = True
-                for hit in l_remoteStatus:
-                    b_jobStatusCheck    =   hit['Message']  == 'finished' and \
-                                            hit['State']    == 'complete' and \
-                                            b_jobStatusCheck
-                    self.qprint('compute job status check = %d' % b_jobStatusCheck)
-                d_jobReturn         = d_jobOperation['d_ret']
-            # self.qprint('blocking on %s' % str_op, comms = 'status')
+                l_status            = d_jobStatus['d_ret']['l_status']
+                lb_status           = []
+                for job in l_status:
+                    if 'finished' in job:   
+                        lb_status.append(True)
+                        self.jobStatus_do(      action      = 'set',
+                                                key         = str_keyID,
+                                                op          = str_op,
+                                                status      = True,
+                                                jobReturn   = d_jobStatus)
+                    else:                   
+                        lb_status.append(False)
+                        self.jobStatus_do(      action      = 'set',
+                                                key         = str_keyID,
+                                                op          = str_op,
+                                                status      = False,
+                                                jobReturn   = d_jobStatus)
+                b_jobStatusCheck    = lb_status[0]
+                for flag in lb_status:
+                    b_jobStatusCheck    = flag and b_jobStatusCheck
+                d_jobReturn         = d_jobStatus['d_ret']
+            # self.dp.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
-        self.qprint('return from %s' % str_op, comms = 'status')
-        self.qprint('d_jobReturn = \n%s' % self.pp.pformat(d_jobReturn).strip(), comms = 'status')
+        self.dp.qprint('return from %s' % str_op, comms = 'status')
+        self.dp.qprint('d_jobReturn = \n%s' % self.pp.pformat(d_jobReturn).strip(), comms = 'status')
         return d_jobReturn
 
     def data_asyncHandler(self, *args, **kwargs):
@@ -891,7 +947,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                     'status':   '<statusString>',
                     'return':   <d_ret>
                     }
-            }
+            }store_true
         }
 
         """
@@ -910,7 +966,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                 kwargs      = kwargs)
 
         # Set the state of the actual data jobOperation being called to 'pushing'...
-        self.jobOperation_do(   action      = 'set',
+        self.jobStatus_do(      action      = 'set',
                                 key         = str_key,
                                 op          = str_op,
                                 status      = 'pushing'
@@ -933,7 +989,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         }
 
         """
-        self.qprint("key_dereference()", comms = 'status')
+        self.dp.qprint("key_dereference()", comms = 'status')
         
         b_status    = False
         d_request   = {}
@@ -941,7 +997,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
 
-        # self.qprint("d_request = %s" % d_request)
+        # self.dp.qprint("d_request = %s" % d_request)
 
         if 'meta-store' in d_request:
             d_metaStore     = d_request['meta-store']
@@ -951,7 +1007,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 if str_storeKey in d_request[str_storeMeta].keys():
                     str_key     = d_request[str_storeMeta][str_storeKey]
                     b_status    = True
-                    self.qprint("key = %s" % str_key, comms = 'status')
+                    self.dp.qprint("key = %s" % str_key, comms = 'status')
         return {
             'status':   b_status,
             'key':      str_key
@@ -1034,19 +1090,22 @@ class StoreHandler(BaseHTTPRequestHandler):
         :return:
         """
 
-        self.qprint("coordinate_process()", comms = 'status')
+        global Gd_internalvar
+
+        self.dp.qprint("coordinate_process()", comms = 'status')
         b_status                    = False
         d_request                   = {}
-        d_jobOperation              = {}
+        d_jobStatus              = {}
         d_dataRequest               = {}
         d_dataRequestProcessPush    = {}
         d_computeRequest            = {}
         d_computeRequestProcess     = {}
         d_dataRequestProcessPull    = {}
+        coordBlockSeconds           = Gd_internalvar['self']['coordBlockSeconds']
 
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
-        # self.qprint("d_request = %s" % d_request)
+        # self.dp.qprint("d_request = %s" % d_request)
 
         str_key         = self.key_dereference(request = d_request)['key']
 
@@ -1056,17 +1115,17 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_metaData      = d_request['meta-data']
         d_metaCompute   = d_request['meta-compute']
 
-        # Set the status of all job operations to 'init'...
-        self.jobOperation_do(   action      = 'set',
+        # Set the status of all job operations to 'not started'...
+        self.jobStatus_do(      action      = 'set',
                                 key         = str_key,
                                 op          = 'all',
-                                status      = 'init'
+                                status      = 'not started'
                             )
         #######
         # Push data to remote location        
         #######
         d_metaData['local'] = d_metaData['localSource']
-        self.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
+        self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
         d_dataRequest   = {
             'action':   'pushPath',
             'meta':     d_metaData
@@ -1079,12 +1138,12 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_jobBlock                  = self.jobOperation_blockUntil(   
                                         key     = str_key,
                                         op      = 'pushPath',
-                                        status  = 'done'
+                                        status  = True
                                     )
         b_status                    = d_jobBlock['status']
 
         if not b_status:
-            self.jobOperation_do(
+            self.jobStatus_do(
                                         action  = 'set',
                                         key     = str_key,
                                         op      = 'pushPath',
@@ -1092,13 +1151,13 @@ class StoreHandler(BaseHTTPRequestHandler):
             )
 
         if b_status:
-            d_jobOperation          = self.jobOperation_do( 
+            d_jobStatus          = self.jobStatus_do( 
                                         key     = str_key,
                                         action  = 'getInfo',
                                         op      = 'pushPath')
-            self.qprint('d_jobOperation = %s' % self.pp.pformat(d_jobOperation).strip(), comms = 'status')
+            self.dp.qprint('d_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(), comms = 'status')
                                             
-            d_dataRequestProcessPush    = d_jobOperation['info']['pushPath']['return']
+            d_dataRequestProcessPush    = d_jobStatus['info']['pushPath']['return']
 
             #######
             # Process data at remote location
@@ -1109,7 +1168,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
             # pudb.set_trace()
             d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
-            self.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
+            self.dp.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
             d_computeRequest   = {
                 'action':   'run',
                 'meta':     d_metaCompute
@@ -1118,24 +1177,32 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_computeRequestProcess = self.computeRequest_process(  request     = d_computeRequest,
                                                                     key         = str_key,
                                                                     op          = 'compute')
-            # wait for processing...
-            time.sleep(10)
+            # wait 1s for processing...
+            self.dp.qprint('compute job submitted... waiting %ds for transients...' % coordBlockSeconds)
+            time.sleep(coordBlockSeconds)
             # pudb.set_trace()
             d_jobBlock                  = self.jobOperation_blockUntil(   
                                             request = d_computeRequest,
                                             key     = str_key,
                                             op      = 'compute',
-                                            status  = 'done')
-            self.qprint('compute d_jobBlock = %s' % self.pp.pformat(d_jobBlock).strip(), comms = 'status')
+                                            status  = True)
+            self.dp.qprint('compute d_jobBlock = %s' % self.pp.pformat(d_jobBlock).strip(), comms = 'status')
             b_status                    = d_jobBlock['status']
             if not b_status:
-                self.jobOperation_do(
+                self.jobStatus_do(
                                             action  = 'set',
                                             key     = str_key,
                                             op      = 'compute',
                                             status  = False
                 )
             if b_status:
+                d_jobStatus          = self.jobStatus_do( 
+                                            key     = str_key,
+                                            action  = 'getInfo',
+                                            op      = 'compute')
+                self.dp.qprint('d_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(), comms = 'status')
+                                                
+                d_computeRequestProcess = d_jobStatus['info']['compute']['return']
                 #######
                 # Pull data from remote location
                 #######                                                                
@@ -1146,7 +1213,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 if 'createDir' in d_metaData['localTarget']:
                     d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
                 d_metaData['transport']['compress']['name']   = str_localDest
-                self.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
+                self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
 
                 d_dataRequest   = {
                     'action':   'pullPath',
@@ -1159,28 +1226,100 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_jobBlock                  = self.jobOperation_blockUntil(   
                                                 key     = str_key,
                                                 op      = 'pullPath',
-                                                status  = 'done'
+                                                status  = True
                                             )
                 b_status                    = d_jobBlock['status']
                 if not b_status:
-                    self.jobOperation_do(
+                    self.jobStatus_do(
                                                 action  = 'set',
                                                 key     = str_key,
                                                 op      = 'pullPath',
                                                 status  = False
                     )
                 if b_status:
-                    d_jobOperation              = self.jobOperation_do( key     = str_key,
+                    d_jobStatus              = self.jobStatus_do(       key     = str_key,
                                                                         action  = 'getInfo',
                                                                         op      = 'pullPath')
-                    d_dataRequestProcessPull    = d_jobOperation['info']['pullPath']['return']
+                    d_dataRequestProcessPull    = d_jobStatus['info']['pullPath']['return']
 
-        return {
+        d_ret = {
             'status':   b_status,
             'pushData': d_dataRequestProcessPush,
-            'compute':  d_computeRequest,
+            'compute':  d_computeRequestProcess,
             'pullData': d_dataRequestProcessPull
         }
+
+        self.dp.qprint('Final return: d_ret = \n%s' % self.pp.pformat(d_ret).strip(), comms = 'status')
+        d_jobStatus         = self.jobStatus_do(           key     = str_key,
+                                                        action  = 'getInfo',
+                                                        op      = 'all')
+        d_jobStatusSummary  = self.summaryStatus_process(d_jobStatus)
+        with open(os.path.join(str_localDestination, 'jobStatus.json'), 'w') as f:
+            json.dump(d_jobStatus, f)
+        f.close()
+        with open(os.path.join(str_localDestination, 'jobStatusSummary.json'), 'w') as f:
+            json.dump(d_jobStatusSummary, f)
+        f.close()
+
+        return d_ret
+
+    def summaryStatus_process(self, ad_jobStatus):
+        """
+        Create a summary dictionary object from the main jobStatus dictionary.abs
+
+        PRECONDITIONS
+        * A valid jobStatus dictionary. 
+        """
+
+        d_jobStatusSummary                      = {
+            'status':           False,
+            'pushPath': {
+                'status':       False
+            },
+            'pullPath': {
+                'status':       False
+            },
+            'compute': {
+                'status':       False,
+                'submit': {
+                    'status':   False
+                },
+                'return': {
+                    'status':   False,
+                    'l_status': [],
+                    'l_logs':   []
+                }
+            }
+        }
+
+        # pudb.set_trace()
+        d_jobStatusSummary['pushPath']['status']            = ad_jobStatus['info']['pushPath']['status']
+        d_jobStatusSummary['pullPath']['status']            = ad_jobStatus['info']['pullPath']['status']
+        d_jobStatusSummary['compute']['status']             = ad_jobStatus['info']['compute']['status']
+
+        if 'submit' in ad_jobStatus['info']['compute']:
+            d_jobStatusSummary['compute']['submit']['status']           = ad_jobStatus['info']['compute']['submit']['status']
+
+        if 'return' in ad_jobStatus['info']['compute']:
+            if 'status' in ad_jobStatus['info']['compute']['return']:
+                d_jobStatusSummary['compute']['return']['status']       = ad_jobStatus['info']['compute']['return']['status']
+                d_jobStatusSummary['compute']['return']['l_status']     = ad_jobStatus['info']['compute']['return']['d_ret']['l_status']
+                d_jobStatusSummary['compute']['return']['l_logs']       = ad_jobStatus['info']['compute']['return']['d_ret']['l_logs']
+
+        if  isinstance(d_jobStatusSummary['pushPath']['status'],            bool) and \
+            isinstance(d_jobStatusSummary['pullPath']['status'],            bool) and \
+            isinstance(d_jobStatusSummary['compute']['status'],             bool) and \
+            isinstance(d_jobStatusSummary['compute']['submit']['status'],   bool) and \
+            isinstance(d_jobStatusSummary['compute']['return']['status'],   bool):
+            d_jobStatusSummary['status'] =      d_jobStatusSummary['pushPath']['status']            and \
+                                                d_jobStatusSummary['pullPath']['status']            and \
+                                                d_jobStatusSummary['compute']['status']             and \
+                                                d_jobStatusSummary['compute']['submit']['status']   and \
+                                                d_jobStatusSummary['compute']['return']['status']
+        else:
+            d_jobStatusSummary['status'] = False
+
+        return d_jobStatusSummary
 
     def status_process(self, *args, **kwargs):
         """
@@ -1200,11 +1339,12 @@ class StoreHandler(BaseHTTPRequestHandler):
         }'
 
         """
-        self.qprint("status_process()", comms = 'status')
+        self.dp.qprint("status_process()", comms = 'status')
         d_request                   = {}
         d_meta                      = {}
-        d_jobOperation              = {}
+        d_jobStatus                 = {}
         b_status                    = False
+        d_jobStatusSummary          = {}
 
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
@@ -1212,14 +1352,17 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_meta      = d_request['meta']
         str_keyID   = d_meta['remote']['key']
 
-        d_jobOperation      = self.jobOperation_do(     key     = str_keyID,
+        # pudb.set_trace()
+        d_jobStatus      = self.jobStatus_do(           key     = str_keyID,
                                                         action  = 'getInfo',
                                                         op      = 'all')
-        self.qprint('d_status = %s' % self.pp.pformat(d_jobOperation).strip(), comms = 'status')
+        self.dp.qprint('d_status = %s' % self.pp.pformat(d_jobStatus).strip(), comms = 'status')
+        d_jobStatusSummary  = self.summaryStatus_process(d_jobStatus)
 
         return {
-            'status':       d_jobOperation['status'],
-            'jobOperation': d_jobOperation
+            'status':               d_jobStatus['status'],
+            'jobOperation':         d_jobStatus,
+            'jobOperationSummary':  d_jobStatusSummary
         }
 
 
@@ -1243,7 +1386,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         b_threaded  = False
 
         # Parse the form data posted
-        self.qprint(str(self.headers), comms = 'rx')
+        self.dp.qprint(str(self.headers), comms = 'rx')
 
         length              = self.headers['content-length']
         data                = self.rfile.read(int(length))
@@ -1255,26 +1398,26 @@ class StoreHandler(BaseHTTPRequestHandler):
             'formsize': sys.getsizeof(form)
         }
 
-        self.qprint('data length = %d' % len(data),   comms = 'status')
-        self.qprint('form length = %d' % len(form), comms = 'status')
+        self.dp.qprint('data length = %d' % len(data),   comms = 'status')
+        self.dp.qprint('form length = %d' % len(form), comms = 'status')
 
         if len(form):
-            self.qprint("Unpacking multi-part form message...", comms = 'status')
+            self.dp.qprint("Unpacking multi-part form message...", comms = 'status')
             for key in form:
-                self.qprint("\tUnpacking field '%s..." % key, comms = 'status')
+                self.dp.qprint("\tUnpacking field '%s..." % key, comms = 'status')
                 d_form[key]     = form.getvalue(key)
             d_msg               = json.loads((d_form['d_msg']))
         else:
-            self.qprint("Parsing JSON data...", comms = 'status')
+            self.dp.qprint("Parsing JSON data...", comms = 'status')
             d_data              = json.loads(data.decode())
             d_msg               = d_data['payload']
 
-        self.qprint('d_msg = %s' % self.pp.pformat(d_msg).strip(), comms = 'status')
+        self.dp.qprint('d_msg = %s' % self.pp.pformat(d_msg).strip(), comms = 'status')
 
         if 'action' in d_msg:
-            self.qprint("verb: %s detected." % d_msg['action'], comms = 'status')
+            self.dp.qprint("verb: %s detected." % d_msg['action'], comms = 'status')
             str_method      = '%s_process' % d_msg['action']
-            self.qprint("method to call: %s(request = d_msg) " % str_method, comms = 'status')
+            self.dp.qprint("method to call: %s(request = d_msg) " % str_method, comms = 'status')
             d_done          = {'status': False}
             try:
                 pf_method   = getattr(self, str_method)
@@ -1286,7 +1429,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
             if not b_threaded:
                 d_done      = pf_method(request = d_msg)
-                self.qprint(self.pp.pformat(d_done).strip(), comms = 'tx')
+                self.dp.qprint(self.pp.pformat(d_done).strip(), comms = 'tx')
                 d_ret       = d_done
             else:
                 t_process   = threading.Thread( target  = pf_method,
@@ -1302,16 +1445,16 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         """
         d_ctl               = d_meta['ctl']
-        self.qprint('Processing server ctl...', comms = 'status')
-        self.qprint(d_meta, comms = 'rx')
+        self.dp.qprint('Processing server ctl...', comms = 'status')
+        self.dp.qprint(d_meta, comms = 'rx')
         if 'serverCmd' in d_ctl:
             if d_ctl['serverCmd'] == 'quit':
-                self.qprint('Shutting down server', comms = 'status')
+                self.dp.qprint('Shutting down server', comms = 'status')
                 d_ret = {
                     'msg':      'Server shut down',
                     'status':   True
                 }
-                self.qprint(d_ret, comms = 'tx')
+                self.dp.qprint(d_ret, comms = 'tx')
                 self.ret_client(d_ret)
                 os._exit(0)
 
@@ -1393,10 +1536,21 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             str_defIPpman   = os.environ['HOST_IP']
             str_defIPpfioh  = os.environ['HOST_IP']
 
+        # For old docker-compose
         if 'PMAN_PORT_5010_TCP_ADDR' in os.environ:
             str_defIPpman   = os.environ['PMAN_PORT_5010_TCP_ADDR']
         if 'PFIOH_PORT_5055_TCP_ADDR' in os.environ:
             str_defIPpfioh  = os.environ['PFIOH_PORT_5055_TCP_ADDR']
+
+        # For newer docker-compose
+        try:
+            str_defIPpman   = socket.gethostbyname('pman_service')
+        except:
+            pass
+        try:
+            str_defIPpfioh  = socket.gethostbyname('pfioh_service')
+        except:
+            pass
 
         for k,v in kwargs.items():
             if k == 'args': self.args           = v
@@ -1408,6 +1562,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         Gd_internalvar['self']['name']                  = self.str_name
         Gd_internalvar['self']['version']               = self.str_version
+        Gd_internalvar['self']['coordBlockSeconds']     = int(self.args['coordBlockSeconds'])
 
         self.col2_print("Listening on address:",    self.args['ip'])
         self.col2_print("Listening on port:",       self.args['port'])
