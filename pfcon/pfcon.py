@@ -1250,16 +1250,17 @@ class StoreHandler(BaseHTTPRequestHandler):
         }
 
         self.dp.qprint('Final return: d_ret = \n%s' % self.pp.pformat(d_ret).strip(), comms = 'status')
-        d_jobStatus         = self.jobStatus_do(           key     = str_key,
-                                                        action  = 'getInfo',
-                                                        op      = 'all')
-        d_jobStatusSummary  = self.summaryStatus_process(d_jobStatus)
-        with open(os.path.join(str_localDestination, 'jobStatus.json'), 'w') as f:
-            json.dump(d_jobStatus, f)
-        f.close()
-        with open(os.path.join(str_localDestination, 'jobStatusSummary.json'), 'w') as f:
-            json.dump(d_jobStatusSummary, f)
-        f.close()
+        if d_ret['status']:
+            d_jobStatus         = self.jobStatus_do(        key     = str_key,
+                                                            action  = 'getInfo',
+                                                            op      = 'all')
+            d_jobStatusSummary  = self.summaryStatus_process(d_jobStatus)
+            with open(os.path.join(str_localDestination, 'jobStatus.json'), 'w') as f:
+                json.dump(d_jobStatus, f)
+            f.close()
+            with open(os.path.join(str_localDestination, 'jobStatusSummary.json'), 'w') as f:
+                json.dump(d_jobStatusSummary, f)
+            f.close()
 
         return d_ret
 
