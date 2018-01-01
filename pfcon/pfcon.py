@@ -1105,9 +1105,11 @@ class StoreHandler(BaseHTTPRequestHandler):
             # Process data at remote location
             #######
             str_serviceName = d_dataRequestProcessPush['serviceName']
-            str_shareDir    = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['shareDir']
-            str_outDirPath  = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop']['outgoingPath']
-            str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
+            str_shareDir    = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop'].get('shareDir')
+            str_outDirPath  = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop'].get('outgoingPath')
+            if str_outDirPath is not None:
+                # This value won't be none in case of non-swift option.
+                str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
             # pudb.set_trace()
             d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
             self.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
