@@ -17,7 +17,7 @@ pfcon  v1.5.6.0
 Overview
 ********
 
-This repository provides ``pfcon`` -- a controlling service that speaks to remote ``pman`` and ``pfioh`` services. This is the bleeding edge branch.
+This repository provides ``pfcon`` -- a controlling service that speaks to remote ``pman`` and ``pfioh`` services.
 
 pfcon
 =====
