@@ -209,6 +209,34 @@ Gd_internalvar  = {
                 'status':       'undefined'
             }
         },
+        'fnndsc': {
+            'data': {
+                'addr':         'fnndsc.childrens.harvard.edu:5055',
+                'baseURLpath':  'api/v1/cmd/',
+                'status':       'undefined',
+
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+            },
+            'compute': {
+                'addr':         'fnndsc.childrens.harvard.edu:5010',
+                'baseURLpath':  'api/v1/cmd/',
+                'status':       'undefined'
+            }
+        },
         'megalodon': {
             'data': {
                 'addr':         '10.23.131.204:5055',
@@ -887,31 +915,32 @@ class StoreHandler(BaseHTTPRequestHandler):
                 if str_jobStatus == str_status: b_jobStatusCheck    = True
 
             if str_op == 'compute':
-                # pudb.set_trace()
+                d_jobReturn     = {'status': False}
                 d_jobStatus      = self.jobOperation_computeStatusQuery(
                                                                 key     = str_keyID,
                                                                 request = d_request)
-                l_status            = d_jobStatus['d_ret']['l_status']
-                lb_status           = []
-                for job in l_status:
-                    if 'finished' in job:   
-                        lb_status.append(True)
-                        self.jobStatus_do(      action      = 'set',
-                                                key         = str_keyID,
-                                                op          = str_op,
-                                                status      = True,
-                                                jobReturn   = d_jobStatus)
-                    else:                   
-                        lb_status.append(False)
-                        self.jobStatus_do(      action      = 'set',
-                                                key         = str_keyID,
-                                                op          = str_op,
-                                                status      = False,
-                                                jobReturn   = d_jobStatus)
-                b_jobStatusCheck    = lb_status[0]
-                for flag in lb_status:
-                    b_jobStatusCheck    = flag and b_jobStatusCheck
-                d_jobReturn         = d_jobStatus['d_ret']
+                if d_jobStatus['status']:
+                    l_status            = d_jobStatus['d_ret']['l_status']
+                    lb_status           = []
+                    for job in l_status:
+                        if 'finished' in job:   
+                            lb_status.append(True)
+                            self.jobStatus_do(      action      = 'set',
+                                                    key         = str_keyID,
+                                                    op          = str_op,
+                                                    status      = True,
+                                                    jobReturn   = d_jobStatus)
+                        else:                   
+                            lb_status.append(False)
+                            self.jobStatus_do(      action      = 'set',
+                                                    key         = str_keyID,
+                                                    op          = str_op,
+                                                    status      = False,
+                                                    jobReturn   = d_jobStatus)
+                    b_jobStatusCheck    = lb_status[0]
+                    for flag in lb_status:
+                        b_jobStatusCheck    = flag and b_jobStatusCheck
+                    d_jobReturn         = d_jobStatus['d_ret']
             # self.dp.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
         self.dp.qprint('return from %s' % str_op, comms = 'status')
