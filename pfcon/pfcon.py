@@ -418,6 +418,35 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return:
         """
+
+        l_fileChanged   = []
+        hits            = 0
+
+        def fileContentsReplaceAtPath(str_path, **kwargs):
+            nonlocal    hits
+            nonlocal    l_fileChanged
+            b_status        = True
+            str_target      = ''
+            str_value       = ''
+            self.dp.qprint('In dir = %s, hits = %d' % (str_path, hits))
+            for k, v in kwargs.items():
+                if k == 'target':   str_target  = v
+                if k == 'value':    str_value   = v
+            for str_hit in Gd_tree.lsf(str_path):
+                str_content = Gd_tree.cat(str_hit)
+                self.dp.qprint('%20s: %20s' % (str_hit, str_content))
+                if str_content  == str_target:
+                    self.dp.qprint('%20s: %20s' % (str_hit, str_value))
+                    Gd_tree.touch(str_hit, str_value)
+                    b_status    = True
+                    hits        = hits + 1
+                    l_fileChanged.append(str_path + '/' + str_hit)
+
+            return {
+                    'status':           b_status,
+                    'l_fileChanged':    l_fileChanged
+                    }
+
         global Gd_internalvar
         global Gd_tree
         d_meta      = {}
@@ -432,7 +461,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_var     = d_meta['var']
 
         T           = C_stree()
-
+        # pudb.set_trace()
         if d_meta:
             if 'get' in d_meta.keys():
                 if Gd_tree.isdir(str_var):
@@ -443,20 +472,43 @@ class StoreHandler(BaseHTTPRequestHandler):
                 b_status                = True
 
             if 'set' in d_meta.keys():
+                b_tree          = False
+                # pudb.set_trace()
                 try:
-                    d_set   = json.loads(d_meta['set'])
-                    b_tree  = True
+                    d_set       = json.loads(d_meta['set'])
                 except:
-                    b_tree  = False
+                    str_set     = json.dumps(d_meta['set'])
+                    d_set       = json.loads(str_set)
+                    if isinstance(d_set, dict):
+                        b_tree  = True
                 if b_tree:
                     D       = C_stree()
                     D.initFromDict(d_set)
-                    D.copy(startPath = '/', destination = Gd_tree, pathDiskRoot = str_var)
+                    for topDir in D.lstr_lsnode():
+                        D.copy(startPath = '/'+topDir, destination = Gd_tree, pathDiskRoot = str_var)
                     d_ret           = d_set
                 else:
                     Gd_tree.touch(str_var, d_meta['set'])
                     d_ret[str_var]          = Gd_tree.cat(str_var)
                 b_status                = True
+
+            if 'valueReplace' in d_meta.keys():
+                # Find all the values in the internalctl tree
+                # and replace the value corresponding to 'var' with
+                # the field of 'valueReplace'
+                # pudb.set_trace()
+                str_target      = d_meta['var']
+                str_value       = d_meta['valueReplace']
+                if str_value    == 'ENV':
+                    if str_target.strip('%') in os.environ:
+                        str_value   = os.environ[str_target.strip('%')]
+                d_ret = Gd_tree.treeExplore(
+                        f       = fileContentsReplaceAtPath, 
+                        target  = str_target, 
+                        value   = str_value
+                        )
+                b_status        = d_ret['status']
+                d_ret['hits']   = hits
 
         return {'d_ret':    d_ret,
                 'status':   b_status}
