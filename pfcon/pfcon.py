@@ -95,7 +95,7 @@ Gd_internalvar  = {
         },
         'moc': {
             'data': {
-                'addr':         'pfioh-radiology.apps.osh.massopen.cloud',
+                'addr':         'pfioh-radiology.openapp.cloud',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
 
@@ -117,7 +117,7 @@ Gd_internalvar  = {
 
             },
             'compute': {
-                'addr':         'pman-radiology.apps.osh.massopen.cloud',
+                'addr':         'pman-radiology.openapp.cloud',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
