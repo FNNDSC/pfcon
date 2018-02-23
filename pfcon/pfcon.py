@@ -6,6 +6,7 @@ from    io              import  BytesIO as IO
 from    http.server     import  BaseHTTPRequestHandler, HTTPServer
 from    socketserver    import  ThreadingMixIn
 from    webob           import  Response
+from    pathlib         import  Path
 import  cgi
 import  json
 import  urllib
@@ -153,29 +154,7 @@ Gd_internalvar  = {
         },
         'gondwanaland': {
             'data': {
-                'addr':         '192.168.1.189:5055',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
-                },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-
-            },
-            'compute': {
-                'addr':         '192.168.1.189:5010',
+                'addr':         '%PFIOH_IP:5055',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
@@ -204,12 +183,12 @@ Gd_internalvar  = {
 
             },
             'compute': {
-                'addr':         '10.17.24.163:5010',
+                'addr':         '%PMAN_IP:5010',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
         },
-        'fnndsc': {
+        'localhost': {
             'data': {
                 'addr':         'fnndsc.childrens.harvard.edu:5055',
                 'baseURLpath':  'api/v1/cmd/',
@@ -250,17 +229,8 @@ Gd_internalvar  = {
                            "set":          "setKeyValueHere"
                        }
                 },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-            },
             'compute': {
-                'addr':         '10.23.131.204:5010',
+                'addr':         '127.0.0.1:5010',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
@@ -287,10 +257,10 @@ Gd_internalvar  = {
                     }
                 }
             },
-            'compute': {
-                'addr':         '%PMAN_IP:5010',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
+            "data": {
+                "addr":         "pfioh-radiology.apps.osh.massopen.cloud",
+                "baseURLpath":  "api/v1/cmd/",
+                "status":       "undefined"
             }
         },
         'localhost': {
@@ -320,7 +290,7 @@ Gd_internalvar  = {
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
-        }        
+        }
     }
 }
 
@@ -1610,6 +1580,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
     def setup(self, **kwargs):
         global G_b_httpResponse
+        global Gd_internalvar
         global Gd_tree
         str_defIP       = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
         str_defIPpman   = str_defIP
@@ -1640,6 +1611,12 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             if k == 'args': self.args           = v
             if k == 'desc': self.str_desc       = v
             if k == 'ver':  self.str_version    = v
+
+        if len(self.args['str_configFileLoad']):
+            if Path(self.args['str_configFileLoad']).is_file():
+                # Read configuration detail from JSON formatted file
+                with open(self.args['str_configFileLoad']) as json_file:
+                    Gd_internalvar  = json.load(json_file)
 
         G_b_httpResponse = self.args['b_httpResponse']
         print(self.str_desc)
