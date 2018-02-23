@@ -88,7 +88,7 @@ Gd_internalvar  = {
 
             },
             'compute': {
-                'addr':         '172.17.0.2',
+                'addr':         '172.17.0.2:5010',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
@@ -536,7 +536,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         dataComs = pfurl.Pfurl(
             msg                         = json.dumps(d_request),
             verb                        = 'POST',
-            http                        = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
+            url                         = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
             b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = True,
@@ -604,7 +604,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         computeComs = pfurl.Pfurl(
             msg                         = json.dumps(d_request),
             verb                        = 'POST',
-            http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
+            url                         = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
             b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
@@ -847,7 +847,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         computeStatus = pfurl.Pfurl(
             msg                         = json.dumps(d_remoteStatus),
             verb                        = 'POST',
-            http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
+            url                         = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
             b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
@@ -1053,7 +1053,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         Input JSON is assumed to be:
 
-        pfurl --verb POST --raw --http 10.17.24.163:5005/api/v1/cmd --httpResponseBodyParse --jsonwrapper 'payload' --msg '
+        pfurl --verb POST --raw --url 10.17.24.163:5005/api/v1/cmd --httpResponseBodyParse --jsonwrapper 'payload' --msg '
         {   "action":           "coordinate",
             "threadAction":     true,
             "meta-store": {
@@ -1360,7 +1360,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         JSON query:
 
-        pfurl --verb POST --raw --http 10.17.24.163:5005/api/v1/cmd --httpResponseBodyParse --jsonwrapper 'payload' --msg '
+        pfurl --verb POST --raw --url 10.17.24.163:5005/api/v1/cmd --httpResponseBodyParse --jsonwrapper 'payload' --msg '
         {   "action":           "status",
             "threadAction":     false,
             "meta": {
