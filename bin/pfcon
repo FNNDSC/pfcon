@@ -123,6 +123,20 @@ parser.add_argument(
     action  = 'store',
     default = 5
 )
+parser.add_argument(
+    '--configFileLoad',
+    help    = 'a file containing configuration information',
+    dest    = 'str_configFileLoad',
+    action  = 'store',
+    default = ''
+)
+parser.add_argument(
+    '--configFileSave',
+    help    = 'a file to store configuration information',
+    dest    = 'str_configFileSave',
+    action  = 'store',
+    default = ''
+)
 
 args            = parser.parse_args()
 args.port       = int(args.port)
