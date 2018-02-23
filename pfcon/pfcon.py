@@ -103,14 +103,16 @@ Gd_internalvar  = {
         },
         "openshiftlocal": {
             "compute": {
-                "addr":         "pman-myproject.127.0.0.1.nip.io",
-                "baseURLpath":  "api/v1/cmd/",
-                "status":       "undefined"
+                "addr":                         "http://pman-myproject.127.0.0.1.nip.io",
+                "baseURLpath":                  "api/v1/cmd/",
+                "allowUnverifiedCertificates":  False,  
+                "status":                       "undefined"
             },
             "data": {
-                "addr":         "pfioh-myproject.127.0.0.1.nip.io",
-                "baseURLpath":  "api/v1/cmd/",
-                "status":       "undefined"
+                "addr":                         "http://pfioh-myproject.127.0.0.1.nip.io",
+                "baseURLpath":                  "api/v1/cmd/",
+                "allowUnverifiedCertificates":  False,  
+                "status":                       "undefined"
             }
         }
     }
