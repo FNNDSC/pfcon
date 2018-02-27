@@ -69,7 +69,7 @@ Gd_internalvar  = {
                 'addr':         '172.17.0.5:5055',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
-            
+
                 'storeAccess.tokenSet':  {
                     "action":   "internalctl",
                     "meta": {
@@ -124,10 +124,9 @@ Gd_internalvar  = {
         },
         'openshiftlocal': {
             'data': {
-                'addr':         'https://pfioh-myproject.127.0.0.1.nip.io',
+                'addr':         'pfioh-myproject.127.0.0.1.nip.io',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
-                'allowUnverifiedCertificates':      True,
 
                 'storeAccess.tokenSet':  {
                     "action":   "internalctl",
@@ -147,10 +146,9 @@ Gd_internalvar  = {
 
             },
             'compute': {
-                'addr':         'https://pman-myproject.127.0.0.1.nip.io',
+                'addr':         'pman-myproject.127.0.0.1.nip.io',
                 'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-                'allowUnverifiedCertificates':      True
+                'status':       'undefined'
             }
         },
         'gondwanaland': {
@@ -187,7 +185,6 @@ Gd_internalvar  = {
                 'addr':         '10.17.24.163:5055',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
-                
 
                 'storeAccess.tokenSet':  {
                     "action":   "internalctl",
@@ -216,7 +213,7 @@ Gd_internalvar  = {
             'data': {
                 'addr':         'fnndsc.childrens.harvard.edu:5055',
                 'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',                
+                'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
                     "action":   "internalctl",
@@ -245,7 +242,6 @@ Gd_internalvar  = {
                 'addr':         '10.23.131.204:5055',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined',
-                
 
                 'storeAccess.tokenSet':  {
                     "action":   "internalctl",
@@ -273,7 +269,7 @@ Gd_internalvar  = {
             'data': {
                 'addr':         '%PFIOH_IP:5055',
                 'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',                
+                'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
                     "action":   "internalctl",
@@ -301,7 +297,7 @@ Gd_internalvar  = {
             'data': {
                 'addr':         '127.0.0.1:5055',
                 'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',                
+                'status':       'undefined',
 
                 'storeAccess.tokenSet':  {
                     "action":   "internalctl",
@@ -323,7 +319,6 @@ Gd_internalvar  = {
                 'addr':         '127.0.0.1:5010',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
-                
             }
         }        
     }
@@ -537,7 +532,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_remoteService       = d_meta['service']
         str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
         str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURLpath'% str_remoteService)
-        unverifiedCerts = Gd_tree.cat('/service/%s/data/allowUnverifiedCertificates' % str_remoteService)
 
         dataComs = pfurl.Pfurl(
             msg                         = json.dumps(d_request),
@@ -546,8 +540,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = True,
-            jsonwrapper                 = '',
-            b_unverifiedCerts           = unverifiedCerts
+            jsonwrapper                 = ''
         )
 
         self.dp.qprint("Calling remote data service...",   comms = 'rx')
@@ -606,7 +599,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_remoteService       = d_meta['service']
         str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'        % str_remoteService)
         str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURLpath' % str_remoteService)
-        unverifiedCerts = Gd_tree.cat('/service/%s/data/allowUnverifiedCertificates' % str_remoteService)
 
         # Remember, 'pman' responses do NOT need to http-body parsed!
         computeComs = pfurl.Pfurl(
@@ -616,8 +608,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
-            jsonwrapper                 = 'payload',
-            b_unverifiedCerts           = unverifiedCerts
+            jsonwrapper                 = 'payload'
         )
 
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
@@ -844,7 +835,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_remoteService       = d_meta['service']
         str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'        % str_remoteService)
         str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURLpath' % str_remoteService)
-        unverifiedCerts = Gd_tree.cat('/service/%s/data/allowUnverifiedCertificates' % str_remoteService)
 
         d_remoteStatus  = {
             "action":   "status",
@@ -861,8 +851,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
-            jsonwrapper                 = 'payload',
-            b_unverifiedCerts           = unverifiedCerts
+            jsonwrapper                 = 'payload'
         )
 
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
