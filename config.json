@@ -1,0 +1,51 @@
+{
+    "jobstatus": {
+        "info": {
+            "compute": {
+                "return": "<d_ret>",
+                "status": "<statusString>"
+            },
+            "pullPath": {
+                "return": "<d_ret>",
+                "status": "<statusString>"
+            },
+            "pushPath": {
+                "return": "<d_ret>",
+                "status": "<statusString>"
+            }
+        },
+        "organization": "the tree is /jobstatus/<someKey>/info",
+        "purpose": "this structure keeps track of job status: pathPush/pull and compute."
+    },
+    "self": {
+        "coordBlockSeconds": 10,
+        "name": "pfcon",
+        "version": "undefined"
+    },
+    "service": {
+        "host": {
+            "compute": {
+                "addr": "%PMAN_IP:5010",
+                "baseURLpath": "api/v1/cmd/",
+                "status": "undefined"
+            },
+            "data": {
+                "addr": "%PFIOH_IP:5055",
+                "baseURLpath": "api/v1/cmd/",
+                "status": "undefined"
+            }
+        },
+        "localhost": {
+            "compute": {
+                "addr": "127.0.0.1:5010",
+                "baseURLpath": "api/v1/cmd/",
+                "status": "undefined"
+            },
+            "data": {
+                "addr": "127.0.0.1:5055",
+                "baseURLpath": "api/v1/cmd/",
+                "status": "undefined"
+            }
+        }
+    }  
+}
