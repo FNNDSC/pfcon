@@ -154,7 +154,29 @@ Gd_internalvar  = {
         },
         'gondwanaland': {
             'data': {
-                'addr':         '%PFIOH_IP:5055',
+                'addr':         '192.168.1.189:5055',
+                'baseURLpath':  'api/v1/cmd/',
+                'status':       'undefined',
+
+                'storeAccess.tokenSet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                           "var":          "key",
+                           "set":          "setKeyValueHere"
+                       }
+                },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+
+            },
+            'compute': {
+                'addr':         '192.168.1.189:5010',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
@@ -183,12 +205,12 @@ Gd_internalvar  = {
 
             },
             'compute': {
-                'addr':         '%PMAN_IP:5010',
+                'addr':         '10.17.24.163:5010',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
         },
-        'localhost': {
+        'fnndsc': {
             'data': {
                 'addr':         'fnndsc.childrens.harvard.edu:5055',
                 'baseURLpath':  'api/v1/cmd/',
@@ -229,8 +251,17 @@ Gd_internalvar  = {
                            "set":          "setKeyValueHere"
                        }
                 },
+
+                'storeAccess.addrGet':  {
+                    "action":   "internalctl",
+                    "meta": {
+                        "var":          "storeAddress",
+                        "compute":      "address"
+                    }
+                }
+            },
             'compute': {
-                'addr':         '127.0.0.1:5010',
+                'addr':         '10.23.131.204:5010',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
@@ -257,10 +288,10 @@ Gd_internalvar  = {
                     }
                 }
             },
-            "data": {
-                "addr":         "pfioh-radiology.apps.osh.massopen.cloud",
-                "baseURLpath":  "api/v1/cmd/",
-                "status":       "undefined"
+            'compute': {
+                'addr':         '%PMAN_IP:5010',
+                'baseURLpath':  'api/v1/cmd/',
+                'status':       'undefined'
             }
         },
         'localhost': {
@@ -290,7 +321,7 @@ Gd_internalvar  = {
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
-        }
+        }        
     }
 }
 
