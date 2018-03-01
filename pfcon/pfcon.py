@@ -6,6 +6,7 @@ from    io              import  BytesIO as IO
 from    http.server     import  BaseHTTPRequestHandler, HTTPServer
 from    socketserver    import  ThreadingMixIn
 from    webob           import  Response
+from    pathlib         import  Path
 import  cgi
 import  json
 import  urllib
