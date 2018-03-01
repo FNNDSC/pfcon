@@ -64,228 +64,11 @@ Gd_internalvar  = {
     },
 
     'service':  {
-        'chris-docker-dev': {
-            'data': {
-                'addr':         '172.17.0.5:5055',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
-                },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-
-            },
-            'compute': {
-                'addr':         '172.17.0.2',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
-            }
-        },
-        'moc': {
-            'data': {
-                'addr':         'pfioh-radiology.openapp.cloud',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
-                },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-
-            },
-            'compute': {
-                'addr':         'pman-radiology.openapp.cloud',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
-            }
-        },
-        'openshiftlocal': {
-            'data': {
-                'addr':         'pfioh-myproject.127.0.0.1.nip.io',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
-                },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-
-            },
-            'compute': {
-                'addr':         'pman-myproject.127.0.0.1.nip.io',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
-            }
-        },
-        'gondwanaland': {
-            'data': {
-                'addr':         '192.168.1.189:5055',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
-                },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-
-            },
-            'compute': {
-                'addr':         '192.168.1.189:5010',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
-            }
-        },
-        'pangea': {
-            'data': {
-                'addr':         '10.17.24.163:5055',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
-                },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-
-            },
-            'compute': {
-                'addr':         '10.17.24.163:5010',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
-            }
-        },
-        'fnndsc': {
-            'data': {
-                'addr':         'fnndsc.childrens.harvard.edu:5055',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
-                },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-            },
-            'compute': {
-                'addr':         'fnndsc.childrens.harvard.edu:5010',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
-            }
-        },
-        'megalodon': {
-            'data': {
-                'addr':         '10.23.131.204:5055',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
-                },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-            },
-            'compute': {
-                'addr':         '10.23.131.204:5010',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
-            }
-        },
         'host': {
             'data': {
                 'addr':         '%PFIOH_IP:5055',
                 'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
-                },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
+                'status':       'undefined'
             },
             'compute': {
                 'addr':         '%PMAN_IP:5010',
@@ -297,30 +80,40 @@ Gd_internalvar  = {
             'data': {
                 'addr':         '127.0.0.1:5055',
                 'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined',
-
-                'storeAccess.tokenSet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                           "var":          "key",
-                           "set":          "setKeyValueHere"
-                       }
+                'status':       'undefined'
                 },
-
-                'storeAccess.addrGet':  {
-                    "action":   "internalctl",
-                    "meta": {
-                        "var":          "storeAddress",
-                        "compute":      "address"
-                    }
-                }
-            },
             'compute': {
-                'addr':         '127.0.0.1:5010',
+                'addr':         '127.0.0.1:5010', 
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
-        }        
+        },
+        "moc": {
+            "compute": {
+                "addr":         "pman-radiology.apps.osh.massopen.cloud",
+                "baseURLpath":  "api/v1/cmd/",
+                "status":       "undefined"
+            },
+            "data": {
+                "addr":         "pfioh-radiology.apps.osh.massopen.cloud",
+                "baseURLpath":  "api/v1/cmd/",
+                "status":       "undefined"
+            }
+        },
+        "openshiftlocal": {
+            "compute": {
+                "addr":                         "pman-myproject.127.0.0.1.nip.io",
+                "baseURLpath":                  "api/v1/cmd/",
+                "allowUnverifiedCertificates":  False,  
+                "status":                       "undefined"
+            },
+            "data": {
+                "addr":                         "pfioh-myproject.127.0.0.1.nip.io",
+                "baseURLpath":                  "api/v1/cmd/",
+                "allowUnverifiedCertificates":  False,  
+                "status":                       "undefined"
+            }
+        }
     }
 }
 
@@ -413,6 +206,35 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return:
         """
+
+        l_fileChanged   = []
+        hits            = 0
+
+        def fileContentsReplaceAtPath(str_path, **kwargs):
+            nonlocal    hits
+            nonlocal    l_fileChanged
+            b_status        = True
+            str_target      = ''
+            str_value       = ''
+            self.dp.qprint('In dir = %s, hits = %d' % (str_path, hits))
+            for k, v in kwargs.items():
+                if k == 'target':   str_target  = v
+                if k == 'value':    str_value   = v
+            for str_hit in Gd_tree.lsf(str_path):
+                str_content = Gd_tree.cat(str_hit)
+                self.dp.qprint('%20s: %20s' % (str_hit, str_content))
+                if str_content  == str_target:
+                    self.dp.qprint('%20s: %20s' % (str_hit, str_value))
+                    Gd_tree.touch(str_hit, str_value)
+                    b_status    = True
+                    hits        = hits + 1
+                    l_fileChanged.append(str_path + '/' + str_hit)
+
+            return {
+                    'status':           b_status,
+                    'l_fileChanged':    l_fileChanged
+                    }
+
         global Gd_internalvar
         global Gd_tree
         d_meta      = {}
@@ -427,7 +249,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_var     = d_meta['var']
 
         T           = C_stree()
-
+        # pudb.set_trace()
         if d_meta:
             if 'get' in d_meta.keys():
                 if Gd_tree.isdir(str_var):
@@ -438,20 +260,43 @@ class StoreHandler(BaseHTTPRequestHandler):
                 b_status                = True
 
             if 'set' in d_meta.keys():
+                b_tree          = False
+                # pudb.set_trace()
                 try:
-                    d_set   = json.loads(d_meta['set'])
-                    b_tree  = True
+                    d_set       = json.loads(d_meta['set'])
                 except:
-                    b_tree  = False
+                    str_set     = json.dumps(d_meta['set'])
+                    d_set       = json.loads(str_set)
+                    if isinstance(d_set, dict):
+                        b_tree  = True
                 if b_tree:
                     D       = C_stree()
                     D.initFromDict(d_set)
-                    D.copy(startPath = '/', destination = Gd_tree, pathDiskRoot = str_var)
+                    for topDir in D.lstr_lsnode():
+                        D.copy(startPath = '/'+topDir, destination = Gd_tree, pathDiskRoot = str_var)
                     d_ret           = d_set
                 else:
                     Gd_tree.touch(str_var, d_meta['set'])
                     d_ret[str_var]          = Gd_tree.cat(str_var)
                 b_status                = True
+
+            if 'valueReplace' in d_meta.keys():
+                # Find all the values in the internalctl tree
+                # and replace the value corresponding to 'var' with
+                # the field of 'valueReplace'
+                # pudb.set_trace()
+                str_target      = d_meta['var']
+                str_value       = d_meta['valueReplace']
+                if str_value    == 'ENV':
+                    if str_target.strip('%') in os.environ:
+                        str_value   = os.environ[str_target.strip('%')]
+                d_ret = Gd_tree.treeExplore(
+                        f       = fileContentsReplaceAtPath, 
+                        target  = str_target, 
+                        value   = str_value
+                        )
+                b_status        = d_ret['status']
+                d_ret['hits']   = hits
 
         return {'d_ret':    d_ret,
                 'status':   b_status}
@@ -1558,6 +1403,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
     def setup(self, **kwargs):
         global G_b_httpResponse
+        global Gd_internalvar
         global Gd_tree
         str_defIP       = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
         str_defIPpman   = str_defIP
@@ -1588,6 +1434,12 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             if k == 'args': self.args           = v
             if k == 'desc': self.str_desc       = v
             if k == 'ver':  self.str_version    = v
+
+        if len(self.args['str_configFileLoad']):
+            if Path(self.args['str_configFileLoad']).is_file():
+                # Read configuration detail from JSON formatted file
+                with open(self.args['str_configFileLoad']) as json_file:
+                    Gd_internalvar  = json.load(json_file)
 
         G_b_httpResponse = self.args['b_httpResponse']
         print(self.str_desc)
