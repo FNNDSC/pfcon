@@ -1,4 +1,5 @@
 {
+    "info" : "This file is a sample configuration for pfcon and can be loaded with the --configFileLoad CLI.",
     "jobstatus": {
         "info": {
             "compute": {
@@ -43,6 +44,30 @@
             },
             "data": {
                 "addr": "127.0.0.1:5055",
+                "baseURLpath": "api/v1/cmd/",
+                "status": "undefined"
+            }
+        },
+        "moc": {
+            "compute": {
+                "addr": "pman-radiology.apps.osh.massopen.cloud",
+                "baseURLpath": "api/v1/cmd/",
+                "status": "undefined"
+            },
+            "data": {
+                "addr": "pfioh-radiology.apps.osh.massopen.cloud",
+                "baseURLpath": "api/v1/cmd/",
+                "status": "undefined"
+            }
+        },
+        "openshiftlocal": {
+            "compute": {
+                "addr": "pman-myproject.127.0.0.1.nip.io",
+                "baseURLpath": "api/v1/cmd/",
+                "status": "undefined"
+            },
+            "data": {
+                "addr": "pfioh-myproject.127.0.0.1.nip.io",
                 "baseURLpath": "api/v1/cmd/",
                 "status": "undefined"
             }
