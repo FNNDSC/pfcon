@@ -40,10 +40,11 @@ RUN apt-get update \
   && adduser localuser sudo                                           \
   && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils vim net-tools inetutils-ping \
   && apt-get install python3-webob                                    \
-  && pip3 install pfurl>=1.3.16.3                                       \
+  && pip3 install pfurl>=1.3.16.3                                     \
   && pip3 install pfmisc==1.0.1                                       \
   && pip3 install webob                                               \
   && pip3 install /tmp/pfcon                                          \
+  && pip3 install python-swiftclient                                  \
   && rm -fr /tmp/pfcon                                                \
   && chmod 777 /dock                                                  \
   && chmod 777 /dock/docker-entrypoint.py                             \
