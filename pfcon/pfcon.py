@@ -28,6 +28,7 @@ import  pfurl
 import  pfmisc
 
 import  pudb
+import  swiftclient
 
 # pfcon local dependencies
 from    ._colors        import  Colors
@@ -1129,7 +1130,8 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                                         action  = 'getInfo',
                                                                         op      = 'pullPath')
                     d_dataRequestProcessPull    = d_jobStatus['info']['pullPath']['return']
-                    if Gd_tree.exists('/swift'):
+                    # pudb.set_trace()
+                    if Gd_tree.exists('swift', path = '/') and False:
                         d_swift = self.swiftStorage_createFileList(
                             root = str_localDestination
                         )
@@ -1203,7 +1205,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         swift storage.
         """
 
-        d_ret   = {
+        d_create   = {
             'status': False,
             'd_result': {
                 'l_fileFS': []
@@ -1218,10 +1220,15 @@ class StoreHandler(BaseHTTPRequestHandler):
             # Create a list of all files down the <str_rootPath>
             for root, dirs, files in os.walk(str_rootPath):
                 for filename in files:
-                    d_ret['d_result']['l_fileFS'].append(filename)
-            self.swiftStorage_putObjects(
-                fileObjectList = d_ret['d_result']['l_fileFS']
+                    d_create['d_result']['l_fileFS'].append(os.path.join(root, filename))
+            d_swiftPut = self.swiftStorage_putObjects(
+                fileObjectList = d_create['d_result']['l_fileFS']
             )
+        return {
+            'status':   True,
+            'd_create': d_create,
+            'd_put':    d_swiftPut
+        }
 
     def summaryStatus_process(self, ad_jobStatus):
         """
