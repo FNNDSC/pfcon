@@ -44,7 +44,14 @@ Gd_internalvar  = {
         'version':              'undefined',
         'coordBlockSeconds':    10
     },
-
+    "swift": {
+        "auth_url":                 "http://swift_service:8080/auth/v1.0",
+        "username":                 "chris:chris1234",
+        "key":                      "testing",
+        "container_name":           "users",
+        "auto_create_container":    True,
+        "file_storage":             "swift.storage.SwiftStorage"
+    },
     'jobstatus': {
         'purpose':  'this structure keeps track of job status: pathPush/pull and compute.',
         'organization': 'the tree is /jobstatus/<someKey>/info',
@@ -965,7 +972,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         :return:
         """
 
-        global Gd_internalvar
+        global Gd_internalvar, Gd_tree
 
         self.dp.qprint("coordinate_process()", comms = 'status')
         b_status                    = False
@@ -976,6 +983,10 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_computeRequest            = {}
         d_computeRequestProcess     = {}
         d_dataRequestProcessPull    = {}
+        d_swift                     = {
+            'status':   False,
+            'd_ret':    {}
+        }
         coordBlockSeconds           = Gd_internalvar['self']['coordBlockSeconds']
 
         for k,v in kwargs.items():
@@ -1118,6 +1129,10 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                                         action  = 'getInfo',
                                                                         op      = 'pullPath')
                     d_dataRequestProcessPull    = d_jobStatus['info']['pullPath']['return']
+                    if Gd_tree.exists('/swift'):
+                        d_swift = self.swiftStorage_createFileList(
+                            root = str_localDestination
+                        )
 
         d_ret = {
             'status':   b_status,
@@ -1140,6 +1155,73 @@ class StoreHandler(BaseHTTPRequestHandler):
             f.close()
 
         return d_ret
+
+    def swiftStorage_putObjects(self, *args, **kwargs):
+        """
+        """
+        global Gd_tree
+        d_ret = {
+            'status': True,
+            'd_put': {
+                'l_fileStore':  []
+            }
+        }
+        l_files     = []
+        for k,v in kwargs.items():
+            if k == 'fileObjectList':   l_files = v
+        # initiate a swift service connection
+        conn = swiftclient.Connection(
+            user    = Gd_tree.cat('/swift/username'),
+            key     = Gd_tree.cat('/swift/key'),
+            authurl = Gd_tree.cat('/swift/auth_url')
+        )
+
+        # create container in case it doesn't already exist
+        conn.put_container(Gd_tree.cat('/swift/container_name'))
+
+        # put files into storage
+        for filename in l_files: 
+            try:
+                d_ret['status'] = True and d_ret['status']
+                with open(filename, 'r') as fp:
+                    conn.put_object(
+                        Gd_tree.cat('/swift/container_name'),
+                        filename,
+                        contents=fp.read()
+                    )
+            except:
+                d_ret['status'] = False
+            d_ret['d_put']['l_fileStore'].append(filename)
+        
+        return d_ret
+
+    def swiftStorage_createFileList(self, *args, **kwargs):
+        """
+        Initial entry point for swift storage processing.
+
+        This method determines a list of files to put into
+        swift storage.
+        """
+
+        d_ret   = {
+            'status': False,
+            'd_result': {
+                'l_fileFS': []
+            }
+        }
+        pudb.set_trace()
+        self.dp.qprint("starting...")
+        str_rootPath    = ''
+        for k,v in kwargs.items():
+            if k == 'root': str_rootPath = v
+        if len(str_rootPath):
+            # Create a list of all files down the <str_rootPath>
+            for root, dirs, files in os.walk(str_rootPath):
+                for filename in files:
+                    d_ret['d_result']['l_fileFS'].append(filename)
+            self.swiftStorage_putObjects(
+                fileObjectList = d_ret['d_result']['l_fileFS']
+            )
 
     def summaryStatus_process(self, ad_jobStatus):
         """
