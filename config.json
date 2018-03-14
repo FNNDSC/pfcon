@@ -1,5 +1,13 @@
 {
     "info" : "This file is a sample configuration for pfcon and can be loaded with the --configFileLoad CLI.",
+    "swift": {
+        "auth_url":                 "http://swift_service:8080/auth/v1.0",
+        "username":                 "chris:chris1234",
+        "key":                      "testing",
+        "container_name":           "users",
+        "auto_create_container":    true,
+        "file_storage":             "swift.storage.SwiftStorage"
+    },
     "jobstatus": {
         "info": {
             "compute": {
