@@ -1131,7 +1131,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                                         op      = 'pullPath')
                     d_dataRequestProcessPull    = d_jobStatus['info']['pullPath']['return']
                     # pudb.set_trace()
-                    if Gd_tree.exists('swift', path = '/') and False:
+                    if Gd_tree.exists('swift', path = '/'):
                         d_swift = self.swiftStorage_createFileList(
                             root = str_localDestination
                         )
@@ -1206,7 +1206,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
 
         d_create   = {
-            'status': False,
+            'status': True,
             'd_result': {
                 'l_fileFS': []
             }
@@ -1220,6 +1220,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             # Create a list of all files down the <str_rootPath>
             for root, dirs, files in os.walk(str_rootPath):
                 for filename in files:
+                    d_ret['status'] = True and d_ret['status']
                     d_create['d_result']['l_fileFS'].append(os.path.join(root, filename))
             d_swiftPut = self.swiftStorage_putObjects(
                 fileObjectList = d_create['d_result']['l_fileFS']
