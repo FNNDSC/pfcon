@@ -53,7 +53,8 @@ RUN apt-get update \
 
 ARG APPROOT="/usr/src/pfcon"  
 ARG VERSION="0.1"
-COPY ["README.rst", "setup.py", "${APPROOT}/"]
+COPY ./README.rst ${APPROOT}
+COPY ./setup.py ${APPROOT}}
 RUN python ${APPROOT}/setup.py
 
 ENTRYPOINT ["/dock/docker-entrypoint.py"]
