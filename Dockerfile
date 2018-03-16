@@ -54,7 +54,7 @@ RUN apt-get update \
 ARG APPROOT="/usr/src/pfcon"  
 COPY ./README.rst ${APPROOT}/README.rst
 COPY ./setup.py ${APPROOT}/setup.py
-RUN python ${APPROOT}/setup.py
+RUN cd ${APPROOT} && python ${APPROOT}/setup.py
 
 ENTRYPOINT ["/dock/docker-entrypoint.py"]
 EXPOSE 5055
