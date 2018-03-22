@@ -372,7 +372,8 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_ret   = {
             'status':       False,
-            'd_swiftPull':  {}
+            'd_swiftPull':  {},
+            'localpath':    ""
         }
         d_meta  = {}
         d_local = {}
@@ -382,9 +383,15 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         if 'local' in d_meta:
             d_local     = d_meta['local']
-            if d_local['storageType'] == 'swift':
-                d_ret['d_swiftPull'] = self.swiftstorage_objPull(d_local['path'])
-                d_ret['status'] = True
+            if 'storageType' in d_local:
+                if d_local['storageType'] == 'swift':
+                    # pudb.set_trace()
+                    d_ret['d_swiftPull']    = self.swiftstorage_objPull(
+                                                    fromLocation = d_local['path']
+                                                )
+                    d_ret['status']         = True
+                    d_ret['localpath']      = d_ret['d_swiftPull']['localpath']
+                    d_meta['local']['path'] = d_ret['localpath']
 
         return d_ret
 
@@ -405,10 +412,11 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         self.dp.qprint("dataRequest_process()", comms = 'status')
 
-        pudb.set_trace()
+        # pudb.set_trace()
 
         d_request       = {}
         d_meta          = {}
+        d_pushPath      = {} 
         # The return from the remote call
         d_ret           = {}
         # The return from this method
@@ -423,7 +431,12 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'key':              str_key             = v
             if k == 'op':               str_op              = v
 
+
         d_meta                  = d_request[str_metaHeader]
+
+        if str_op == 'pushPath':
+            d_pushPath = self.dataRequest_processPushPath(d_meta = d_meta)
+
         str_remoteService       = d_meta['service']
         str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
         str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURLpath'% str_remoteService)
@@ -1199,13 +1212,21 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         return d_ret
 
+    def static_vars(**kwargs):
+        def decorate(func):
+            for k in kwargs:
+                setattr(func, k, kwargs[k])
+            return func
+        return decorate
+
+    @static_vars(str_prependBucketPath = "")
     def swiftstorage_connect(self, *args, **kwargs):
         """
         Connect to swift storage and return the connection object,
         as well an optional "prepend" string to fully qualify 
         object location in swift storage.
 
-        The 'prependBuckPath' is somewhat 'legacy' to a similar
+        The 'prependBucketPath' is somewhat 'legacy' to a similar
         method in charm.py and included here with the idea 
         to eventually converge on a single swift-based intermediary
         library for both pfcon and CUBE.
@@ -1213,10 +1234,6 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         global Gd_tree
         b_status                = True
-
-        # static var
-        if 'str_prependBucketPath' not in self.swiftstorage_connect.__dict__:
-            self.swiftstorage_connect.str_prependBucketPath = ''
 
         for k,v in kwargs.items():
             if k == 'prependBucketPath':    self.swiftstorage_connect.str_prependBucketPath = v
@@ -1322,7 +1339,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         to new locations in the object storage. For example, assume
         a list of local locations starting with:
 
-                /home/user/project/data/ ...
+                    /home/user/project/data/ ...
 
         and we want to pack everything in the 'data' dir to 
         object storage, at location '/storage'. In this case, the
@@ -1384,7 +1401,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                     d_ret['status'] = True and d_ret['status']
                     with open(str_localfilename, 'r') as fp:
                         d_conn['conn'].put_object(
-                            d_conn['swift_container_name'],
+                            d_conn['container_name'],
                             str_storagefilename,
                             contents=fp.read()
                         )
@@ -1412,7 +1429,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         In this case, the pattern of kwargs specifying this would be:
 
-                    inLocation      = user/someuser/uploads/project/data
+                    fromLocation    = user/someuser/uploads/project/data
                     mapLocationOver = /some/dir/data
 
         if 'mapLocationOver' is not specified, then the local file system
@@ -1430,7 +1447,8 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_ret                   = {
             'status':           b_status,
             'localFileList':    [],
-            'objectFileList':   []
+            'objectFileList':   [],
+            'localpath':        ''
         }
 
         d_conn  = self.swiftstorage_connect(*args, **kwargs)
@@ -1440,7 +1458,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_swiftLocation               = str_prependBucketPath
 
         for k,v in kwargs.items():
-            if k == 'inLocation':       str_swiftLocation   = '%s%s' % (str_prependBucketPath, v)
+            if k == 'fromLocation':     str_swiftLocation   = '%s%s' % (str_prependBucketPath, v)
             if k == 'mapLocationOver':  str_mapLocationOver = v
 
         # Get dictionary of objects in storage
@@ -1451,26 +1469,31 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         if len(str_mapLocationOver):
             # replace the local file path with object store path
-            l_localfile     = [w.replace(str_swiftLocation, str_mapLocationOver) \
-                                for w in l_objectfile]
+            l_localfile         = [w.replace(str_swiftLocation, str_mapLocationOver) \
+                                    for w in l_objectfile]
         else:
             # Prepend a '/' to each element in the l_objectfile:
-            l_localfile     = ['/' + '{0}'.format(i) for i in l_objectfile]
+            l_localfile         = ['/' + '{0}'.format(i) for i in l_objectfile]
+            str_mapLocationOver =  '/' + str_swiftLocation
+
+        d_ret['localpath']      = str_mapLocationOver
 
         if d_conn['status']:
             for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile):
                 try:
                     d_ret['status'] = True and d_ret['status']
-                    obj_tuple   = d_conn['conn'].get_object(
-                                                    d_conn['swift_container_name'],
+                    obj_tuple       = d_conn['conn'].get_object(
+                                                    d_conn['container_name'],
                                                     str_storagefilename
                                                 )
+                    str_parentDir   = os.path.dirname(str_localfilename)
+                    os.makedirs(str_parentDir, exist_ok = True)
                     with open(str_localfilename, 'w') as fp:
-                        fp.write(obj_tuple[1])
+                        fp.write(str(obj_tuple[1], 'utf-8'))
                 except:
                     d_ret['status'] = False
                 d_ret['localFileList'].append(str_localfilename)
-                d_ret['objectFileList'].append(str_swiftLocation)
+                d_ret['objectFileList'].append(str_storagefilename)
         return d_ret
 
     def swiftStorage_putObjects(self, *args, **kwargs):
@@ -1526,7 +1549,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 'l_fileFS': []
             }
         }
-        pudb.set_trace()
+        # pudb.set_trace()
         self.dp.qprint("starting...")
         str_rootPath    = ''
         for k,v in kwargs.items():
