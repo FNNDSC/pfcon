@@ -434,6 +434,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_meta                  = d_request[str_metaHeader]
 
+        # pudb.set_trace()
         if str_op == 'pushPath':
             d_pushPath = self.dataRequest_processPushPath(d_meta = d_meta)
 
@@ -1032,7 +1033,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         self.dp.qprint("coordinate_process()", comms = 'status')
         b_status                    = False
         d_request                   = {}
-        d_jobStatus              = {}
+        d_jobStatus                 = {}
         d_dataRequest               = {}
         d_dataRequestProcessPush    = {}
         d_computeRequest            = {}
@@ -1184,11 +1185,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                                         action  = 'getInfo',
                                                                         op      = 'pullPath')
                     d_dataRequestProcessPull    = d_jobStatus['info']['pullPath']['return']
-                    # pudb.set_trace()
-                    if Gd_tree.exists('swift', path = '/'):
-                        d_swift = self.swiftStorage_createFileList(
-                            root = str_localDestination
-                        )
 
         d_ret = {
             'status':   b_status,
@@ -1209,6 +1205,11 @@ class StoreHandler(BaseHTTPRequestHandler):
             with open(os.path.join(str_localDestination, 'jobStatusSummary.json'), 'w') as f:
                 json.dump(d_jobStatusSummary, f)
             f.close()
+            # pudb.set_trace()
+            if Gd_tree.exists('swift', path = '/'):
+                d_swift = self.swiftStorage_createFileList(
+                    root = str_localDestination
+                )
 
         return d_ret
 
@@ -1481,6 +1482,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         if d_conn['status']:
             for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile):
                 try:
+                    # pudb.set_trace()
                     d_ret['status'] = True and d_ret['status']
                     obj_tuple       = d_conn['conn'].get_object(
                                                     d_conn['container_name'],
@@ -1488,9 +1490,12 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                 )
                     str_parentDir   = os.path.dirname(str_localfilename)
                     os.makedirs(str_parentDir, exist_ok = True)
-                    with open(str_localfilename, 'w') as fp:
-                        fp.write(str(obj_tuple[1], 'utf-8'))
-                except:
+                    with open(str_localfilename, 'wb') as fp:
+                        # fp.write(str(obj_tuple[1], 'utf-8'))
+                        fp.write(obj_tuple[1])
+                except Exception as e:
+                    # pudb.set_trace()
+                    d_ret['error']  = str(e)
                     d_ret['status'] = False
                 d_ret['localFileList'].append(str_localfilename)
                 d_ret['objectFileList'].append(str_storagefilename)
@@ -1523,7 +1528,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         for filename in l_files: 
             try:
                 d_ret['status'] = True and d_ret['status']
-                with open(filename, 'r') as fp:
+                with open(filename, 'rb') as fp:
                     conn.put_object(
                         Gd_tree.cat('/swift/container_name'),
                         filename,
