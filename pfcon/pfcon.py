@@ -1187,13 +1187,13 @@ class StoreHandler(BaseHTTPRequestHandler):
                     d_dataRequestProcessPull    = d_jobStatus['info']['pullPath']['return']
 
         d_ret = {
-            'status':   b_status,
-            'pushData': d_dataRequestProcessPush,
-            'compute':  d_computeRequestProcess,
-            'pullData': d_dataRequestProcessPull
+            'status':       b_status,
+            'pushData':     d_dataRequestProcessPush,
+            'compute':      d_computeRequestProcess,
+            'pullData':     d_dataRequestProcessPull,
+            'swiftstore':   {}
         }
 
-        self.dp.qprint('Final return: d_ret = \n%s' % self.pp.pformat(d_ret).strip(), comms = 'status')
         if d_ret['status']:
             d_jobStatus         = self.jobStatus_do(        key     = str_key,
                                                             action  = 'getInfo',
@@ -1207,10 +1207,16 @@ class StoreHandler(BaseHTTPRequestHandler):
             f.close()
             # pudb.set_trace()
             if Gd_tree.exists('swift', path = '/'):
-                d_swift = self.swiftStorage_createFileList(
+                d_swiftstore = self.swiftStorage_createFileList(
                     root = str_localDestination
                 )
+                # d_ls    = self.filesFind(root = str_localDestination)
+                # if d_ls['status']:
+                #     d_swiftstore = self.swiftstorage_objPut(
+                #         fileList    = d_ls['l_fileFS']
+                #     )
 
+        self.dp.qprint('Final return: d_ret = \n%s' % self.pp.pformat(d_ret).strip(), comms = 'status')
         return d_ret
 
     def static_vars(**kwargs):
@@ -1373,7 +1379,8 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_ret                   = {
             'status':           b_status,
             'localFileList':    [],
-            'objectFileList':   []
+            'objectFileList':   [],
+            'localpath':        ''
         }
 
         d_conn  = self.swiftstorage_connect(*args, **kwargs)
@@ -1396,17 +1403,20 @@ class StoreHandler(BaseHTTPRequestHandler):
             # Prepend the swiftlocation to each element in the localfile list:
             l_objectfile    = [str_swiftLocation + '{0}'.format(i) for i in l_localfile]
 
+        d_ret['localpath']  = os.path.dirname(l_localfile[0])
+
         if d_conn['status']:
             for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile): 
                 try:
                     d_ret['status'] = True and d_ret['status']
-                    with open(str_localfilename, 'r') as fp:
+                    with open(str_localfilename, 'rb') as fp:
                         d_conn['conn'].put_object(
                             d_conn['container_name'],
                             str_storagefilename,
                             contents=fp.read()
                         )
-                except:
+                except Exception as e:
+                    d_ret['error']  = e
                     d_ret['status'] = False
                 d_ret['localFileList'].append(str_localfilename)
                 d_ret['objectFileList'].append(str_swiftLocation)
@@ -1537,6 +1547,32 @@ class StoreHandler(BaseHTTPRequestHandler):
             except:
                 d_ret['status'] = False
             d_ret['d_put']['l_fileStore'].append(filename)
+        
+        return d_ret
+
+    def filesFind(self, *args, **kwargs):
+        """
+        This method simply returns a list of files 
+        down a filesystem tree starting from the 
+        kwarg:
+
+            root = <someStartPath>
+
+        """
+
+        d_ret      = {
+            'status':   False,
+            'l_fileFS': []
+        }
+        str_rootPath    = ''
+        for k,v in kwargs.items():
+            if k == 'root': str_rootPath    = v
+        if len(str_rootPath):
+            # Create a list of all files down the <str_rootPath>
+            for root, dirs, files in os.walk(str_rootPath):
+                for filename in files:
+                    d_ret['l_fileFS'].append(os.path.join(root, filename))
+                    d_ret['status'] = True
         
         return d_ret
 
