@@ -1191,7 +1191,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             'pushData':     d_dataRequestProcessPush,
             'compute':      d_computeRequestProcess,
             'pullData':     d_dataRequestProcessPull,
-            'swiftstore':   {}
+            'd_swiftstore': {}
         }
 
         if d_ret['status']:
@@ -1207,16 +1207,43 @@ class StoreHandler(BaseHTTPRequestHandler):
             f.close()
             # pudb.set_trace()
             if Gd_tree.exists('swift', path = '/'):
-                d_swiftstore = self.swiftStorage_createFileList(
+                # There might be a timing issue with pushing files into swift and 
+                # the swift container being able to report them as accessible. The
+                # solution is to push objects, and then poll on calls to swift 'ls'
+                # and compare results with push record.
+                waitPoll            = 0
+                maxWaitPoll         = 10
+                # pudb.set_trace()
+                d_ret['d_swiftstore'] = self.swiftStorage_createFileList(
                     root = str_localDestination
                 )
-                # d_ls    = self.filesFind(root = str_localDestination)
+                filesPushed         = len(d_ret['d_swiftstore']['d_put']['d_result']['l_fileStore'])
+
+                # while numFilesReturned < 2 and waitPoll < maxWaitPoll:
+                #     d_ls                = self.filesFind(root = str_localDestination)
+                #     numFilesReturned    = d_ls['numFiles']
+                #     time.sleep(0.2)
+                #     waitPoll            += 1
                 # if d_ls['status']:
-                #     d_swiftstore = self.swiftstorage_objPut(
+                #     d_ret['d_swiftstore'] = self.swiftstorage_objPut(
                 #         fileList    = d_ls['l_fileFS']
                 #     )
 
-        self.dp.qprint('Final return: d_ret = \n%s' % self.pp.pformat(d_ret).strip(), comms = 'status')
+                filesAccessible     = 0
+                while filesAccessible < filesPushed and waitPoll < maxWaitPoll:
+                    d_swift_ls      = self.swiftstorage_ls(path = str_localDestination)
+                    filesAccessible = len(d_swift_ls['lsList'])
+                    time.sleep(0.2)
+                    waitPoll        += 1
+                d_ret['d_swift_ls'] = d_swift_ls
+                d_ret['d_swiftstore']['waitPoll']           = waitPoll
+                d_ret['d_swiftstore']['filesPushed']        = filesPushed
+                d_ret['d_swiftstore']['filesAccessible']    = filesAccessible
+
+        self.dp.qprint( 'Final return: d_ret = \n%s' % self.pp.pformat(d_ret).strip(), 
+                        comms = 'status',
+                        teeFile = '/data/tmp/d_swiftstore-%s.json' % str_key, 
+                        teeMode = 'w+')
         return d_ret
 
     def static_vars(**kwargs):
@@ -1419,7 +1446,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                     d_ret['error']  = e
                     d_ret['status'] = False
                 d_ret['localFileList'].append(str_localfilename)
-                d_ret['objectFileList'].append(str_swiftLocation)
+                d_ret['objectFileList'].append(str_storagefilename)
         return d_ret
 
     def swiftstorage_objPull(self, *args, **kwargs):
@@ -1517,7 +1544,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         global Gd_tree
         d_ret = {
             'status': True,
-            'd_put': {
+            'd_result': {
                 'l_fileStore':  []
             }
         }
@@ -1546,7 +1573,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                     )
             except:
                 d_ret['status'] = False
-            d_ret['d_put']['l_fileStore'].append(filename)
+            d_ret['d_result']['l_fileStore'].append(filename)
         
         return d_ret
 
@@ -1562,7 +1589,8 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_ret      = {
             'status':   False,
-            'l_fileFS': []
+            'l_fileFS': [],
+            'numFiles': 0
         }
         str_rootPath    = ''
         for k,v in kwargs.items():
@@ -1574,6 +1602,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                     d_ret['l_fileFS'].append(os.path.join(root, filename))
                     d_ret['status'] = True
         
+        d_ret['numFiles']   = len(d_ret['l_fileFS'])
         return d_ret
 
     def swiftStorage_createFileList(self, *args, **kwargs):
