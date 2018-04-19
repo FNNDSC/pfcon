@@ -434,7 +434,6 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_meta                  = d_request[str_metaHeader]
 
-        # pudb.set_trace()
         if str_op == 'pushPath':
             d_pushPath = self.dataRequest_processPushPath(d_meta = d_meta)
 
@@ -652,6 +651,8 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_jobReturn = {}
         b_jobSubmit = False
         d_jobSubmit = {}
+        b_jobSwift  = False
+        d_jobSwift  = {}
 
         # pudb.set_trace()
         for k,v in kwargs.items():
@@ -664,6 +665,9 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'jobReturn':
                 b_jobReturn                     = True    
                 d_jobReturn                     = v 
+            if k == 'jobSwift':
+                b_jobSwift                      = True    
+                d_jobSwift                      = v 
             if k == 'action':       str_action  = v
 
         # pudb.set_trace()
@@ -713,6 +717,8 @@ class StoreHandler(BaseHTTPRequestHandler):
                             d_info[k]['return'] = d_jobReturn
                         if b_jobSubmit:
                             d_info[k]['submit'] = d_jobSubmit
+                        if b_jobSwift:
+                            d_info[k]['swift']  = d_jobSwift
                     T.touch('info', d_info)
         return {
             'status':   b_status,
@@ -1039,10 +1045,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_computeRequest            = {}
         d_computeRequestProcess     = {}
         d_dataRequestProcessPull    = {}
-        d_swift                     = {
-            'status':   False,
-            'd_ret':    {}
-        }
         coordBlockSeconds           = Gd_internalvar['self']['coordBlockSeconds']
 
         for k,v in kwargs.items():
@@ -1187,25 +1189,27 @@ class StoreHandler(BaseHTTPRequestHandler):
                     d_dataRequestProcessPull    = d_jobStatus['info']['pullPath']['return']
 
         d_ret = {
-            'status':       b_status,
-            'pushData':     d_dataRequestProcessPush,
-            'compute':      d_computeRequestProcess,
-            'pullData':     d_dataRequestProcessPull,
-            'd_swiftstore': {}
+            'status':               b_status,
+            'pushData':             d_dataRequestProcessPush,
+            'compute':              d_computeRequestProcess,
+            'pullData':             d_dataRequestProcessPull,
+            'd_swiftstore':         {},
+            'd_jobStatus':          {},
+            'd_jobStatusSummary':   {}
         }
 
         if d_ret['status']:
-            d_jobStatus         = self.jobStatus_do(        key     = str_key,
-                                                            action  = 'getInfo',
-                                                            op      = 'all')
-            d_jobStatusSummary  = self.summaryStatus_process(d_jobStatus)
+            d_ret['d_jobStatus']            = self.jobStatus_do(        key     = str_key,
+                                                                        action  = 'getInfo',
+                                                                        op      = 'all')
+            d_ret['d_jobStatusSummary']     = self.summaryStatus_process(d_jobStatus)
             with open(os.path.join(str_localDestination, 'jobStatus.json'), 'w') as f:
-                json.dump(d_jobStatus, f)
+                json.dump(d_ret['d_jobStatus'], f)
             f.close()
             with open(os.path.join(str_localDestination, 'jobStatusSummary.json'), 'w') as f:
-                json.dump(d_jobStatusSummary, f)
+                json.dump(d_ret['d_jobStatusSummary'], f)
             f.close()
-            # pudb.set_trace()
+
             if Gd_tree.exists('swift', path = '/'):
                 # There might be a timing issue with pushing files into swift and 
                 # the swift container being able to report them as accessible. The
@@ -1239,10 +1243,28 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_ret['d_swiftstore']['waitPoll']           = waitPoll
                 d_ret['d_swiftstore']['filesPushed']        = filesPushed
                 d_ret['d_swiftstore']['filesAccessible']    = filesAccessible
+                # pudb.set_trace()
+                d_swift                                     = {}
+                d_swift['useSwift']                         = True
+                d_swift['d_swift_ls']                       = d_swift_ls
+                d_swift['d_swiftstore']                     = d_ret['d_swiftstore']
+                self.jobStatus_do(      
+                                        action      = 'set',
+                                        key         = str_key,
+                                        op          = 'pullPath',
+                                        status      = True,
+                                        jobSwift    = d_swift
+                )
 
-        self.dp.qprint( 'Final return: d_ret = \n%s' % self.pp.pformat(d_ret).strip(), 
+                d_internalInfo  = Gd_tree.cat('/jobstatus/%s/info' % str_key)
+
+        self.dp.qprint( 'Final return: d_ret = \n%s' % json.dumps(d_ret, indent=4),
                         comms = 'status',
-                        teeFile = '/data/tmp/d_swiftstore-%s.json' % str_key, 
+                        teeFile = '/data/tmp/d_ret-%s.json' % str_key, 
+                        teeMode = 'w+')
+        self.dp.qprint( 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
+                        comms = 'status',
+                        teeFile = '/data/tmp/d_internalInfo-%s.json' % str_key, 
                         teeMode = 'w+')
         return d_ret
 
