@@ -8,14 +8,33 @@
 # specify them again in docker-compose.yml.
 #
 
-pfcon_dev:
-  image:  ${CREPO}/pfcon:dev
-  volumes:
-    # - /var/run/docker.sock:/var/run/docker.sock
-    - .:/usr/local/pfcon
-  ports:
-    - "5005:5005"
-  labels:
-    name: "PF controller, part of the CHRIS backend."
-    role: "PF controller, part of the CHRIS backend."
-  command: ["--forever", "--httpResponse"]
+version: '3'
+
+services:
+  pfcon_dev:
+    image:  local/pfcon
+    volumes:
+      # - /var/run/docker.sock:/var/run/docker.sock
+      - ./pfcon/pfcon.py:/usr/local/lib/python3.5/dist-packages/pfcon/pfcon.py
+      # - .:/usr/local/lib/python3.5/dist-packages/pfcon
+    ports:
+      - "5005:5005"
+    depends_on:
+      - swift_service
+    labels:
+      name: "pfcon"
+      role: "PF controller, part of the CHRIS backend."
+    command: ["--forever", "--httpResponse"]
+
+  swift_service:
+    image:  fnndsc/docker-swift-onlyone
+    volumes:
+      - swift_storage:/srv
+    ports:
+      - "8080:8080"
+    labels:
+      name: "swift"
+      role: "swift object storage service"
+
+volumes:
+  swift_storage:

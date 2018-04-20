@@ -29,6 +29,7 @@ MAINTAINER fnndsc "dev@babymri.org"
 ARG UID=1001
 ENV UID=$UID
 
+ARG APPROOT="/usr/src/pfcon"  
 COPY . /tmp/pfcon
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
 
@@ -39,10 +40,6 @@ RUN apt-get update \
   && echo "localuser:localuser" | chpasswd                            \
   && adduser localuser sudo                                           \
   && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils vim net-tools inetutils-ping \
-  && apt-get install python3-webob                                    \
-  && pip3 install pfurl>=1.3.16.3                                       \
-  && pip3 install pfmisc==1.0.1                                       \
-  && pip3 install webob                                               \
   && pip3 install /tmp/pfcon                                          \
   && rm -fr /tmp/pfcon                                                \
   && chmod 777 /dock                                                  \

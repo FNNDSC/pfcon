@@ -28,6 +28,7 @@ import  pfurl
 import  pfmisc
 
 import  pudb
+import  swiftclient
 
 # pfcon local dependencies
 from    ._colors        import  Colors
@@ -44,7 +45,14 @@ Gd_internalvar  = {
         'version':              'undefined',
         'coordBlockSeconds':    10
     },
-
+    "swift": {
+        "auth_url":                 "http://swift_service:8080/auth/v1.0",
+        "username":                 "chris:chris1234",
+        "key":                      "testing",
+        "container_name":           "users",
+        "auto_create_container":    True,
+        "file_storage":             "swift.storage.SwiftStorage"
+    },
     'jobstatus': {
         'purpose':  'this structure keeps track of job status: pathPush/pull and compute.',
         'organization': 'the tree is /jobstatus/<someKey>/info',
@@ -339,6 +347,54 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_ret   = self.internalctl_varprocess(d_meta = d_meta)
         return d_ret
 
+    def dataRequest_processPushPath(self, *args, **kwargs):
+        """
+        This method handles the processing of data to push out to a 
+        compute environment. In the JSON input specification the
+        'local' denotes the source to push -- this is a path-like
+        descriptor that originally denoted an actual path on the
+        filesystem accessible to pfcon. 
+
+        If, however, the 'local' has a directive:
+
+            {'storageType': 'swift'}
+
+        then the path spec is a location in object storage. 
+
+        This method will pull from object storage all elements that
+        conform to the path spec, and store on the local filesystem
+        in a directory with the same name.
+
+        Thus, this method effectively mirrors a location in object
+        storage out to local storage (prepending a leading '/' to the
+        local storage path).
+        """
+
+        d_ret   = {
+            'status':       False,
+            'd_swiftPull':  {},
+            'localpath':    ""
+        }
+        d_meta  = {}
+        d_local = {}
+
+        for k,v in kwargs.items():
+            if k == 'd_meta':   d_meta = v
+
+        if 'local' in d_meta:
+            d_local     = d_meta['local']
+            if 'storageType' in d_local:
+                if d_local['storageType'] == 'swift':
+                    # pudb.set_trace()
+                    d_ret['d_swiftPull']    = self.swiftstorage_objPull(
+                                                    fromLocation = d_local['path']
+                                                )
+                    d_ret['status']         = True
+                    d_ret['localpath']      = d_ret['d_swiftPull']['localpath']
+                    d_meta['local']['path'] = d_ret['localpath']
+
+        return d_ret
+
     def dataRequest_process(self, *args, **kwargs):
         """
         Method for talking to the data handling service.
@@ -360,6 +416,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         d_request       = {}
         d_meta          = {}
+        d_pushPath      = {} 
         # The return from the remote call
         d_ret           = {}
         # The return from this method
@@ -374,7 +431,12 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'key':              str_key             = v
             if k == 'op':               str_op              = v
 
+
         d_meta                  = d_request[str_metaHeader]
+
+        if str_op == 'pushPath':
+            d_pushPath = self.dataRequest_processPushPath(d_meta = d_meta)
+
         str_remoteService       = d_meta['service']
         str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
         str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURLpath'% str_remoteService)
@@ -589,6 +651,8 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_jobReturn = {}
         b_jobSubmit = False
         d_jobSubmit = {}
+        b_jobSwift  = False
+        d_jobSwift  = {}
 
         # pudb.set_trace()
         for k,v in kwargs.items():
@@ -601,6 +665,9 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'jobReturn':
                 b_jobReturn                     = True    
                 d_jobReturn                     = v 
+            if k == 'jobSwift':
+                b_jobSwift                      = True    
+                d_jobSwift                      = v 
             if k == 'action':       str_action  = v
 
         # pudb.set_trace()
@@ -650,6 +717,8 @@ class StoreHandler(BaseHTTPRequestHandler):
                             d_info[k]['return'] = d_jobReturn
                         if b_jobSubmit:
                             d_info[k]['submit'] = d_jobSubmit
+                        if b_jobSwift:
+                            d_info[k]['swift']  = d_jobSwift
                     T.touch('info', d_info)
         return {
             'status':   b_status,
@@ -965,12 +1034,12 @@ class StoreHandler(BaseHTTPRequestHandler):
         :return:
         """
 
-        global Gd_internalvar
+        global Gd_internalvar, Gd_tree
 
         self.dp.qprint("coordinate_process()", comms = 'status')
         b_status                    = False
         d_request                   = {}
-        d_jobStatus              = {}
+        d_jobStatus                 = {}
         d_dataRequest               = {}
         d_dataRequestProcessPush    = {}
         d_computeRequest            = {}
@@ -1120,26 +1189,476 @@ class StoreHandler(BaseHTTPRequestHandler):
                     d_dataRequestProcessPull    = d_jobStatus['info']['pullPath']['return']
 
         d_ret = {
-            'status':   b_status,
-            'pushData': d_dataRequestProcessPush,
-            'compute':  d_computeRequestProcess,
-            'pullData': d_dataRequestProcessPull
+            'status':               b_status,
+            'pushData':             d_dataRequestProcessPush,
+            'compute':              d_computeRequestProcess,
+            'pullData':             d_dataRequestProcessPull,
+            'd_swiftstore':         {},
+            'd_jobStatus':          {},
+            'd_jobStatusSummary':   {}
         }
 
-        self.dp.qprint('Final return: d_ret = \n%s' % self.pp.pformat(d_ret).strip(), comms = 'status')
         if d_ret['status']:
-            d_jobStatus         = self.jobStatus_do(        key     = str_key,
-                                                            action  = 'getInfo',
-                                                            op      = 'all')
-            d_jobStatusSummary  = self.summaryStatus_process(d_jobStatus)
+            d_ret['d_jobStatus']            = self.jobStatus_do(        key     = str_key,
+                                                                        action  = 'getInfo',
+                                                                        op      = 'all')
+            d_ret['d_jobStatusSummary']     = self.summaryStatus_process(d_jobStatus)
             with open(os.path.join(str_localDestination, 'jobStatus.json'), 'w') as f:
-                json.dump(d_jobStatus, f)
+                json.dump(d_ret['d_jobStatus'], f)
             f.close()
             with open(os.path.join(str_localDestination, 'jobStatusSummary.json'), 'w') as f:
-                json.dump(d_jobStatusSummary, f)
+                json.dump(d_ret['d_jobStatusSummary'], f)
             f.close()
 
+            if Gd_tree.exists('swift', path = '/'):
+                # There might be a timing issue with pushing files into swift and 
+                # the swift container being able to report them as accessible. The
+                # solution is to push objects, and then poll on calls to swift 'ls'
+                # and compare results with push record.
+                waitPoll            = 0
+                maxWaitPoll         = 10
+                # pudb.set_trace()
+                d_ret['d_swiftstore'] = self.swiftStorage_createFileList(
+                    root = str_localDestination
+                )
+                filesPushed         = len(d_ret['d_swiftstore']['d_put']['d_result']['l_fileStore'])
+
+                # while numFilesReturned < 2 and waitPoll < maxWaitPoll:
+                #     d_ls                = self.filesFind(root = str_localDestination)
+                #     numFilesReturned    = d_ls['numFiles']
+                #     time.sleep(0.2)
+                #     waitPoll            += 1
+                # if d_ls['status']:
+                #     d_ret['d_swiftstore'] = self.swiftstorage_objPut(
+                #         fileList    = d_ls['l_fileFS']
+                #     )
+
+                filesAccessible     = 0
+                while filesAccessible < filesPushed and waitPoll < maxWaitPoll:
+                    d_swift_ls      = self.swiftstorage_ls(path = str_localDestination)
+                    filesAccessible = len(d_swift_ls['lsList'])
+                    time.sleep(0.2)
+                    waitPoll        += 1
+                d_ret['d_swift_ls'] = d_swift_ls
+                d_ret['d_swiftstore']['waitPoll']           = waitPoll
+                d_ret['d_swiftstore']['filesPushed']        = filesPushed
+                d_ret['d_swiftstore']['filesAccessible']    = filesAccessible
+                # pudb.set_trace()
+                d_swift                                     = {}
+                d_swift['useSwift']                         = True
+                d_swift['d_swift_ls']                       = d_swift_ls
+                d_swift['d_swiftstore']                     = d_ret['d_swiftstore']
+                self.jobStatus_do(      
+                                        action      = 'set',
+                                        key         = str_key,
+                                        op          = 'pullPath',
+                                        status      = True,
+                                        jobSwift    = d_swift
+                )
+
+                d_internalInfo  = Gd_tree.cat('/jobstatus/%s/info' % str_key)
+
+        self.dp.qprint( 'Final return: d_ret = \n%s' % json.dumps(d_ret, indent=4),
+                        comms = 'status',
+                        teeFile = '/data/tmp/d_ret-%s.json' % str_key, 
+                        teeMode = 'w+')
+        self.dp.qprint( 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
+                        comms = 'status',
+                        teeFile = '/data/tmp/d_internalInfo-%s.json' % str_key, 
+                        teeMode = 'w+')
         return d_ret
+
+    def static_vars(**kwargs):
+        def decorate(func):
+            for k in kwargs:
+                setattr(func, k, kwargs[k])
+            return func
+        return decorate
+
+    @static_vars(str_prependBucketPath = "")
+    def swiftstorage_connect(self, *args, **kwargs):
+        """
+        Connect to swift storage and return the connection object,
+        as well an optional "prepend" string to fully qualify 
+        object location in swift storage.
+
+        The 'prependBucketPath' is somewhat 'legacy' to a similar
+        method in charm.py and included here with the idea 
+        to eventually converge on a single swift-based intermediary
+        library for both pfcon and CUBE.
+        """
+
+        global Gd_tree
+        b_status                = True
+
+        for k,v in kwargs.items():
+            if k == 'prependBucketPath':    self.swiftstorage_connect.str_prependBucketPath = v
+
+        d_ret       = {
+            'status':               b_status,
+            'conn':                 None,
+            'prependBucketPath':    self.swiftstorage_connect.str_prependBucketPath,
+            'user':                 Gd_tree.cat('/swift/username'),
+            'key':                  Gd_tree.cat('/swift/key'),
+            'authurl':              Gd_tree.cat('/swift/auth_url'),
+            'container_name':       Gd_tree.cat('/swift/container_name')
+        }
+
+        # initiate a swift service connection, based on internal
+        # settings already available in the django variable space.
+        try:
+            d_ret['conn'] = swiftclient.Connection(
+                user    = d_ret['user'],
+                key     = d_ret['key'],
+                authurl = d_ret['authurl']
+            )
+        except:
+            d_ret['status'] = False
+
+        return d_ret
+
+    def swiftstorage_ls(self, *args, **kwargs):
+        """
+        Return a list of objects in the swiftstorage
+        """
+        l_ls                    = []    # The listing of names to return
+        ld_obj                  = {}    # List of dictionary objects in swift
+        str_path                = '/'
+        str_fullPath            = ''
+        b_prependBucketPath     = False
+        b_status                = False
+
+        for k,v in kwargs.items():
+            if k == 'path':                 str_path            = v
+            if k == 'prependBucketPath':    b_prependBucketPath = v
+
+        # Remove any leading noise on the str_path, specifically
+        # any leading '.' characters.
+        # This is probably not very robust!
+        while str_path[:1] == '.':  str_path    = str_path[1:]
+
+        d_conn          = self.swiftstorage_connect(**kwargs)
+        if d_conn['status']:
+            conn        = d_conn['conn']
+            if b_prependBucketPath:
+                str_fullPath    = '%s%s' % (d_conn['prependBucketPath'], str_path)
+            else:
+                str_fullPath    = str_path
+
+            # get the full list of objects in Swift storage with given prefix
+            ld_obj = conn.get_container( 
+                        d_conn['container_name'], 
+                        prefix          = str_fullPath,
+                        full_listing    = True)[1]        
+
+            for d_obj in ld_obj:
+                l_ls.append(d_obj['name'])
+                b_status    = True
+        
+        return {
+            'status':       b_status,
+            'objectDict':   ld_obj,
+            'lsList':       l_ls,
+            'fullPath':     str_fullPath
+        }
+
+    def swiftstorage_objExists(self, *args, **kwargs):
+        """
+        Return True/False if passed object exists in swift storage
+        """        
+        b_exists    = False
+        str_obj     = ''
+
+        for k,v in kwargs.items():
+            if k == 'obj':                  str_obj             = v
+            if k == 'prependBucketPath':    b_prependBucketPath = v
+
+        kwargs['path']  = str_obj
+        d_swift_ls  = self.swiftstorage_ls(*args, **kwargs)
+        str_obj     = d_swift_ls['fullPath']
+
+        if d_swift_ls['status']:
+            for obj in d_swift_ls['lsList']:
+                if obj == str_obj:
+                    b_exists = True
+
+        return {
+            'status':   b_exists,
+            'objPath':  str_obj
+        }
+
+    def swiftstorage_objPut(self, *args, **kwargs):
+        """
+        Put an object (or list of objects) into swift storage.
+
+        This method also "maps" tree locations in the local storage
+        to new locations in the object storage. For example, assume
+        a list of local locations starting with:
+
+                    /home/user/project/data/ ...
+
+        and we want to pack everything in the 'data' dir to 
+        object storage, at location '/storage'. In this case, the
+        pattern of kwargs specifying this would be:
+
+                    fileList = ['/home/user/project/data/file1',
+                                '/home/user/project/data/dir1/file_d1',
+                                '/home/user/project/data/dir2/file_d2'],
+                    inLocation      = '/storage',
+                    mapLocationOver = '/home/user/project/data'
+
+        will replace, for each file in <fileList>, the <mapLocationOver> with
+        <inLocation>, resulting in a new list
+
+                    '/storage/file1', 
+                    '/storage/dir1/file_d1',
+                    '/storage/dir2/file_d2'
+
+        Note that the <inLocation> is subject to <b_prependBucketPath>!
+
+        """
+        b_status                = True
+        l_localfile             = []    # Name on the local file system
+        l_objectfile            = []    # Name in the object storage
+        str_swiftLocation       = ''
+        str_mapLocationOver     = ''
+        str_localfilename       = ''
+        str_storagefilename     = ''
+        str_prependBucketPath   = ''
+        d_ret                   = {
+            'status':           b_status,
+            'localFileList':    [],
+            'objectFileList':   [],
+            'localpath':        ''
+        }
+
+        d_conn  = self.swiftstorage_connect(*args, **kwargs)
+        if d_conn['status']:
+            str_prependBucketPath       = d_conn['prependBucketPath']
+
+        str_swiftLocation               = str_prependBucketPath
+
+        for k,v in kwargs.items():
+            if k == 'file':             l_localfile.append(v)
+            if k == 'fileList':         l_localfile         = v
+            if k == 'inLocation':       str_swiftLocation   = '%s%s' % (str_prependBucketPath, v)
+            if k == 'mapLocationOver':  str_mapLocationOver = v
+
+        if len(str_mapLocationOver):
+            # replace the local file path with object store path
+            l_objectfile    = [w.replace(str_mapLocationOver, str_swiftLocation) \
+                                for w in l_localfile]
+        else:
+            # Prepend the swiftlocation to each element in the localfile list:
+            l_objectfile    = [str_swiftLocation + '{0}'.format(i) for i in l_localfile]
+
+        d_ret['localpath']  = os.path.dirname(l_localfile[0])
+
+        if d_conn['status']:
+            for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile): 
+                try:
+                    d_ret['status'] = True and d_ret['status']
+                    with open(str_localfilename, 'rb') as fp:
+                        d_conn['conn'].put_object(
+                            d_conn['container_name'],
+                            str_storagefilename,
+                            contents=fp.read()
+                        )
+                except Exception as e:
+                    d_ret['error']  = e
+                    d_ret['status'] = False
+                d_ret['localFileList'].append(str_localfilename)
+                d_ret['objectFileList'].append(str_storagefilename)
+        return d_ret
+
+    def swiftstorage_objPull(self, *args, **kwargs):
+        """
+        Pull an object (or set of objects) from swift storage and
+        onto the local filesystem.
+
+        This method can also "map" locations in the object storage
+        to new locations in the filesytem storage. For example, assume
+        a list of object locations starting with:
+
+                user/someuser/uploads/project/data ...
+
+        and we want to pack everything from 'data' to the local filesystem
+        to, for example, 
+
+                /some/dir/data
+
+        In this case, the pattern of kwargs specifying this would be:
+
+                    fromLocation    = user/someuser/uploads/project/data
+                    mapLocationOver = /some/dir/data
+
+        if 'mapLocationOver' is not specified, then the local file system
+        location will be the 'inLocation' prefixed with a '/'.
+
+        """
+        b_status                = True
+        l_localfile             = []    # Name on the local file system
+        l_objectfile            = []    # Name in the object storage
+        str_swiftLocation       = ''
+        str_mapLocationOver     = ''
+        str_localfilename       = ''
+        str_storagefilename     = ''
+        str_prependBucketPath   = ''
+        d_ret                   = {
+            'status':           b_status,
+            'localFileList':    [],
+            'objectFileList':   [],
+            'localpath':        ''
+        }
+
+        d_conn  = self.swiftstorage_connect(*args, **kwargs)
+        if d_conn['status']:
+            str_prependBucketPath       = d_conn['prependBucketPath']
+
+        str_swiftLocation               = str_prependBucketPath
+
+        for k,v in kwargs.items():
+            if k == 'fromLocation':     str_swiftLocation   = '%s%s' % (str_prependBucketPath, v)
+            if k == 'mapLocationOver':  str_mapLocationOver = v
+
+        # Get dictionary of objects in storage
+        d_lsSwift       = self.swiftstorage_ls(path = str_swiftLocation)
+
+        # List of objects in storage
+        l_objectfile    = d_lsSwift['lsList']
+
+        if len(str_mapLocationOver):
+            # replace the local file path with object store path
+            l_localfile         = [w.replace(str_swiftLocation, str_mapLocationOver) \
+                                    for w in l_objectfile]
+        else:
+            # Prepend a '/' to each element in the l_objectfile:
+            l_localfile         = ['/' + '{0}'.format(i) for i in l_objectfile]
+            str_mapLocationOver =  '/' + str_swiftLocation
+
+        d_ret['localpath']      = str_mapLocationOver
+
+        if d_conn['status']:
+            for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile):
+                try:
+                    # pudb.set_trace()
+                    d_ret['status'] = True and d_ret['status']
+                    obj_tuple       = d_conn['conn'].get_object(
+                                                    d_conn['container_name'],
+                                                    str_storagefilename
+                                                )
+                    str_parentDir   = os.path.dirname(str_localfilename)
+                    os.makedirs(str_parentDir, exist_ok = True)
+                    with open(str_localfilename, 'wb') as fp:
+                        # fp.write(str(obj_tuple[1], 'utf-8'))
+                        fp.write(obj_tuple[1])
+                except Exception as e:
+                    # pudb.set_trace()
+                    d_ret['error']  = str(e)
+                    d_ret['status'] = False
+                d_ret['localFileList'].append(str_localfilename)
+                d_ret['objectFileList'].append(str_storagefilename)
+        return d_ret
+
+    def swiftStorage_putObjects(self, *args, **kwargs):
+        """
+        """
+        global Gd_tree
+        d_ret = {
+            'status': True,
+            'd_result': {
+                'l_fileStore':  []
+            }
+        }
+        l_files     = []
+        for k,v in kwargs.items():
+            if k == 'fileObjectList':   l_files = v
+        # initiate a swift service connection
+        conn = swiftclient.Connection(
+            user    = Gd_tree.cat('/swift/username'),
+            key     = Gd_tree.cat('/swift/key'),
+            authurl = Gd_tree.cat('/swift/auth_url')
+        )
+
+        # create container in case it doesn't already exist
+        conn.put_container(Gd_tree.cat('/swift/container_name'))
+
+        # put files into storage
+        for filename in l_files: 
+            try:
+                d_ret['status'] = True and d_ret['status']
+                with open(filename, 'rb') as fp:
+                    conn.put_object(
+                        Gd_tree.cat('/swift/container_name'),
+                        filename,
+                        contents=fp.read()
+                    )
+            except:
+                d_ret['status'] = False
+            d_ret['d_result']['l_fileStore'].append(filename)
+        
+        return d_ret
+
+    def filesFind(self, *args, **kwargs):
+        """
+        This method simply returns a list of files 
+        down a filesystem tree starting from the 
+        kwarg:
+
+            root = <someStartPath>
+
+        """
+
+        d_ret      = {
+            'status':   False,
+            'l_fileFS': [],
+            'numFiles': 0
+        }
+        str_rootPath    = ''
+        for k,v in kwargs.items():
+            if k == 'root': str_rootPath    = v
+        if len(str_rootPath):
+            # Create a list of all files down the <str_rootPath>
+            for root, dirs, files in os.walk(str_rootPath):
+                for filename in files:
+                    d_ret['l_fileFS'].append(os.path.join(root, filename))
+                    d_ret['status'] = True
+        
+        d_ret['numFiles']   = len(d_ret['l_fileFS'])
+        return d_ret
+
+    def swiftStorage_createFileList(self, *args, **kwargs):
+        """
+        Initial entry point for swift storage processing.
+
+        This method determines a list of files to put into
+        swift storage.
+        """
+
+        d_create   = {
+            'status': True,
+            'd_result': {
+                'l_fileFS': []
+            }
+        }
+        # pudb.set_trace()
+        self.dp.qprint("starting...")
+        str_rootPath    = ''
+        for k,v in kwargs.items():
+            if k == 'root': str_rootPath = v
+        if len(str_rootPath):
+            # Create a list of all files down the <str_rootPath>
+            for root, dirs, files in os.walk(str_rootPath):
+                for filename in files:
+                    d_create['d_result']['l_fileFS'].append(os.path.join(root, filename))
+            d_swiftPut = self.swiftStorage_putObjects(
+                fileObjectList = d_create['d_result']['l_fileFS']
+            )
+        return {
+            'status':   True,
+            'd_create': d_create,
+            'd_put':    d_swiftPut
+        }
 
     def summaryStatus_process(self, ad_jobStatus):
         """
