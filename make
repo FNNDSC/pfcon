@@ -65,6 +65,16 @@ if (( $# == 1 )) ; then
 fi
 
 title -d 1 "Setting global exports..."
+    if (( ! b_storeBaseOverride )) ; then
+        if [[ ! -d FS/remote ]] ; then
+            mkdir -p FS/remote
+        fi
+        cd FS/remote
+        STOREBASE=$(pwd)
+        cd $HERE
+    fi
+    echo -e "${STEP}.1 For pman override to swarm containers, exporting\n\tSTOREBASE=$STOREBASE... "
+    export STOREBASE=$STOREBASE
     if (( b_debug )) ; then
         echo -e "${STEP}.2 Setting debug quiet to OFF. Note this is noisy!"
         export CHRIS_DEBUG_QUIET=0
