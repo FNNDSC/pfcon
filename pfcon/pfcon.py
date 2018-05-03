@@ -68,6 +68,10 @@ Gd_internalvar  = {
             'pullPath': {
                 'status':   '<statusString>',
                 'return':   '<d_ret>'
+                },
+            'swiftPut': {
+                'status':   '<statusString>',
+                'return':   '<d_ret>'
                 }
         }
     },
@@ -693,17 +697,20 @@ class StoreHandler(BaseHTTPRequestHandler):
                 # self.dp.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
                 if not isinstance(d_info['compute']['status'], bool)  or \
                    not isinstance(d_info['pullPath']['status'], bool) or \
-                   not isinstance(d_info['pushPath']['status'], bool):
+                   not isinstance(d_info['pushPath']['status'], bool) or \
+                   not isinstance(d_info['swiftPut']['status'], bool):
                     b_status = False
                 else:
                     b_status =  d_info['compute']['status']     and \
                                 d_info['pullPath']['status']    and \
-                                d_info['pullPath']['status']
+                                d_info['pullPath']['status']    and \
+                                d_info['swiftPut']['status']
+                                
             if str_op != 'none':
                 if str_op == 'all':
-                    l_opKey = ['pushPath', 'compute', 'pullPath']
+                    l_opKey = ['pushPath', 'compute', 'pullPath', 'swiftPut']
                 else:
-                    if str_op in ['pushPath', 'compute', 'pullPath']:
+                    if str_op in ['pushPath', 'compute', 'pullPath', 'swiftPut']:
                         l_opKey = [str_op]
                 for k in l_opKey:
                     if str_action == 'set':
@@ -718,7 +725,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                         if b_jobSubmit:
                             d_info[k]['submit'] = d_jobSubmit
                         if b_jobSwift:
-                            d_info[k]['swift']  = d_jobSwift
+                            d_info[k]           = d_jobSwift
                     T.touch('info', d_info)
         return {
             'status':   b_status,
@@ -828,6 +835,13 @@ class StoreHandler(BaseHTTPRequestHandler):
                 str_jobStatus       = d_jobStatus['info'][str_op]['status']
                 d_jobReturn         = d_jobStatus['info'][str_op]['return']
                 if str_jobStatus == str_status: b_jobStatusCheck    = True
+
+            if str_op == 'swiftPut':
+                d_jobStatus      = self.jobStatus_do(           key     = str_keyID,
+                                                                action  = 'getInfo',
+                                                                op      = str_op)
+                str_jobStatus       = d_jobStatus['info'][str_op]['status']
+                d_jobReturn         = d_jobStatus['info'][str_op]['return']
 
             if str_op == 'compute':
                 d_jobReturn     = {'status': False}
@@ -1034,83 +1048,155 @@ class StoreHandler(BaseHTTPRequestHandler):
         :return:
         """
 
-        global Gd_internalvar, Gd_tree
+        def pushData_handler():
+            """
+            Nested function for handling push to remote.
 
-        self.dp.qprint("coordinate_process()", comms = 'status')
-        b_status                    = False
-        d_request                   = {}
-        d_jobStatus                 = {}
-        d_dataRequest               = {}
-        d_dataRequestProcessPush    = {}
-        d_computeRequest            = {}
-        d_computeRequestProcess     = {}
-        d_dataRequestProcessPull    = {}
-        coordBlockSeconds           = Gd_internalvar['self']['coordBlockSeconds']
+            Input           -- d_dataRequestProcessPush holder 
+            Return: bool    -- success
 
-        for k,v in kwargs.items():
-            if k == 'request':      d_request   = v
-        # self.dp.qprint("d_request = %s" % d_request)
+            """
 
-        str_key         = self.key_dereference(request = d_request)['key']
+            d_metaData['local'] = d_metaData['localSource']
+            self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
+            d_dataRequest   = {
+                'action':   'pushPath',
+                'meta':     d_metaData
+            }
 
-        # pudb.set_trace()
-        str_flatDict    = json.dumps(d_request)
-        d_request       = json.loads(str_flatDict.replace('%meta-store', str_key))
-        d_metaData      = d_request['meta-data']
-        d_metaCompute   = d_request['meta-compute']
+            self.data_asyncHandler(         request = d_dataRequest, 
+                                            key     = str_key,
+                                            op      = 'pushPath')
 
-        # Set the status of all job operations to 'not started'...
-        self.jobStatus_do(      action      = 'set',
-                                key         = str_key,
-                                op          = 'all',
-                                status      = 'not started'
-                            )
-        #######
-        # Push data to remote location        
-        #######
-        d_metaData['local'] = d_metaData['localSource']
-        self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
-        d_dataRequest   = {
-            'action':   'pushPath',
-            'meta':     d_metaData
-        }
+            d_jobBlock                  = self.jobOperation_blockUntil(   
+                                            key     = str_key,
+                                            op      = 'pushPath',
+                                            status  = True
+                                        )
+            b_status                    = d_jobBlock['status']
 
-        self.data_asyncHandler(         request = d_dataRequest, 
-                                        key     = str_key,
-                                        op      = 'pushPath')
+            if not b_status:
+                self.jobStatus_do(
+                                            action  = 'set',
+                                            key     = str_key,
+                                            op      = 'pushPath',
+                                            status  = False
+                )
+            if b_status:
+                d_jobStatus          = self.jobStatus_do( 
+                                            key     = str_key,
+                                            action  = 'getInfo',
+                                            op      = 'pushPath')
+                self.dp.qprint('d_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(), comms = 'status')
+                                                
+                d_dataRequestProcessPush = d_jobStatus['info']['pushPath']['return']
+            return b_status, d_dataRequestProcessPush
 
-        d_jobBlock                  = self.jobOperation_blockUntil(   
-                                        key     = str_key,
-                                        op      = 'pushPath',
-                                        status  = True
-                                    )
-        b_status                    = d_jobBlock['status']
-
-        if not b_status:
-            self.jobStatus_do(
-                                        action  = 'set',
-                                        key     = str_key,
-                                        op      = 'pushPath',
-                                        status  = False
-            )
-
-        if b_status:
-            d_jobStatus          = self.jobStatus_do( 
-                                        key     = str_key,
-                                        action  = 'getInfo',
-                                        op      = 'pushPath')
-            self.dp.qprint('d_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(), comms = 'status')
-                                            
-            d_dataRequestProcessPush    = d_jobStatus['info']['pushPath']['return']
-
+        def pullData_handler():
             #######
-            # Process data at remote location
-            #######
-            str_serviceName = d_dataRequestProcessPush['serviceName']
-            str_shareDir    = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop'].get('shareDir')
-            str_outDirPath  = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop'].get('outgoingPath')
+            # Pull data from remote location
+            #######                                                                
+            # pudb.set_trace()
+
+            str_localDestination                = d_metaData['localTarget']['path']
+            str_localParentPath, str_localDest  = os.path.split(str_localDestination)        
+            d_metaData['local']                 = {'path': str_localDestination}
+            if 'createDir' in d_metaData['localTarget']:
+                d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
+            d_metaData['transport']['compress']['name']   = str_localDest
+            self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
+            d_dataRequest   = {
+                'action':   'pullPath',
+                'meta':     d_metaData
+            }
+            self.data_asyncHandler(         request = d_dataRequest, 
+                                            key     = str_key,
+                                            op      = 'pullPath')
+
+            d_jobBlock                  = self.jobOperation_blockUntil(   
+                                            key     = str_key,
+                                            op      = 'pullPath',
+                                            status  = True
+                                        )
+            b_status                    = d_jobBlock['status']
+            if not b_status:
+                self.jobStatus_do(
+                                            action  = 'set',
+                                            key     = str_key,
+                                            op      = 'pullPath',
+                                            status  = False
+                )
+            if b_status:
+                d_jobStatus              = self.jobStatus_do(       key     = str_key,
+                                                                    action  = 'getInfo',
+                                                                    op      = 'pullPath')
+                d_dataRequestProcessPull.update(d_jobStatus['info']['pullPath']['return'])
+ 
+            return b_status, d_dataRequestProcessPull, str_localDestination       
+
+        def swift_handler():
+            """
+            Put data pulled from previous process into swift.
+
+            This is an "internal" process, so not asynchronous and does not require 
+            a separate blocking method.
+            """
+            if Gd_tree.exists('swift', path = '/'):
+                # There might be a timing issue with pushing files into swift and 
+                # the swift container being able to report them as accessible. The
+                # solution is to push objects, and then poll on calls to swift 'ls'
+                # and compare results with push record.
+                waitPoll            = 0
+                maxWaitPoll         = 10
+                # pudb.set_trace()
+                d_ret['d_swiftstore'] = self.swiftStorage_createFileList(
+                    root = str_localDestination
+                )
+                filesPushed         = len(d_ret['d_swiftstore']['d_put']['d_result']['l_fileStore'])
+                filesAccessible     = 0
+                while filesAccessible < filesPushed and waitPoll < maxWaitPoll:
+                    d_swift_ls      = self.swiftstorage_ls(path = str_localDestination)
+                    filesAccessible = len(d_swift_ls['lsList'])
+                    time.sleep(0.2)
+                    waitPoll        += 1
+                d_ret['d_swift_ls'] = d_swift_ls
+                d_ret['d_swiftstore']['waitPoll']           = waitPoll
+                d_ret['d_swiftstore']['filesPushed']        = filesPushed
+                d_ret['d_swiftstore']['filesAccessible']    = filesAccessible
+                # pudb.set_trace()
+                d_swift                                     = {}
+                d_swift['useSwift']                         = True
+                d_swift['d_swift_ls']                       = d_swift_ls
+                d_swift['d_swiftstore']                     = d_ret['d_swiftstore']
+                d_swift['status']                           = d_swift['d_swift_ls']['status'] and \
+                                                              d_swift['d_swiftstore']['status']
+                self.jobStatus_do(      
+                                        action      = 'set',
+                                        key         = str_key,
+                                        op          = 'swiftPut',
+                                        status      = True,
+                                        jobSwift    = d_swift
+                )
+
+                d_internalInfo  = Gd_tree.cat('/jobstatus/%s/info' % str_key)
+
+            self.dp.qprint( 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
+                            comms = 'status',
+                            teeFile = '/data/tmp/d_internalInfo-%s.json' % str_key, 
+                            teeMode = 'w+')
+            return d_swift['status']
+
+        def compute_handler():
+            """
+            Nested function for handling compute
+            """
+
+            coordBlockSeconds   = Gd_internalvar['self']['coordBlockSeconds']
+            str_serviceName     = d_dataRequestProcessPush['serviceName']
+            str_shareDir        = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop'].get('shareDir')
+            str_outDirPath      = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop'].get('outgoingPath')
             if str_outDirPath is not None:
-                # This value won't be none in case of non-swift option.
+                # This value will not be none in case of non-swift option.
                 str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
             # pudb.set_trace()
             d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
@@ -1120,10 +1206,10 @@ class StoreHandler(BaseHTTPRequestHandler):
                 'meta':     d_metaCompute
             }
 
-            d_computeRequestProcess = self.computeRequest_process(  request     = d_computeRequest,
+            d_computeRequestProcess.update(self.computeRequest_process(  request     = d_computeRequest,
                                                                     key         = str_key,
-                                                                    op          = 'compute')
-            # wait 1s for processing...
+                                                                    op          = 'compute'))
+            # wait for processing...
             self.dp.qprint('compute job submitted... waiting %ds for transients...' % coordBlockSeconds)
             time.sleep(coordBlockSeconds)
             # pudb.set_trace()
@@ -1147,46 +1233,66 @@ class StoreHandler(BaseHTTPRequestHandler):
                                             action  = 'getInfo',
                                             op      = 'compute')
                 self.dp.qprint('d_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(), comms = 'status')
-                                                
-                d_computeRequestProcess = d_jobStatus['info']['compute']['return']
-                #######
-                # Pull data from remote location
-                #######                                                                
-                # pudb.set_trace()
-                str_localDestination                = d_metaData['localTarget']['path']
-                str_localParentPath, str_localDest  = os.path.split(str_localDestination)        
-                d_metaData['local']                 = {'path': str_localDestination}
-                if 'createDir' in d_metaData['localTarget']:
-                    d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
-                d_metaData['transport']['compress']['name']   = str_localDest
-                self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
+                d_computeRequestProcess.update(d_jobStatus['info']['compute']['return'])
 
-                d_dataRequest   = {
-                    'action':   'pullPath',
-                    'meta':     d_metaData
-                }
-                self.data_asyncHandler(         request = d_dataRequest, 
-                                                key     = str_key,
-                                                op      = 'pullPath')
+            return b_status, d_computeRequestProcess
 
-                d_jobBlock                  = self.jobOperation_blockUntil(   
-                                                key     = str_key,
-                                                op      = 'pullPath',
-                                                status  = True
-                                            )
-                b_status                    = d_jobBlock['status']
-                if not b_status:
-                    self.jobStatus_do(
-                                                action  = 'set',
-                                                key     = str_key,
-                                                op      = 'pullPath',
-                                                status  = False
-                    )
-                if b_status:
-                    d_jobStatus              = self.jobStatus_do(       key     = str_key,
+        def jobStatusFiles_create():
+            # Note a potential issue here: the status and summary files can only be 
+            # pushed to swift after swift has completed (since these files contain
+            # information about the swift operation. We push them to object storage
+            # after creating them in the pfcon FS). This means that the files may 
+            # not be registered with CUBE since when CUBE might pull from swift storage
+            # these last two files might not be consistently reported to the pulling
+            # client.
+            d_ret['d_jobStatus']            = self.jobStatus_do(        key     = str_key,
                                                                         action  = 'getInfo',
-                                                                        op      = 'pullPath')
-                    d_dataRequestProcessPull    = d_jobStatus['info']['pullPath']['return']
+                                                                        op      = 'all')
+            d_ret['d_jobStatusSummary']     = self.summaryStatus_process(d_ret['d_jobStatus'])
+            str_statusFile = os.path.join(str_localDestination, 'jobStatus.json') 
+            with open(str_statusFile, 'w') as f:
+                json.dump(d_ret['d_jobStatus'], f)
+            f.close()
+            str_summaryFile = os.path.join(str_localDestination, 'jobStatusSummary.json')
+            with open(str_summaryFile, 'w') as f:
+                json.dump(d_ret['d_jobStatusSummary'], f)
+            f.close()
+            # Also put these two files into swift
+            self.swiftstorage_objPut( fileList = [str_statusFile, str_summaryFile])
+
+            self.dp.qprint( 'Final return: d_ret = \n%s' % json.dumps(d_ret, indent=4),
+                            comms = 'status',
+                            teeFile = '/data/tmp/d_ret-%s.json' % str_key, 
+                            teeMode = 'w+')
+
+        global Gd_internalvar, Gd_tree
+
+        self.dp.qprint("coordinate_process()", comms = 'status')
+        b_status                    = False
+        d_request                   = {}
+        d_jobStatus                 = {}
+        d_dataRequestProcessPush    = {}
+        d_computeRequestProcess     = {}
+        d_dataRequestProcessPull    = {}
+        str_localDestination        = ""
+        str_key                     = ""
+
+        for k,v in kwargs.items():
+            if k == 'request':      d_request   = v
+        # self.dp.qprint("d_request = %s" % d_request)
+
+        str_key                     = self.key_dereference(request = d_request)['key']
+        str_flatDict                = json.dumps(d_request)
+        d_request                   = json.loads(str_flatDict.replace('%meta-store', str_key))
+        d_metaData                  = d_request['meta-data']
+        d_metaCompute               = d_request['meta-compute']
+
+        # Set the status of all job operations to 'not started'...
+        self.jobStatus_do(      action      = 'set',
+                                key         = str_key,
+                                op          = 'all',
+                                status      = 'not started'
+                            )
 
         d_ret = {
             'status':               b_status,
@@ -1198,74 +1304,16 @@ class StoreHandler(BaseHTTPRequestHandler):
             'd_jobStatusSummary':   {}
         }
 
-        if d_ret['status']:
-            d_ret['d_jobStatus']            = self.jobStatus_do(        key     = str_key,
-                                                                        action  = 'getInfo',
-                                                                        op      = 'all')
-            d_ret['d_jobStatusSummary']     = self.summaryStatus_process(d_jobStatus)
-            with open(os.path.join(str_localDestination, 'jobStatus.json'), 'w') as f:
-                json.dump(d_ret['d_jobStatus'], f)
-            f.close()
-            with open(os.path.join(str_localDestination, 'jobStatusSummary.json'), 'w') as f:
-                json.dump(d_ret['d_jobStatusSummary'], f)
-            f.close()
+        b_status, d_dataRequestProcessPush = pushData_handler()
+        if b_status:
+            b_status, d_computeRequestProcess = compute_handler()
+            if b_status:
+                b_status, d_dataRequestProcessPull, str_localDestination = pullData_handler()
+                if b_status:
+                    b_status = swift_handler()
+                    if b_status:
+                        jobStatusFiles_create()
 
-            if Gd_tree.exists('swift', path = '/'):
-                # There might be a timing issue with pushing files into swift and 
-                # the swift container being able to report them as accessible. The
-                # solution is to push objects, and then poll on calls to swift 'ls'
-                # and compare results with push record.
-                waitPoll            = 0
-                maxWaitPoll         = 10
-                # pudb.set_trace()
-                d_ret['d_swiftstore'] = self.swiftStorage_createFileList(
-                    root = str_localDestination
-                )
-                filesPushed         = len(d_ret['d_swiftstore']['d_put']['d_result']['l_fileStore'])
-
-                # while numFilesReturned < 2 and waitPoll < maxWaitPoll:
-                #     d_ls                = self.filesFind(root = str_localDestination)
-                #     numFilesReturned    = d_ls['numFiles']
-                #     time.sleep(0.2)
-                #     waitPoll            += 1
-                # if d_ls['status']:
-                #     d_ret['d_swiftstore'] = self.swiftstorage_objPut(
-                #         fileList    = d_ls['l_fileFS']
-                #     )
-
-                filesAccessible     = 0
-                while filesAccessible < filesPushed and waitPoll < maxWaitPoll:
-                    d_swift_ls      = self.swiftstorage_ls(path = str_localDestination)
-                    filesAccessible = len(d_swift_ls['lsList'])
-                    time.sleep(0.2)
-                    waitPoll        += 1
-                d_ret['d_swift_ls'] = d_swift_ls
-                d_ret['d_swiftstore']['waitPoll']           = waitPoll
-                d_ret['d_swiftstore']['filesPushed']        = filesPushed
-                d_ret['d_swiftstore']['filesAccessible']    = filesAccessible
-                # pudb.set_trace()
-                d_swift                                     = {}
-                d_swift['useSwift']                         = True
-                d_swift['d_swift_ls']                       = d_swift_ls
-                d_swift['d_swiftstore']                     = d_ret['d_swiftstore']
-                self.jobStatus_do(      
-                                        action      = 'set',
-                                        key         = str_key,
-                                        op          = 'pullPath',
-                                        status      = True,
-                                        jobSwift    = d_swift
-                )
-
-                d_internalInfo  = Gd_tree.cat('/jobstatus/%s/info' % str_key)
-
-        self.dp.qprint( 'Final return: d_ret = \n%s' % json.dumps(d_ret, indent=4),
-                        comms = 'status',
-                        teeFile = '/data/tmp/d_ret-%s.json' % str_key, 
-                        teeMode = 'w+')
-        self.dp.qprint( 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
-                        comms = 'status',
-                        teeFile = '/data/tmp/d_internalInfo-%s.json' % str_key, 
-                        teeMode = 'w+')
         return d_ret
 
     def static_vars(**kwargs):
@@ -1686,6 +1734,9 @@ class StoreHandler(BaseHTTPRequestHandler):
                     'l_status': [],
                     'l_logs':   []
                 }
+            },
+            'swiftPut': {
+                'status':       False
             }
         }
 
@@ -1693,6 +1744,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_jobStatusSummary['pushPath']['status']            = ad_jobStatus['info']['pushPath']['status']
         d_jobStatusSummary['pullPath']['status']            = ad_jobStatus['info']['pullPath']['status']
         d_jobStatusSummary['compute']['status']             = ad_jobStatus['info']['compute']['status']
+        d_jobStatusSummary['swiftPut']['status']            = ad_jobStatus['info']['swiftPut']['status']
 
         if 'submit' in ad_jobStatus['info']['compute']:
             d_jobStatusSummary['compute']['submit']['status']           = ad_jobStatus['info']['compute']['submit']['status']
@@ -1707,12 +1759,14 @@ class StoreHandler(BaseHTTPRequestHandler):
             isinstance(d_jobStatusSummary['pullPath']['status'],            bool) and \
             isinstance(d_jobStatusSummary['compute']['status'],             bool) and \
             isinstance(d_jobStatusSummary['compute']['submit']['status'],   bool) and \
-            isinstance(d_jobStatusSummary['compute']['return']['status'],   bool):
+            isinstance(d_jobStatusSummary['compute']['return']['status'],   bool) and \
+            isinstance(d_jobStatusSummary['swiftPut']['status'],            bool):
             d_jobStatusSummary['status'] =      d_jobStatusSummary['pushPath']['status']            and \
                                                 d_jobStatusSummary['pullPath']['status']            and \
                                                 d_jobStatusSummary['compute']['status']             and \
                                                 d_jobStatusSummary['compute']['submit']['status']   and \
-                                                d_jobStatusSummary['compute']['return']['status']
+                                                d_jobStatusSummary['compute']['return']['status']   and \
+                                                d_jobStatusSummary['swiftPut']['status']
         else:
             d_jobStatusSummary['status'] = False
 
@@ -1740,7 +1794,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_request                   = {}
         d_meta                      = {}
         d_jobStatus                 = {}
-        b_status                    = False
         d_jobStatusSummary          = {}
 
         for k,v in kwargs.items():
