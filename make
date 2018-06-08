@@ -21,26 +21,32 @@
 source ./decorate.sh 
 
 declare -i STEP=0
-RESTART=""
+declare -i b_restart=0
+declare -i b_kill=0
+JOB=""
 HERE=$(pwd)
 echo "Starting script in dir $HERE"
 
 declare -a A_CONTAINER=(
     "pfcon${TAG}"
     "docker-swift-onlyone"
+    "pman${TAG}"
+    "pfioh${TAG}"
 )
 
 CREPO=fnndsc
-TAG=:dev
+TAG=
 
 if [[ -f .env ]] ; then
     source .env 
 fi
 
-while getopts "r:psidUIa:S:" opt; do
+while getopts "k:r:psidUIa:S:" opt; do
     case $opt in 
         r) b_restart=1
-           RESTART=$OPTARG                      ;;
+           JOB=$OPTARG                          ;;
+        k) b_kill=1
+           JOB=$OPTARG                          ;;
         p) b_pause=1                            ;;
         s) b_skipIntro=1                        ;;
         i) b_norestartinteractive_chris_dev=1   ;;
@@ -81,9 +87,13 @@ title -d 1 "Setting global exports..."
     fi
 windowBottom
 
-if (( b_restart )) ; then
-    docker-compose stop ${RESTART}_service && docker-compose rm -f ${RESTART}_service
-    docker-compose run --service-ports ${RESTART}_service
+if (( b_restart || b_kill )) ; then
+    printf "${Red}Stopping $JOB...${NC}\n"
+    docker-compose stop ${JOB}_service && docker-compose rm -f ${JOB}_service
+    if (( b_restart )) ; then
+        printf "${Yellow}Restarting $JOB...${NC}\n"
+        docker-compose run --service-ports ${JOB}_service
+    fi
 else
     title -d 1 "Using <$CREPO> family containers..."
     if (( ! b_skipIntro )) ; then 
@@ -136,10 +146,59 @@ else
     done
     windowBottom
 
+    cd $HERE
+    title -d 1 "Changing permissions to 755 on" " $(pwd)"
+    echo "chmod -R 755 $(pwd)"
+    chmod -R 755 $(pwd)
+    windowBottom
+
+    title -d 1 "Creating tmp dirs for volume mounting into containers..."
+    echo "${STEP}.1: Remove tree root 'FS'.."
+    rm -fr ./FS 
+    echo "${STEP}.2: Create tree structure for remote services in host filesystem..."
+    mkdir -p FS/local
+    chmod 777 FS/local
+    mkdir -p FS/remote
+    chmod 777 FS/remote
+    mkdir -p FS/data 
+    chmod 777 FS/data
+    chmod 777 FS
+    b_FSOK=1
+    type -all tree >/dev/null 2>/dev/null
+    if (( ! $? )) ; then
+        tree FS
+        report=$(tree FS | tail -n 1)
+        if [[ "$report" != "3 directories, 0 files" ]] ; then 
+            b_FSOK=0
+        fi
+    else
+        report=$(find FS 2>/dev/null)
+        lines=$(echo "$report" | wc -l)
+        if (( lines != 4 )) ; then
+            b_FSOK=0
+        fi
+    fi
+    if (( ! b_FSOK )) ; then 
+        printf "\n${Red}There should only be 3 directories and no files in the FS tree!\n"
+        printf "${Yellow}Please manually clean/delete the entire FS tree and re-run.\n"
+        printf "${Yellow}\nThis script will now exit with code '1'.\n\n"
+        exit 1
+    fi
+    windowBottom
+
+
     title -d 1 "Starting pfcon containerized development environment using " " ./docker-compose.yml"
     echo "docker-compose up -d"
     docker-compose up -d
     windowBottom
+
+    title -d 1 "Pause for manual restart of services?"
+    if (( b_pause )) ; then
+        read -n 1 -p "Hit ANY key to continue..." anykey
+        echo ""
+    fi
+    windowBottom
+
     if (( !  b_norestartinteractive_chris_dev )) ; then
         title -d 1 "Restarting pfcon development container in interactive mode..."
         docker-compose stop pfcon_dev
