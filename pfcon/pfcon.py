@@ -712,7 +712,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                             d_info[k]['return'] = {}
                             d_info[k]['status'] = ''
                         d_info[k]['status'] = str_status
-                        b_status            = str_status
+                        b_status            = True
                         if b_jobReturn:
                             d_info[k]['return'] = d_jobReturn
                         if b_jobSubmit:
