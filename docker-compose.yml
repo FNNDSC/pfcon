@@ -12,7 +12,7 @@ version: '3'
 
 services:
   pfcon_dev:
-    image:  local/pfcon
+    image:   ${CREPO}/pfcon
     volumes:
       # - /var/run/docker.sock:/var/run/docker.sock
       - ./pfcon/pfcon.py:/usr/local/lib/python3.5/dist-packages/pfcon/pfcon.py
@@ -27,7 +27,7 @@ services:
     command: ["--forever", "--httpResponse"]
 
   swift_service:
-    image:  fnndsc/docker-swift-onlyone
+    image:   ${CREPO}/docker-swift-onlyone
     volumes:
       - swift_storage:/srv
     ports:
@@ -44,6 +44,7 @@ services:
     command: ["--forever", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase"]
     volumes:
       - ./FS/remote:/hostFS/storeBase
+      # - ../pfioh/pfioh/pfioh.py:/usr/lib/python3.5/site-packages/pfioh/pfioh.py
     ports:
       - "5055:5055"
     labels:
@@ -68,6 +69,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./FS/remote:/hostFS/storeBase
+      # - ../pman/pman/pman.py:/usr/local/lib/python3.5/dist-packages/pman/pman.py
+      - /tmp:/tmp
     ports:
       - "5010:5010"
     labels:

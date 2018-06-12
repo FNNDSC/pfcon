@@ -131,8 +131,8 @@ in
         here=$(pwd)
         cd $PUSHDIR
         for FILE in *${EXT} ; do
-                printf "Pushing file: $PUSHDIR/%s to ${SWIFTPATHPREFIX}/$FILE\n" $FILE
-                CMD="swift -U chris:chris1234 -A http://${SWIFTIP}:${SWIFTPORT}/auth/v1.0  -K testing upload users ${PUSHDIR}/$FILE --object-name ${SWIFTPATHPREFIX}/$FILE"
+                printf "Pushing file: %s to ${SWIFTPATHPREFIX}/$FILE\n" $FILE
+                CMD="swift -U chris:chris1234 -A http://${SWIFTIP}:${SWIFTPORT}/auth/v1.0  -K testing upload users $FILE --object-name ${SWIFTPATHPREFIX}/$FILE"
                 CMD_eval "$CMD"
         done
         cd $here
