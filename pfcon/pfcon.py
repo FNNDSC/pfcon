@@ -1008,7 +1008,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                 "transport": {
                     "mechanism":    "compress",
                     "compress": {
-                        "encoding": "none",
                         "archive":  "zip",
                         "unpack":   true,
                         "cleanup":  true
