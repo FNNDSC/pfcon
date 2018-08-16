@@ -25,12 +25,12 @@ import  os
 import  multiprocessing
 import  pfurl
 import  configparser
+import  swiftclient
 
 import  pfmisc
 
 # debugging utilities
 import  pudb
-import  swiftclient
 
 # pfcon local dependencies
 from    ._colors        import  Colors
@@ -79,23 +79,23 @@ Gd_internalvar  = {
     'service':  {
         'host': {
             'data': {
-                'addr':            '%PFIOH_IP:5055',
-                'baseURLpath':     'api/v1/cmd/',
-                'status':          'undefined',
-                "enableTokenAuth": True,
-                "authTokens":      "password"
+                'addr':             '%PFIOH_IP:5055',
+                'baseURLpath':      'api/v1/cmd/',
+                'status':           'undefined',
+                'authToken':        'password'
             },
             'compute': {
-                'addr':         '%PMAN_IP:5010',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
+                'addr':             '%PMAN_IP:5010',
+                'baseURLpath':      'api/v1/cmd/',
+                'status':           'undefined',
+                'authToken':        'password'
             }
         },
         'localhost': {
             'data': {
-                'addr':            '127.0.0.1:5055',
-                'baseURLpath':     'api/v1/cmd/',
-                'status':          'undefined'
+                'addr':             '127.0.0.1:5055',
+                'baseURLpath':      'api/v1/cmd/',
+                'status':           'undefined'
             },
             'compute': {
                 'addr':         '127.0.0.1:5010',
@@ -132,15 +132,13 @@ Gd_internalvar  = {
                 "addr":                         "pman-myproject.127.0.0.1.nip.io",
                 "baseURLpath":                  "api/v1/cmd/",
                 "status":                       "undefined",
-                "enableTokenAuth":              False,
-                "authTokens":                   ""
+                "authToken":                    "password"
             },
             "data": {
                 "addr":                         "pfioh-myproject.127.0.0.1.nip.io",
                 "baseURLpath":                  "api/v1/cmd/", 
                 "status":                       "undefined",
-                "enableTokenAuth":              True,
-                "authTokens":                   "password"
+                "authToken":                    "password"
             }
         }
     }
@@ -455,30 +453,19 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_remoteService       = d_meta['service']
         str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
         str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURLpath'% str_remoteService)
-        b_enableTokenAuth       = Gd_tree.cat('/service/%s/data/enableTokenAuth'% str_remoteService)
-        if b_enableTokenAuth:
-            str_token = Gd_tree.cat('/service/%s/data/authTokens'% str_remoteService)
-            dataComs = pfurl.Pfurl(
-                msg                         = json.dumps(d_request),
-                verb                        = 'POST',
-                http                        = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
-                b_quiet                     = False,
-                b_raw                       = True,
-                b_httpResponseBodyParse     = True,
-                jsonwrapper                 = '',
-                authToken                   = str_token
-            )
-        else:
-            # Run remote call without Authorization header
-            dataComs = pfurl.Pfurl(
-                msg                         = json.dumps(d_request),
-                verb                        = 'POST',
-                http                        = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
-                b_quiet                     = False,
-                b_raw                       = True,
-                b_httpResponseBodyParse     = True,
-                jsonwrapper                 = ''
-            )
+        str_token = Gd_tree.cat('/service/%s/data/authToken'% str_remoteService)
+        if not str_token:
+            str_token = None
+        dataComs = pfurl.Pfurl(
+            msg                         = json.dumps(d_request),
+            verb                        = 'POST',
+            http                        = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
+            b_quiet                     = False,
+            b_raw                       = True,
+            b_httpResponseBodyParse     = True,
+            jsonwrapper                 = '',
+            authToken                   = str_token
+        )
         self.dp.qprint("Calling remote data service...",   comms = 'rx')
         d_dataComs = dataComs()
         str_response = d_dataComs.split('\n')
@@ -544,33 +531,22 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_remoteService       = d_meta['service']
         str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'        % str_remoteService)
         str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURLpath' % str_remoteService)
-        b_enableTokenAuth       = Gd_tree.cat('/service/%s/compute/enableTokenAuth'% str_remoteService)
 
-        if b_enableTokenAuth:
-            str_token = Gd_tree.cat('/service/%s/compute/authTokens'% str_remoteService)
-
-            # Remember, 'pman' responses do NOT need to http-body parsed!
-            computeComs = pfurl.Pfurl(
-                msg                         = json.dumps(d_request),
-                verb                        = 'POST',
-                http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
-                b_quiet                     = False,
-                b_raw                       = True,
-                b_httpResponseBodyParse     = False,
-                jsonwrapper                 = 'payload',
-                authToken                   = str_token
-            )
-        else:
-            # Run Remote call without Authorization header 
-            computeComs = pfurl.Pfurl(
-                msg                         = json.dumps(d_request),
-                verb                        = 'POST',
-                http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
-                b_quiet                     = False,
-                b_raw                       = True,
-                b_httpResponseBodyParse     = False,
-                jsonwrapper                 = 'payload'
-            )
+        str_token = Gd_tree.cat('/service/%s/compute/authToken'% str_remoteService)
+        if not str_token:
+            str_token = None
+        # Remember, 'pman' responses do NOT need to http-body parsed!
+        computeComs = pfurl.Pfurl(
+            msg                         = json.dumps(d_request),
+            verb                        = 'POST',
+            http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
+            b_quiet                     = False,
+            b_raw                       = True,
+            b_httpResponseBodyParse     = False,
+            jsonwrapper                 = 'payload',
+            authToken                   = str_token
+        )
+            
 
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeComs                           = computeComs()
@@ -812,37 +788,20 @@ class StoreHandler(BaseHTTPRequestHandler):
             }
         }
 
-        b_enableTokenAuth       = Gd_tree.cat('/service/%s/compute/enableTokenAuth'% str_remoteService)
 
-        # setup to pass the token NONE by default, which is universally an INVALID token. Systems that are not configured to handle auth tokens will
-        # simply ignore the bearer token header, so sending it NONE will not affect running jobs on services without auth, while services with 
-        # auth enabled will always reject this
-        
-        if b_enableTokenAuth:
-            # Sends a request with an authorization token
-            str_token = Gd_tree.cat('/service/%s/compute/authTokens'% str_remoteService)
-            computeStatus = pfurl.Pfurl(
-                msg                         = json.dumps(d_remoteStatus),
-                verb                        = 'POST',
-                http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
-                b_quiet                     = False,
-                b_raw                       = True,
-                b_httpResponseBodyParse     = False,
-                jsonwrapper                 = 'payload',
-                authToken                   = str_token
-            )
-        
-        else:
-            # Sends a request without Authorization header
-            computeStatus = pfurl.Pfurl(
-                msg                         = json.dumps(d_remoteStatus),
-                verb                        = 'POST',
-                http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
-                b_quiet                     = False,
-                b_raw                       = True,
-                b_httpResponseBodyParse     = False,
-                jsonwrapper                 = 'payload'
-            )
+        str_token = Gd_tree.cat('/service/%s/compute/authToken'% str_remoteService)
+        if not str_token:
+            str_token = None
+        computeStatus = pfurl.Pfurl(
+            msg                         = json.dumps(d_remoteStatus),
+            verb                        = 'POST',
+            http                        = '%s/%s' % (str_computeServiceAddr, str_computeServiceURL),
+            b_quiet                     = False,
+            b_raw                       = True,
+            b_httpResponseBodyParse     = False,
+            jsonwrapper                 = 'payload',
+            authToken                   = str_token
+        )
 
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeStatus                         = computeStatus()
@@ -1269,7 +1228,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             if str_outDirPath is not None:
                 # This value will not be none in case of non-swift option.
                 str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
-            # 
             d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
             self.dp.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
             d_computeRequest   = {
@@ -1283,7 +1241,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             # wait for processing...
             self.dp.qprint('compute job submitted... waiting %ds for transients...' % coordBlockSeconds)
             time.sleep(coordBlockSeconds)
-            # 
             d_jobBlock                  = self.jobOperation_blockUntil(   
                                             request = d_computeRequest,
                                             key     = str_key,
@@ -1314,7 +1271,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             # information about the swift operation. We push them to object storage
             # after creating them in the pfcon FS). This means that the files may 
             # not be registered with CUBE since when CUBE might pull from swift storage
-            # these last two files might not be conpushData_sistently reported to the pulling
+            # these last two files might not be consistently reported to the pulling
             # client.
             d_ret['d_jobStatus']            = self.jobStatus_do(        key     = str_key,
                                                                         action  = 'getInfo',
@@ -1374,7 +1331,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             'd_jobStatusSummary':   {}
         }
 
-        # pudb.set_trace()
         # does not propogate the error message. If the status is false, the client will not be notified
         b_status, d_dataRequestProcessPush = pushData_handler()
         if b_status:
@@ -1809,7 +1765,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             }
         }
 
-        # 
         d_jobStatusSummary['pushPath']['status']            = ad_jobStatus['info']['pushPath']['status']
         d_jobStatusSummary['pullPath']['status']            = ad_jobStatus['info']['pullPath']['status']
         d_jobStatusSummary['compute']['status']             = ad_jobStatus['info']['compute']['status']
@@ -1897,7 +1852,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return:
         """
-        # pudb.set_trace()
         d_msg       = {}
         d_done      = {}
         b_threaded  = False
