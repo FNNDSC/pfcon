@@ -941,8 +941,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 "threaded": true,
                 "container":   {
                         "target": {
-                            "image":            "fnndsc/pl-simpledsapp",
-                            "cmdParse":         true
+                            "image":            "fnndsc/pl-simpledsapp"
                         },
                         "manager": {
                             "image":            "fnndsc/swarm",
