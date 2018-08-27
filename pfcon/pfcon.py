@@ -161,27 +161,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         if not b_test:
             BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
-    # def qprint(self, msg, **kwargs):
-    #     """
-    #     Simple print function with verbosity control.
-    #     """
-    #     str_comms  = ""
-    #     for k,v in kwargs.items():
-    #         if k == 'comms':    str_comms  = v
-
-    #     str_caller  = inspect.stack()[1][3]
-
-    #     if not StoreHandler.b_quiet:
-    #         if str_comms == 'status':   print(Colors.PURPLE,    end="")
-    #         if str_comms == 'error':    print(Colors.RED,       end="")
-    #         if str_comms == "tx":       print(Colors.YELLOW + "<----")
-    #         if str_comms == "rx":       print(Colors.GREEN  + "---->")
-    #         print('%s' % datetime.datetime.now() + " | "  + os.path.basename(__file__) + ':' + self.__name__ + "." + str_caller + '() | ', end="")
-    #         print(msg)
-    #         if str_comms == "tx":       print(Colors.YELLOW + "<----")
-    #         if str_comms == "rx":       print(Colors.GREEN  + "---->")
-    #         print(Colors.NO_COLOUR, end="")
-
     def log_message(self, format, *args):
         """
         This silences the server from spewing to stdout!
