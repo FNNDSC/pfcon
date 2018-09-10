@@ -1,5 +1,5 @@
 ###############
-pfcon  v2.0.0.2
+pfcon  v2.0.0.4
 ###############
 
 .. image:: https://badge.fury.io/py/pfcon.svg
@@ -156,9 +156,9 @@ Start ``pfcon`` in forever mode:
 
             pfcon                                                   \\
                 --forever                                           \\
-                --ip %s                                      \\
                 --port 5005                                         \\
                 --httpResponse                                      \\
-                --verbosity 1
+                --verbosity 1                                       \\
+                --ip 127.0.0.1
 
 
