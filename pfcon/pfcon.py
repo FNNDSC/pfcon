@@ -31,9 +31,9 @@ import  pudb
 import  swiftclient
 
 # pfcon local dependencies
-from    ._colors        import  Colors
-from    .debug          import  debug
-from   .C_snode         import *
+from    pfmisc._colors      import  Colors
+from    pfmisc.debug        import  debug
+from    pfmisc.C_snode      import *
 
 
 # Horrible global var
@@ -43,6 +43,7 @@ Gd_internalvar  = {
     'self': {
         'name':                 'pfcon',
         'version':              'undefined',
+        'verbosity':            0,
         'coordBlockSeconds':    10
     },
     "swift": {
@@ -140,14 +141,16 @@ class StoreHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         """
         """
+        global Gd_internalvar
         b_test                  = False
         self.__name__           = 'StoreHandler'
         self.b_useDebug         = False
         self.str_debugFile      = '/tmp/pfcon-log.txt'
         self.b_quiet            = True
+
+        self.verbosity          = Gd_internalvar['self']['verbosity']
         self.dp                 = pfmisc.debug(    
-                                            verbosity   = 0,
-                                            level       = -1,
+                                            verbosity   = self.verbosity,
                                             within      = self.__name__
                                             )
         self.pp                 = pprint.PrettyPrinter(indent=4)
@@ -157,27 +160,6 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         if not b_test:
             BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
-
-    def qprint(self, msg, **kwargs):
-        """
-        Simple print function with verbosity control.
-        """
-        str_comms  = ""
-        for k,v in kwargs.items():
-            if k == 'comms':    str_comms  = v
-
-        str_caller  = inspect.stack()[1][3]
-
-        if not StoreHandler.b_quiet:
-            if str_comms == 'status':   print(Colors.PURPLE,    end="")
-            if str_comms == 'error':    print(Colors.RED,       end="")
-            if str_comms == "tx":       print(Colors.YELLOW + "<----")
-            if str_comms == "rx":       print(Colors.GREEN  + "---->")
-            print('%s' % datetime.datetime.now() + " | "  + os.path.basename(__file__) + ':' + self.__name__ + "." + str_caller + '() | ', end="")
-            print(msg)
-            if str_comms == "tx":       print(Colors.YELLOW + "<----")
-            if str_comms == "rx":       print(Colors.GREEN  + "---->")
-            print(Colors.NO_COLOUR, end="")
 
     def log_message(self, format, *args):
         """
@@ -1927,11 +1909,17 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     Handle requests in a separate thread.
     """
 
-    def col2_print(self, str_left, str_right):
-        print(Colors.WHITE +
-              ('%*s' % (self.LC, str_left)), end='')
-        print(Colors.LIGHT_BLUE +
-              ('%*s' % (self.RC, str_right)) + Colors.NO_COLOUR)
+    def col2_print(self, str_left, str_right, level = 1):
+        self.dp.qprint(Colors.WHITE +
+              ('%*s' % (self.LC, str_left)), 
+              end       = '',
+              syslog    = False,
+              level     = level)
+        self.dp.qprint(Colors.LIGHT_BLUE +
+              ('%*s' % (self.RC, str_right)) + 
+              Colors.NO_COLOUR,
+              syslog    = False,
+              level     = level)
 
     def __init__(self, *args, **kwargs):
         """
@@ -1950,8 +1938,6 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         self.str_desc       = 'pfcon'
         self.str_name       = self.str_desc
         self.str_version    = ''
-
-        self.dp             = debug(verbosity=0, level=-1)
 
     def leaf_process(self, **kwargs):
         """
@@ -1996,11 +1982,15 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         # For newer docker-compose
         try:
-            str_defIPpman   = socket.gethostbyname('pman_service')
+            pman_service    = socket.gethostbyname('pman_service')
+            if pman_service != "127.0.0.1":
+                str_defIPpman   = pman_service
         except:
             pass
         try:
-            str_defIPpfioh  = socket.gethostbyname('pfioh_service')
+            pfioh_service   = socket.gethostbyname('pfioh_service')
+            if pfioh_service != "127.0.0.1":
+                str_defIPpfioh  = pfioh_service
         except:
             pass
 
@@ -2016,11 +2006,15 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
                     Gd_internalvar  = json.load(json_file)
 
         G_b_httpResponse = self.args['b_httpResponse']
-        print(self.str_desc)
 
         Gd_internalvar['self']['name']                  = self.str_name
         Gd_internalvar['self']['version']               = self.str_version
         Gd_internalvar['self']['coordBlockSeconds']     = int(self.args['coordBlockSeconds'])
+        Gd_internalvar['self']['verbosity']             = int(self.args['verbosity'])
+        self.verbosity      = Gd_internalvar['self']['verbosity']
+        self.dp             = debug(verbosity = self.verbosity)
+
+        self.dp.qprint(self.str_desc, level = 1)
 
         self.col2_print("Listening on address:",    self.args['ip'])
         self.col2_print("Listening on port:",       self.args['port'])
@@ -2036,9 +2030,20 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
                             replace = '%PMAN_IP', 
                             newVal  = str_defIPpman)
 
-        print(Colors.YELLOW + "\n\t\tInternal data tree:")
-        print(C_snode.str_blockIndent(str(Gd_tree), 3, 8))
+        self.dp.qprint(
+            Colors.YELLOW + "\n\t\tInternal data tree:", 
+            level   = 1,
+            syslog  = False)
+        self.dp.qprint(
+            C_snode.str_blockIndent(str(Gd_tree), 3, 8), 
+            level   = 1,
+            syslog  = False)
 
-        print(Colors.LIGHT_GREEN + "\n\n\tWaiting for incoming data..." + Colors.NO_COLOUR)
+        self.dp.qprint(
+            Colors.LIGHT_GREEN + 
+            "\n\n\t\t\tWaiting for incoming data...\n" + 
+            Colors.NO_COLOUR,
+            level   = 1,
+            syslog  = False)
 
 
