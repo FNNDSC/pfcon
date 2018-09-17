@@ -15,7 +15,7 @@ services:
     image:   ${CREPO}/pfcon
     volumes:
       # - /var/run/docker.sock:/var/run/docker.sock
-      - ./pfcon/pfcon.py:/usr/local/lib/python3.5/dist-packages/pfcon/pfcon.py
+      - ./pfcon/pfcon.py:/usr/local/lib/python3.6/dist-packages/pfcon/pfcon.py
       # - .:/usr/local/lib/python3.5/dist-packages/pfcon
     ports:
       - "5005:5005"
@@ -24,7 +24,7 @@ services:
     labels:
       name: "pfcon"
       role: "PF controller, part of the CHRIS backend."
-    command: ["--forever", "--httpResponse"]
+    command: ["--forever", "--httpResponse", "--verbosity", "1"]
 
   swift_service:
     image:   ${CREPO}/docker-swift-onlyone
@@ -41,7 +41,7 @@ services:
     # in the HOST to the key store in pfioh. The keystore is specified by the
     # --storeBase flag.
     image:  ${CREPO}/pfioh${TAG}
-    command: ["--forever", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase"]
+    command: ["--forever", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
     volumes:
       - ./FS/remote:/hostFS/storeBase
       # - ../pfioh/pfioh/pfioh.py:/usr/lib/python3.5/site-packages/pfioh/pfioh.py
@@ -58,19 +58,18 @@ services:
     # There is however an extra twist. Since pman spins off containers of its
     # own, it needs to mount this storeBase dir into the spawned container.
     # However, it can't mount a dir inside itself to the spawned container,
-    # it has to mount an actaul existing directory. This directory is
+    # it has to mount an actual existing directory. This directory is
     # passed in the STOREBASE env variable, and will override the base
     # mapping of SHAREDIR inside pman to the swarm manager. Note that the
     # full path to the spawned container should be ${STOREBASE} + keyStore!
     environment:
       - STOREBASE
     image:  ${CREPO}/pman${TAG}
-    command: ["--rawmode", "1", "--http", "--port", "5010", "--listeners", "12"]
+    command: ["--rawmode", "1", "--http", "--port", "5010", "--listeners", "12", "--verbosity", "1"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./FS/remote:/hostFS/storeBase
       # - ../pman/pman/pman.py:/usr/local/lib/python3.5/dist-packages/pman/pman.py
-      - /tmp:/tmp
     ports:
       - "5010:5010"
     labels:
