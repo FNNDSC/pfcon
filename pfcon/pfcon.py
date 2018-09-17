@@ -1160,9 +1160,6 @@ class StoreHandler(BaseHTTPRequestHandler):
 
                 d_internalInfo  = Gd_tree.cat('/jobstatus/%s/info' % str_key)
 
-            if os.path.exists('/data'):
-                if not os.path.exists('/data/tmp'):
-                    os.makedirs('/data/tmp')
             self.dp.qprint( 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
                             comms = 'status',
                             teeFile = '/data/tmp/d_internalInfo-%s.json' % str_key, 
@@ -2038,6 +2035,10 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             C_snode.str_blockIndent(str(Gd_tree), 3, 8), 
             level   = 1,
             syslog  = False)
+
+        # pudb.set_trace()
+        if not os.path.exists('/data/tmp'):
+            os.makedirs('/data/tmp')
 
         self.dp.qprint(
             Colors.LIGHT_GREEN + 
