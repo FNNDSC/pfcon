@@ -40,6 +40,10 @@ RUN apt-get update \
   && echo "localuser:localuser" | chpasswd                            \
   && adduser localuser sudo                                           \
   && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils vim net-tools inetutils-ping \
+  && apt-get install python3-webob                                    \
+  && pip3 install ptvsd==3.0.0                                        \
+  && pip3 install pfmisc==1.0.1                                       \
+  && pip3 install webob                                               \
   && pip3 install /tmp/pfcon                                          \
   && rm -fr /tmp/pfcon                                                \
   && chmod 777 /dock                                                  \
