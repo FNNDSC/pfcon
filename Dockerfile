@@ -40,6 +40,7 @@ RUN apt-get update \
   && echo "localuser:localuser" | chpasswd                            \
   && adduser localuser sudo                                           \
   && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils vim net-tools inetutils-ping \
+  && pip install --upgrade pip                                        \
   && pip3 install /tmp/pfcon                                          \
   && rm -fr /tmp/pfcon                                                \
   && chmod 777 /dock                                                  \
