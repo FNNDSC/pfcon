@@ -110,7 +110,7 @@ def synopsis(ab_shortOnly = False):
         ``pfcon`` is a process/file controller, part of the ``pf`` suite of 
         applications, and used mostly in the context of ChRIS.
 
-        Typically ``pfcon`` is launched on a the localhost where it 
+        Typically ``pfcon`` is launched on the localhost where it 
         listens for directives directing data and compute. Target 
         data is zipped and transmitted to a remote location, and 
         once available on the remote, a containerized computation 
