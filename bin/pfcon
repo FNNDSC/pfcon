@@ -28,10 +28,11 @@ import  pudb
 #     sys.path.insert(1, os.path.join(get_python_lib(True, True), 'site-packages'))
 #     sys.path.insert(1, os.path.join(get_python_lib(True, True), 'site-packages/pfcon'))
 #     import  pfcon
-from    pfcon._colors             import Colors
+
+from    pfmisc._colors             import Colors
 
 str_defIP = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-str_version = "2.0.0.0"
+str_version = "2.0.0.8"
 str_desc = Colors.CYAN + """
 
         __                
@@ -64,6 +65,119 @@ str_desc = Colors.CYAN + """
             +-----------------------------------------------------------+
               
 """ + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  '''
+    NAME
+
+	    pfcon 
+
+        - process-and-file controller
+
+    SYNOPSIS
+
+            pfcon                                                   \\
+                [--ip <IPofServer>]                                 \\
+                [--port <port>]                                     \\
+                [--man <manpage>]                                   \\
+                [--forever]                                         \\
+                [--coordBlockSeconds <secondsBlock>]                \\
+                [--verbosity <level>]                               \\
+                [--configFileLoad <file>]                           \\
+                [--configFileSave <file>]                           \\
+                [--test]                                            \\
+                [--httpResponse]                                    \\
+                [-x|--desc]                                         \\
+                [-y|--synopsis]                                     \\
+                [--version]                                         \\
+                [--verbosity <level>]
+
+    BRIEF EXAMPLE
+
+            pfcon                                                   \\
+                --forever                                           \\
+                --port 5005                                         \\
+                --httpResponse                                      \\
+                --verbosity 1                                       \\
+                --ip %s
+
+    ''' % str_defIP
+
+    description =  '''
+    DESCRIPTION
+
+        ``pfcon`` is a process/file controller, part of the ``pf`` suite of 
+        applications, and used mostly in the context of ChRIS.
+
+        Typically ``pfcon`` is launched on the localhost where it 
+        listens for directives directing data and compute. Target 
+        data is zipped and transmitted to a remote location, and 
+        once available on the remote, a containerized computation 
+        is started.
+
+        An internal loop monitors the status of the remote processing,
+        and once complete, control returns.
+
+    ARGS
+
+        [--ip <IP>]                            
+
+        The IP interface on which to listen. Default %s.
+
+        [--port <port>]
+        The port on which to listen. Defaults to '5055'.
+
+        [--man <manpage>]
+        Internal man page with more detail on specific calls.
+
+        [--forever]
+        Start service and do not terminate.
+
+        [--httpResponse]
+        Send return strings as HTTP formatted replies with content-type html.
+
+        [--cordBlockSeconds <blockSeconds>]
+        The number of seconds to block/wait internally in the coordination loop.
+        This is the time between ``pfioh`` has indicated successful unpack of file
+        data and the call to ``pman`` to start processing.
+
+        [--configFileLoad <file>]
+        Load configuration information from the JSON formatted <file>.
+
+        [--configFileSave <file>]
+        Save configuration information to the JSON formatted <file>.
+
+        [-x|--desc]                                     
+        Provide an overview help page.
+
+        [-y|--synopsis]
+        Provide a synopsis help summary.
+
+        [--version]
+        Print internal version number and exit.
+
+        [-v|--verbosity <level>]
+        Set the verbosity level. "0" typically means no/minimal output. Allows for
+        more fine tuned output control as opposed to '--quiet' that effectively
+        silences everything.
+
+    EXAMPLES
+
+    Start ``pfcon`` in forever mode:
+
+            pfcon                                                   \\
+                --forever                                           \\
+                --port 5005                                         \\
+                --httpResponse                                      \\
+                --verbosity 1                                       \\
+                --ip %s
+
+    ''' % (str_defIP, str_defIP)
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
 
 parser  = ArgumentParser(description = str_desc, formatter_class = RawTextHelpFormatter)
 
@@ -137,9 +251,37 @@ parser.add_argument(
     action  = 'store',
     default = ''
 )
+parser.add_argument(
+    "-v", "--verbosity",
+    help    = "verbosity level for app",
+    dest    = 'verbosity',
+    default = "0")
+parser.add_argument(
+    "-x", "--desc",
+    help    = "long synopsis",
+    dest    = 'desc',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    "-y", "--synopsis",
+    help    = "short synopsis",
+    dest    = 'synopsis',
+    action  = 'store_true',
+    default = False
+) 
 
 args            = parser.parse_args()
 args.port       = int(args.port)
+
+if args.desc or args.synopsis:
+    print(str_desc)
+    if args.desc:
+        str_help     = synopsis(False)
+    if args.synopsis:
+        str_help     = synopsis(True)
+    print(str_help)
+    sys.exit(1)
 
 if args.b_version:
     print("Version: %s" % str_version)
