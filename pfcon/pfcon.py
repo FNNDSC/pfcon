@@ -24,17 +24,18 @@ import  psutil
 import  os
 import  multiprocessing
 import  pfurl
+import  configparser
+import  swiftclient
 
 import  pfmisc
 
+# debugging utilities
 import  pudb
-import  swiftclient
 
 # pfcon local dependencies
 from    pfmisc._colors      import  Colors
 from    pfmisc.debug        import  debug
 from    pfmisc.C_snode      import *
-
 
 # Horrible global var
 G_b_httpResponse            = False
@@ -76,28 +77,29 @@ Gd_internalvar  = {
                 }
         }
     },
-
     'service':  {
         'host': {
             'data': {
-                'addr':         '%PFIOH_IP:5055',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
+                'addr':             '%PFIOH_IP:5055',
+                'baseURLpath':      'api/v1/cmd/',
+                'status':           'undefined',
+                'authToken':        'password'
             },
             'compute': {
-                'addr':         '%PMAN_IP:5010',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
+                'addr':             '%PMAN_IP:5010',
+                'baseURLpath':      'api/v1/cmd/',
+                'status':           'undefined',
+                'authToken':        'password'
             }
         },
         'localhost': {
             'data': {
-                'addr':         '127.0.0.1:5055',
-                'baseURLpath':  'api/v1/cmd/',
-                'status':       'undefined'
-                },
+                'addr':             '127.0.0.1:5055',
+                'baseURLpath':      'api/v1/cmd/',
+                'status':           'undefined'
+            },
             'compute': {
-                'addr':         '127.0.0.1:5010', 
+                'addr':         '127.0.0.1:5010',
                 'baseURLpath':  'api/v1/cmd/',
                 'status':       'undefined'
             }
@@ -117,15 +119,27 @@ Gd_internalvar  = {
         "openshiftlocal": {
             "compute": {
                 "addr":                         "pman-myproject.127.0.0.1.nip.io",
-                "baseURLpath":                  "api/v1/cmd/",
-                "allowUnverifiedCertificates":  False,  
+                "baseURLpath":                  "api/v1/cmd/", 
                 "status":                       "undefined"
             },
             "data": {
                 "addr":                         "pfioh-myproject.127.0.0.1.nip.io",
                 "baseURLpath":                  "api/v1/cmd/",
-                "allowUnverifiedCertificates":  False,  
                 "status":                       "undefined"
+            }
+        },
+        "openshiftlocal-tokens": {
+            "compute": {
+                "addr":                         "pman-myproject.127.0.0.1.nip.io",
+                "baseURLpath":                  "api/v1/cmd/",
+                "status":                       "undefined",
+                "authToken":                    "password"
+            },
+            "data": {
+                "addr":                         "pfioh-myproject.127.0.0.1.nip.io",
+                "baseURLpath":                  "api/v1/cmd/", 
+                "status":                       "undefined",
+                "authToken":                    "password"
             }
         }
     }
@@ -137,7 +151,6 @@ Gd_tree         = C_stree()
 class StoreHandler(BaseHTTPRequestHandler):
 
     b_quiet     = False
-
     def __init__(self, *args, **kwargs):
         """
         """
@@ -154,7 +167,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                                             within      = self.__name__
                                             )
         self.pp                 = pprint.PrettyPrinter(indent=4)
-
         for k,v in kwargs.items():
             if k == 'test': b_test  = True
 
@@ -168,14 +180,13 @@ class StoreHandler(BaseHTTPRequestHandler):
         return
 
     def do_GET(self):
-
         d_server            = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(self.path).query))
         d_meta              = ast.literal_eval(d_server['meta'])
 
         d_msg               = {'action': d_server['action'], 'meta': d_meta}
         d_ret               = {}
+        print("Request: " + self.headers + '\n' + d_msg)
         self.dp.qprint(self.path, comms = 'rx')
-
         return d_ret
 
     def form_get(self, str_verb, data):
@@ -191,6 +202,8 @@ class StoreHandler(BaseHTTPRequestHandler):
                 'CONTENT_TYPE':     self.headers['Content-Type'],
             }
         )
+
+    
 
     def internalctl_varprocess(self, *args, **kwargs):
         """
@@ -244,7 +257,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_var     = d_meta['var']
 
         T           = C_stree()
-        # pudb.set_trace()
+         
         if d_meta:
             if 'get' in d_meta.keys():
                 if Gd_tree.isdir(str_var):
@@ -256,7 +269,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
             if 'set' in d_meta.keys():
                 b_tree          = False
-                # pudb.set_trace()
+                 
                 try:
                     d_set       = json.loads(d_meta['set'])
                 except:
@@ -279,7 +292,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 # Find all the values in the internalctl tree
                 # and replace the value corresponding to 'var' with
                 # the field of 'valueReplace'
-                # pudb.set_trace()
+                # 
                 str_target      = d_meta['var']
                 str_value       = d_meta['valueReplace']
                 if str_value    == 'ENV':
@@ -371,7 +384,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_local     = d_meta['local']
             if 'storageType' in d_local:
                 if d_local['storageType'] == 'swift':
-                    # pudb.set_trace()
                     d_ret['d_swiftPull']    = self.swiftstorage_objPull(
                                                     fromLocation = d_local['path']
                                                 )
@@ -398,8 +410,6 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         self.dp.qprint("dataRequest_process()", comms = 'status')
 
-        # pudb.set_trace()
-
         d_request       = {}
         d_meta          = {}
         d_pushPath      = {} 
@@ -416,17 +426,18 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'return':           d_return            = v
             if k == 'key':              str_key             = v
             if k == 'op':               str_op              = v
-
-
         d_meta                  = d_request[str_metaHeader]
 
         if str_op == 'pushPath':
             d_pushPath = self.dataRequest_processPushPath(d_meta = d_meta)
 
+        # pudb.set_trace()
         str_remoteService       = d_meta['service']
         str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
         str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURLpath'% str_remoteService)
-
+        str_token = Gd_tree.cat('/service/%s/data/authToken'% str_remoteService)
+        if not str_token:
+            str_token = None
         dataComs = pfurl.Pfurl(
             msg                         = json.dumps(d_request),
             verb                        = 'POST',
@@ -434,11 +445,20 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = True,
-            jsonwrapper                 = ''
+            jsonwrapper                 = '',
+            authToken                   = str_token
         )
-
         self.dp.qprint("Calling remote data service...",   comms = 'rx')
-        d_dataComs                              = dataComs()
+        d_dataComs = dataComs()
+        str_response = d_dataComs.split('\n')
+        str_responseStatus = str_response[0]
+        if len(str_response) > 1 and '200 OK' == str_responseStatus:
+            # Unusual case caused by pfurl returning a response string, during parsing of hello response, starting with "200 OK\n"
+            # Isolates json payload from request headers
+            d_dataComs = str_response[-1].replace('\\', '')
+            if d_dataComs[-1] == '\"':
+                d_dataComs = d_dataComs[:-1]
+
         d_dataResponse                          = json.loads(d_dataComs)
         d_ret['%s-data' % str_remoteService]    = d_dataResponse
 
@@ -453,7 +473,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                                 op          = str_op,
                                 status      = True,
                                 jobReturn   = d_return)
-
         return d_return
 
     def computeRequest_process(self, *args, **kwargs):
@@ -465,7 +484,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         :param args:
         :param kwargs:
-        :return: JSON object from the 'pfioh' call.
+        :return: JSON object from the 'pman' call.
         """
 
         global  Gd_tree
@@ -489,11 +508,15 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'key':              str_key             = v
             if k == 'op':               str_op              = v
 
+        #pudb.set_trace()
         d_meta                  = d_request[str_metaHeader]
         str_remoteService       = d_meta['service']
         str_computeServiceAddr  = Gd_tree.cat('/service/%s/compute/addr'        % str_remoteService)
         str_computeServiceURL   = Gd_tree.cat('/service/%s/compute/baseURLpath' % str_remoteService)
 
+        str_token = Gd_tree.cat('/service/%s/compute/authToken'% str_remoteService)
+        if not str_token:
+            str_token = None
         # Remember, 'pman' responses do NOT need to http-body parsed!
         computeComs = pfurl.Pfurl(
             msg                         = json.dumps(d_request),
@@ -502,14 +525,14 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
-            jsonwrapper                 = 'payload'
+            jsonwrapper                 = 'payload',
+            authToken                   = str_token
         )
+            
 
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeComs                           = computeComs()
         d_computeResponse                       = json.loads(d_computeComs)
-
-        # pudb.set_trace()
         d_ret['%s-computeRequest' % str_remoteService] = d_computeResponse
 
         d_return = {
@@ -613,7 +636,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_ret['echoBack']['msg']        = d_meta['echoBack']
                 b_status                        = True
 
-        # pudb.set_trace()
         d_remote    = self.hello_process_remote(request = d_request)
 
         return { 'd_ret':       d_ret,
@@ -640,7 +662,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         b_jobSwift  = False
         d_jobSwift  = {}
 
-        # pudb.set_trace()
         for k,v in kwargs.items():
             if k == 'key':          str_keyID   = v
             if k == 'op':           str_op      = v
@@ -657,6 +678,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'action':       str_action  = v
 
         # pudb.set_trace()
+
         if str_keyID != 'none':
             T           = Gd_tree
             T.cd('/jobstatus')
@@ -676,7 +698,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 T.cd(str_keyID)
             if T.exists('info'):
                 d_info  = T.cat('info')
-                # self.dp.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
+                self.dp.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
                 if not isinstance(d_info['compute']['status'], bool)  or \
                    not isinstance(d_info['pullPath']['status'], bool) or \
                    not isinstance(d_info['pushPath']['status'], bool) or \
@@ -748,6 +770,10 @@ class StoreHandler(BaseHTTPRequestHandler):
             }
         }
 
+
+        str_token = Gd_tree.cat('/service/%s/compute/authToken'% str_remoteService)
+        if not str_token:
+            str_token = None
         computeStatus = pfurl.Pfurl(
             msg                         = json.dumps(d_remoteStatus),
             verb                        = 'POST',
@@ -755,7 +781,8 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_quiet                     = False,
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
-            jsonwrapper                 = 'payload'
+            jsonwrapper                 = 'payload',
+            authToken                   = str_token
         )
 
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
@@ -1036,6 +1063,9 @@ class StoreHandler(BaseHTTPRequestHandler):
             Return: bool    -- success
 
             """
+            # default returns
+            d_dataRequestProcessPush = {}
+            b_status = False
 
             d_metaData['local'] = d_metaData['localSource']
             self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
@@ -1075,8 +1105,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         def pullData_handler():
             #######
             # Pull data from remote location
-            #######                                                                
-            # pudb.set_trace()
+            #######
 
             str_localDestination                = d_metaData['localTarget']['path']
             str_localParentPath, str_localDest  = os.path.split(str_localDestination)        
@@ -1128,7 +1157,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                 # and compare results with push record.
                 waitPoll            = 0
                 maxWaitPoll         = 10
-                # pudb.set_trace()
                 d_ret['d_swiftstore'] = self.swiftStorage_createFileList(
                     root = str_localDestination
                 )
@@ -1143,7 +1171,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_ret['d_swiftstore']['waitPoll']           = waitPoll
                 d_ret['d_swiftstore']['filesPushed']        = filesPushed
                 d_ret['d_swiftstore']['filesAccessible']    = filesAccessible
-                # pudb.set_trace()
                 d_swift                                     = {}
                 d_swift['useSwift']                         = True
                 d_swift['d_swift_ls']                       = d_swift_ls
@@ -1178,7 +1205,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             if str_outDirPath is not None:
                 # This value will not be none in case of non-swift option.
                 str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
-            # pudb.set_trace()
             d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
             self.dp.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
             d_computeRequest   = {
@@ -1192,7 +1218,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             # wait for processing...
             self.dp.qprint('compute job submitted... waiting %ds for transients...' % coordBlockSeconds)
             time.sleep(coordBlockSeconds)
-            # pudb.set_trace()
             d_jobBlock                  = self.jobOperation_blockUntil(   
                                             request = d_computeRequest,
                                             key     = str_key,
@@ -1244,7 +1269,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                             comms = 'status',
                             teeFile = '/data/tmp/d_ret-%s.json' % str_key, 
                             teeMode = 'w+')
-
         global Gd_internalvar, Gd_tree
 
         self.dp.qprint("coordinate_process()", comms = 'status')
@@ -1284,6 +1308,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             'd_jobStatusSummary':   {}
         }
 
+        # does not propogate the error message. If the status is false, the client will not be notified
         b_status, d_dataRequestProcessPush = pushData_handler()
         if b_status:
             b_status, d_computeRequestProcess = compute_handler()
@@ -1569,7 +1594,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         if d_conn['status']:
             for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile):
                 try:
-                    # pudb.set_trace()
                     d_ret['status'] = True and d_ret['status']
                     obj_tuple       = d_conn['conn'].get_object(
                                                     d_conn['container_name'],
@@ -1581,7 +1605,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                         # fp.write(str(obj_tuple[1], 'utf-8'))
                         fp.write(obj_tuple[1])
                 except Exception as e:
-                    # pudb.set_trace()
                     d_ret['error']  = str(e)
                     d_ret['status'] = False
                 d_ret['localFileList'].append(str_localfilename)
@@ -1669,7 +1692,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                 'l_fileFS': []
             }
         }
-        # pudb.set_trace()
         self.dp.qprint("starting...")
         str_rootPath    = ''
         for k,v in kwargs.items():
@@ -1720,7 +1742,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             }
         }
 
-        # pudb.set_trace()
         d_jobStatusSummary['pushPath']['status']            = ad_jobStatus['info']['pushPath']['status']
         d_jobStatusSummary['pullPath']['status']            = ad_jobStatus['info']['pullPath']['status']
         d_jobStatusSummary['compute']['status']             = ad_jobStatus['info']['compute']['status']
@@ -1768,7 +1789,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                 }
             }
         }'
-
         """
         self.dp.qprint("status_process()", comms = 'status')
         d_request                   = {}
@@ -1782,7 +1802,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         d_meta      = d_request['meta']
         str_keyID   = d_meta['remote']['key']
 
-        # pudb.set_trace()
         d_jobStatus      = self.jobStatus_do(           key     = str_keyID,
                                                         action  = 'getInfo',
                                                         op      = 'all')
@@ -1810,7 +1829,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return:
         """
-
         d_msg       = {}
         d_done      = {}
         b_threaded  = False
@@ -1829,6 +1847,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         }
 
         self.dp.qprint('data length = %d' % len(data),   comms = 'status')
+        self.dp.qprint('data: %s' % data, comms = 'status')
         self.dp.qprint('form length = %d' % len(form), comms = 'status')
 
         if len(form):
