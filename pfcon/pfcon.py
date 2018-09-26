@@ -120,24 +120,12 @@ Gd_internalvar  = {
             "compute": {
                 "addr":                         "pman-myproject.127.0.0.1.nip.io",
                 "baseURLpath":                  "api/v1/cmd/", 
-                "status":                       "undefined"
-            },
-            "data": {
-                "addr":                         "pfioh-myproject.127.0.0.1.nip.io",
-                "baseURLpath":                  "api/v1/cmd/",
-                "status":                       "undefined"
-            }
-        },
-        "openshiftlocal-tokens": {
-            "compute": {
-                "addr":                         "pman-myproject.127.0.0.1.nip.io",
-                "baseURLpath":                  "api/v1/cmd/",
                 "status":                       "undefined",
                 "authToken":                    "password"
             },
             "data": {
                 "addr":                         "pfioh-myproject.127.0.0.1.nip.io",
-                "baseURLpath":                  "api/v1/cmd/", 
+                "baseURLpath":                  "api/v1/cmd/",
                 "status":                       "undefined",
                 "authToken":                    "password"
             }
@@ -1530,7 +1518,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         onto the local filesystem.
 
         This method can also "map" locations in the object storage
-        to new locations in the filesytem storage. For example, assume
+        to new locations in the filesystem storage. For example, assume
         a list of object locations starting with:
 
                 user/someuser/uploads/project/data ...
@@ -2065,5 +2053,3 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             Colors.NO_COLOUR,
             level   = 1,
             syslog  = False)
-
-
