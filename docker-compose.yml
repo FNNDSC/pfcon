@@ -24,10 +24,10 @@ services:
     labels:
       name: "pfcon"
       role: "PF controller, part of the CHRIS backend."
-    command: ["--forever", "--httpResponse", "--verbosity", "1"]
+    command: ["--forever", "--httpResponse", "--verbosity", "1", "--debugToDir", "/tmp"]
 
   swift_service:
-    image:   ${CREPO}/docker-swift-onlyone
+    image:   fnndsc/docker-swift-onlyone
     volumes:
       - swift_storage:/srv
     ports:

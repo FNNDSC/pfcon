@@ -45,7 +45,8 @@ Gd_internalvar  = {
         'name':                 'pfcon',
         'version':              'undefined',
         'verbosity':            0,
-        'coordBlockSeconds':    10
+        'coordBlockSeconds':    10,
+        'debugToDir':           ''
     },
     "swift": {
         "auth_url":                 "http://swift_service:8080/auth/v1.0",
@@ -146,7 +147,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         b_test                  = False
         self.__name__           = 'StoreHandler'
         self.b_useDebug         = False
-        self.str_debugFile      = '/tmp/pfcon-log.txt'
+        self.str_debugToDir     = Gd_internalvar['self']['debugToDir']
         self.b_quiet            = True
 
         self.verbosity          = Gd_internalvar['self']['verbosity']
@@ -1175,9 +1176,10 @@ class StoreHandler(BaseHTTPRequestHandler):
 
                 d_internalInfo  = Gd_tree.cat('/jobstatus/%s/info' % str_key)
 
-            self.dp.qprint( 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
+            if len(self.str_debugToDir):
+                self.dp.qprint( 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
                             comms = 'status',
-                            teeFile = '/data/tmp/d_internalInfo-%s.json' % str_key, 
+                            teeFile = '%s/d_internalInfo-%s.json' % (self.str_debugToDir, str_key), 
                             teeMode = 'w+')
             return d_swift['status']
 
@@ -1253,9 +1255,10 @@ class StoreHandler(BaseHTTPRequestHandler):
             # Also put these two files into swift
             self.swiftstorage_objPut( fileList = [str_statusFile, str_summaryFile])
 
-            self.dp.qprint( 'Final return: d_ret = \n%s' % json.dumps(d_ret, indent=4),
+            if len(self.str_debugToDir):
+                self.dp.qprint( 'Final return: d_ret = \n%s' % json.dumps(d_ret, indent=4),
                             comms = 'status',
-                            teeFile = '/data/tmp/d_ret-%s.json' % str_key, 
+                            teeFile = '%s/d_ret-%s.json' % (self.str_debugToDir, str_key), 
                             teeMode = 'w+')
         global Gd_internalvar, Gd_tree
 
@@ -1942,6 +1945,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         self.str_desc       = 'pfcon'
         self.str_name       = self.str_desc
         self.str_version    = ''
+        self.str_debugToDir = ''
 
     def leaf_process(self, **kwargs):
         """
@@ -2011,19 +2015,19 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         G_b_httpResponse = self.args['b_httpResponse']
 
+        # pudb.set_trace()
         Gd_internalvar['self']['name']                  = self.str_name
         Gd_internalvar['self']['version']               = self.str_version
         Gd_internalvar['self']['coordBlockSeconds']     = int(self.args['coordBlockSeconds'])
         Gd_internalvar['self']['verbosity']             = int(self.args['verbosity'])
+        if len(self.args['str_debugToDir']):
+            Gd_internalvar['self']['debugToDir']        = self.args['str_debugToDir']
+            self.str_debugToDir                         = self.args['str_debugToDir']
+
         self.verbosity      = Gd_internalvar['self']['verbosity']
         self.dp             = debug(verbosity = self.verbosity)
 
         self.dp.qprint(self.str_desc, level = 1)
-
-        self.col2_print("Listening on address:",    self.args['ip'])
-        self.col2_print("Listening on port:",       self.args['port'])
-        self.col2_print("Server listen forever:",   self.args['b_forever'])
-        self.col2_print("Return HTTP responses:",   G_b_httpResponse)
 
         Gd_tree.initFromDict(Gd_internalvar)
 
@@ -2043,9 +2047,16 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             level   = 1,
             syslog  = False)
 
+        self.col2_print("Listening on address:",    self.args['ip'])
+        self.col2_print("Listening on port:",       self.args['port'])
+        self.col2_print("Server listen forever:",   self.args['b_forever'])
+        self.col2_print("Return HTTP responses:",   G_b_httpResponse)
+        self.col2_print("Internal debug dir:",      self.str_debugToDir)
+
         # pudb.set_trace()
-        if not os.path.exists('/data/tmp'):
-            os.makedirs('/data/tmp')
+        if len(self.str_debugToDir):
+            if not os.path.exists(self.str_debugToDir):
+                os.makedirs(self.str_debugToDir)
 
         self.dp.qprint(
             Colors.LIGHT_GREEN + 

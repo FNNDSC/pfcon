@@ -32,7 +32,7 @@ import  pudb
 from    pfmisc._colors             import Colors
 
 str_defIP = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-str_version = "2.0.0.8"
+str_version = "2.0.2.0"
 str_desc = Colors.CYAN + """
 
         __                
@@ -91,6 +91,7 @@ def synopsis(ab_shortOnly = False):
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--version]                                         \\
+                [--debugToDir <dir>]                                \\
                 [--verbosity <level>]
 
     BRIEF EXAMPLE
@@ -100,6 +101,7 @@ def synopsis(ab_shortOnly = False):
                 --port 5005                                         \\
                 --httpResponse                                      \\
                 --verbosity 1                                       \\
+                --debugToDir /tmp                                   \\
                 --ip %s
 
     ''' % str_defIP
@@ -157,6 +159,13 @@ def synopsis(ab_shortOnly = False):
         [--version]
         Print internal version number and exit.
 
+        [--debugToDir <dir>]
+        A directory to contain various debugging output -- these are typically
+        JSON object strings capturing internal state. If empty string (default)
+        then no debugging outputs are captured/generated. If specified, then
+        ``pfcon`` will check for dir existence and attempt to create if
+        needed.
+
         [-v|--verbosity <level>]
         Set the verbosity level. "0" typically means no/minimal output. Allows for
         more fine tuned output control as opposed to '--quiet' that effectively
@@ -171,6 +180,7 @@ def synopsis(ab_shortOnly = False):
                 --port 5005                                         \\
                 --httpResponse                                      \\
                 --verbosity 1                                       \\
+                --debugToDir /tmp                                   \\
                 --ip %s
 
     ''' % (str_defIP, str_defIP)
@@ -248,6 +258,13 @@ parser.add_argument(
     '--configFileSave',
     help    = 'a file to store configuration information',
     dest    = 'str_configFileSave',
+    action  = 'store',
+    default = ''
+)
+parser.add_argument(
+    '--debugToDir',
+    help    = 'a destination directory to contain debugging info',
+    dest    = 'str_debugToDir',
     action  = 'store',
     default = ''
 )
