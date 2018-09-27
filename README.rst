@@ -1,5 +1,5 @@
 ###############
-pfcon  v2.0.0.8
+pfcon  v2.0.2.0
 ###############
 
 .. image:: https://badge.fury.io/py/pfcon.svg
@@ -141,6 +141,13 @@ For ``pfcon`` detailed information, see the `pfcon wiki page <https://github.com
         [--version]
         Print internal version number and exit.
 
+        [--debugToDir <dir>]
+        A directory to contain various debugging output -- these are typically
+        JSON object strings capturing internal state. If empty string (default)
+        then no debugging outputs are captured/generated. If specified, then
+        ``pfcon`` will check for dir existence and attempt to create if
+        needed.
+
         [-v|--verbosity <level>]
         Set the verbosity level. "0" typically means no/minimal output. Allows for
         more fine tuned output control as opposed to '--quiet' that effectively
@@ -159,6 +166,7 @@ Start ``pfcon`` in forever mode:
                 --port 5005                                         \\
                 --httpResponse                                      \\
                 --verbosity 1                                       \\
+                --debugToDir /tmp                                   \\
                 --ip 127.0.0.1
 
 
