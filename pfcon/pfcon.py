@@ -719,7 +719,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                             d_info[k]['return'] = {}
                             d_info[k]['status'] = ''
                         d_info[k]['status'] = str_status
-                        b_status            = str_status
                         if b_jobReturn:
                             d_info[k]['return'] = d_jobReturn
                         if b_jobSubmit:
@@ -728,7 +727,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                             d_info[k]           = d_jobSwift
                     T.touch('info', d_info)
         return {
-            'status':   b_status,
+            'status':   str_status,
             'info':     d_info
         }
 
