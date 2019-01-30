@@ -44,7 +44,7 @@ Gd_internalvar  = {
     'self': {
         'name':                 'pfcon',
         'version':              'undefined',
-        'verbosity':            0,
+        'verbosity':            1,
         'coordBlockSeconds':    10,
         'debugToDir':           ''
     },
