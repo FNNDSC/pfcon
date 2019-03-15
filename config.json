@@ -58,12 +58,12 @@
         },
         "moc": {
             "compute": {
-                "addr": "pman-radiology.apps.osh.massopen.cloud",
+                "addr": "pman-radiology.k-apps.osh.massopen.cloud",
                 "baseURLpath": "api/v1/cmd/",
                 "status": "undefined"
             },
             "data": {
-                "addr": "pfioh-radiology.apps.osh.massopen.cloud",
+                "addr": "pfioh-radiology.k-apps.osh.massopen.cloud",
                 "baseURLpath": "api/v1/cmd/",
                 "status": "undefined"
             }
