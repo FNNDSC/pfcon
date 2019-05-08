@@ -1906,9 +1906,11 @@ class StoreHandler(BaseHTTPRequestHandler):
         :return:
         """
         if not G_b_httpResponse:
-            self.wfile.write(json.dumps(d_ret).encode())
+            self.wfile.write(json.dumps(d_ret, indent = 4).encode())
         else:
-            self.wfile.write(str(Response(json.dumps(d_ret))).encode())
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(str(Response(json.dumps(d_ret, indent=4))).encode())
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
