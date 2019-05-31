@@ -427,6 +427,10 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_token = Gd_tree.cat('/service/%s/data/authToken'% str_remoteService)
         if not str_token:
             str_token = None
+        # This dump to file is only for debugging, if tracking the actual
+        # pfurl JSON payload is useful.
+        # with open("/tmp/pfurl.json", "w") as f:
+        #     json.dump(d_request, f, indent = 4)
         dataComs = pfurl.Pfurl(
             msg                         = json.dumps(d_request),
             verb                        = 'POST',
@@ -687,6 +691,8 @@ class StoreHandler(BaseHTTPRequestHandler):
                 T.cd(str_keyID)
             if T.exists('info'):
                 d_info  = T.cat('info')
+                # The following creates terminal noise that should be commented out
+                # if doing debugging otherwise the pudb screen gets corrupted.
                 self.dp.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
                 if not isinstance(d_info['compute']['status'], bool)  or \
                    not isinstance(d_info['pullPath']['status'], bool) or \
@@ -1107,6 +1113,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 'action':   'pullPath',
                 'meta':     d_metaData
             }
+            # pudb.set_trace()
             self.data_asyncHandler(         request = d_dataRequest, 
                                             key     = str_key,
                                             op      = 'pullPath')
@@ -1298,6 +1305,8 @@ class StoreHandler(BaseHTTPRequestHandler):
             'd_jobStatus':          {},
             'd_jobStatusSummary':   {}
         }
+
+        # pudb.set_trace()
 
         # does not propogate the error message. If the status is false, the client will not be notified
         b_status, d_dataRequestProcessPush = pushData_handler()
