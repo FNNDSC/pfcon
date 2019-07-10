@@ -109,12 +109,14 @@ Gd_internalvar  = {
             "compute": {
                 "addr":         "pman-radiology.k-apps.osh.massopen.cloud",
                 "baseURLpath":  "api/v1/cmd/",
-                "status":       "undefined"
+                "status":       "undefined",
+                "authToken":    "password"
             },
             "data": {
                 "addr":         "pfioh-radiology.k-apps.osh.massopen.cloud",
                 "baseURLpath":  "api/v1/cmd/",
-                "status":       "undefined"
+                "status":       "undefined",
+                "authToken":    "password"
             }
         },
         "openshiftlocal": {
