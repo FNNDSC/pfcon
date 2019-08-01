@@ -46,7 +46,11 @@ Gd_internalvar  = {
         'version':              'undefined',
         'verbosity':            1,
         'coordBlockSeconds':    10,
-        'debugToDir':           ''
+        'debugToDir':           '',
+        'httpProxy':    {
+            'use':              False,
+            'httpSpec':         ''
+        }
     },
     "swift": {
         "auth_url":                 "http://swift_service:8080/auth/v1.0",
@@ -439,7 +443,8 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_raw                       = True,
             b_httpResponseBodyParse     = True,
             jsonwrapper                 = '',
-            authToken                   = str_token
+            authToken                   = str_token,
+            httpProxy                   = Gd_tree.cat('/self/httpProxy/httpSpec')
         )
         self.dp.qprint("Calling remote data service...",   comms = 'rx')
         d_dataComs = dataComs()
@@ -519,7 +524,8 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
             jsonwrapper                 = 'payload',
-            authToken                   = str_token
+            authToken                   = str_token,
+            httpProxy                   = Gd_tree.cat('/self/httpProxy/httpSpec')
         )
             
 
@@ -557,6 +563,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         b_status    = False
 
         self.dp.qprint("hello_process_remote()", comms = 'status')
+        # pudb.set_trace()
 
         d_request   = {}
         d_ret       = {}
@@ -777,7 +784,8 @@ class StoreHandler(BaseHTTPRequestHandler):
             b_raw                       = True,
             b_httpResponseBodyParse     = False,
             jsonwrapper                 = 'payload',
-            authToken                   = str_token
+            authToken                   = str_token,
+            httpProxy                   = Gd_tree.cat('/self/httpProxy/httpSpec')
         )
 
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
@@ -2025,6 +2033,10 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
                     Gd_internalvar  = json.load(json_file)
 
         G_b_httpResponse = self.args['b_httpResponse']
+        if 'httpProxy' in self.args.keys():
+            if len(self.args['httpProxy']):
+                Gd_internalvar['self']['httpProxy']['use']          = True
+                Gd_internalvar['self']['httpProxy']['httpSpec']     = self.args['httpProxy']
 
         # pudb.set_trace()
         Gd_internalvar['self']['name']                  = self.str_name

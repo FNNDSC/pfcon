@@ -15,8 +15,9 @@ services:
     image:   ${CREPO}/pfcon
     volumes:
       # - /var/run/docker.sock:/var/run/docker.sock
-      # - ./pfcon/pfcon.py:/usr/local/lib/python3.6/dist-packages/pfcon/pfcon.py
-      - .:/usr/local/lib/python3.6/dist-packages/pfcon
+      - ./pfcon/pfcon.py:/usr/local/lib/python3.6/dist-packages/pfcon/pfcon.py
+      # - ./pfcon/pfurl.py:/usr/local/lib/python3.6/dist-packages/pfurl/pfurl.py
+      # - .:/usr/local/lib/python3.6/dist-packages/pfcon
     ports:
       - "5005:5005"
     depends_on:
@@ -24,6 +25,7 @@ services:
     labels:
       name: "pfcon"
       role: "PF controller, part of the CHRIS backend."
+    # command: ["--forever", "--httpResponse", "--verbosity", "1", "--debugToDir", "/tmp", "--httpProxy", "http://proxy.tch.harvard.edu:3128"]
     command: ["--forever", "--httpResponse", "--verbosity", "1", "--debugToDir", "/tmp"]
 
   swift_service:
@@ -44,7 +46,7 @@ services:
     command: ["--forever", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
     volumes:
       - ./FS/remote:/hostFS/storeBase
-      # - ../pfioh/pfioh/pfioh.py:/usr/lib/python3.6/site-packages/pfioh/pfioh.py
+#      - ../pfioh/pfioh/pfioh.py:/usr/lib/python3.6/site-packages/pfioh/pfioh.py
     ports:
       - "5055:5055"
     labels:
@@ -69,7 +71,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./FS/remote:/hostFS/storeBase
-      # - ../pman/pman/pman.py:/usr/local/lib/python3.6/dist-packages/pman/pman.py
+#      - ../pman/pman/pman.py:/usr/local/lib/python3.6/dist-packages/pman/pman.py
     ports:
       - "5010:5010"
     labels:

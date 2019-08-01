@@ -32,7 +32,7 @@ import  pudb
 from    pfmisc._colors             import Colors
 
 str_defIP = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-str_version = "2.2.0.2"
+str_version = "2.2.1.2"
 str_desc = Colors.CYAN + """
 
         __                
@@ -80,6 +80,7 @@ def synopsis(ab_shortOnly = False):
             pfcon                                                   \\
                 [--ip <IPofServer>]                                 \\
                 [--port <port>]                                     \\
+                [--httpProxy <proxyHost>[:<port>]]                  \\
                 [--man <manpage>]                                   \\
                 [--forever]                                         \\
                 [--coordBlockSeconds <secondsBlock>]                \\
@@ -109,8 +110,8 @@ def synopsis(ab_shortOnly = False):
     description =  '''
     DESCRIPTION
 
-        ``pfcon`` is a process/file controller, part of the ``pf`` suite of 
-        applications, and used mostly in the context of ChRIS.
+        ``pfcon`` is a process/file controller, part of the ``pf`` 
+        suite of applications, and used mostly in the context of ChRIS.
 
         Typically ``pfcon`` is launched on the localhost where it 
         listens for directives directing data and compute. Target 
@@ -124,11 +125,13 @@ def synopsis(ab_shortOnly = False):
     ARGS
 
         [--ip <IP>]                            
-
         The IP interface on which to listen. Default %s.
 
         [--port <port>]
         The port on which to listen. Defaults to '5055'.
+
+        [--httpproxy <proxyHost>[:<port>]]                  
+        If specified, use the passed proxy for http communication.
 
         [--man <manpage>]
         Internal man page with more detail on specific calls.
@@ -204,6 +207,13 @@ parser.add_argument(
     dest    = 'port',
     default = '5005',
     help    = 'Port to use.'
+)
+parser.add_argument(
+    '--httpProxy',
+    action  = 'store',
+    dest    = 'httpProxy',
+    default = '',
+    help    = 'Optional proxy to use.'
 )
 parser.add_argument(
     '--version',
