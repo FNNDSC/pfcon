@@ -67,7 +67,7 @@ services:
     environment:
       - STOREBASE
     image:  ${CREPO}/pman${TAG}
-    command: ["--rawmode", "1", "--http", "--port", "5010", "--listeners", "12", "--verbosity", "1"]
+    command: ["--rawmode", "1", "--http", "--port", "5010", "--listeners", "12", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./FS/remote:/hostFS/storeBase
