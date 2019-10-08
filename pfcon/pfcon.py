@@ -419,7 +419,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'return':           d_return            = v
             if k == 'key':              str_key             = v
             if k == 'op':               str_op              = v
-        d_meta                  = d_request[str_metaHeader]
+        d_meta          = d_request[str_metaHeader]
 
         if str_op == 'pushPath':
             d_pushPath = self.dataRequest_processPushPath(d_meta = d_meta)
@@ -428,9 +428,13 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_remoteService       = d_meta['service']
         str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
         str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURLpath'% str_remoteService)
-        str_token = Gd_tree.cat('/service/%s/data/authToken'% str_remoteService)
+        str_token               = Gd_tree.cat('/service/%s/data/authToken'  % str_remoteService)
+        str_serviceType         = Gd_tree.cat('/service/%s/data/serviceType'% str_remoteService)
         if not str_token:
             str_token = None
+        if str_serviceType:
+            d_meta['serviceType']   = str_serviceType
+
         # This dump to file is only for debugging, if tracking the actual
         # pfurl JSON payload is useful.
         # with open("/tmp/pfurl.json", "w") as f:
