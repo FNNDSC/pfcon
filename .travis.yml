@@ -3,7 +3,7 @@ services:
   - docker
 language: python
 python: 
-  - "3.5"
+  - "3.6"
 env:
   global:
     - DOCKER_COMPOSE_VERSION=1.18.0
@@ -17,7 +17,7 @@ before_install:
       
 # command to install dependencies
 install: 
-  - if [ "$TO_TEST" = "pfcon" ]; then pip install .; fi
+  - if [ "$TO_TEST" = "pfcon" ]; then sudo apt-get install -y libgnutls28-dev && pip install .; fi
 
 before_script:
   - if [ "$TO_TEST" = "cube" ]; then ./cube_before_script.sh; fi

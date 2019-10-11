@@ -1,4 +1,6 @@
 #!/usr/bin/env python3.5
+import logging
+logging.disable(logging.CRITICAL)
 
 import  sys
 
@@ -419,7 +421,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'return':           d_return            = v
             if k == 'key':              str_key             = v
             if k == 'op':               str_op              = v
-        d_meta                  = d_request[str_metaHeader]
+        d_meta          = d_request[str_metaHeader]
 
         if str_op == 'pushPath':
             d_pushPath = self.dataRequest_processPushPath(d_meta = d_meta)
@@ -428,9 +430,13 @@ class StoreHandler(BaseHTTPRequestHandler):
         str_remoteService       = d_meta['service']
         str_dataServiceAddr     = Gd_tree.cat('/service/%s/data/addr'       % str_remoteService)
         str_dataServiceURL      = Gd_tree.cat('/service/%s/data/baseURLpath'% str_remoteService)
-        str_token = Gd_tree.cat('/service/%s/data/authToken'% str_remoteService)
+        str_token               = Gd_tree.cat('/service/%s/data/authToken'  % str_remoteService)
+        str_serviceMan          = Gd_tree.cat('/service/%s/data/serviceMan' % str_remoteService)
         if not str_token:
             str_token = None
+        if str_serviceMan:
+            d_request[str_metaHeader]['serviceMan']   = str_serviceMan
+
         # This dump to file is only for debugging, if tracking the actual
         # pfurl JSON payload is useful.
         # with open("/tmp/pfurl.json", "w") as f:
@@ -931,6 +937,16 @@ class StoreHandler(BaseHTTPRequestHandler):
             if k == 'key':      str_key     = v
             if k == 'op':       str_op      = v
 
+        # 
+        # NB NB NB -- DEBUGGING NOTE:
+        # If debugging the dataRequest_process, it is sometimes best to 
+        # call it directly instead of threading it. Breakpoints in the
+        # function seem to mess up pudb keys if threaded. In such a usecase
+        # uncomment the following call:
+        ###
+        # self.dataRequest_process(**kwargs)
+        ###
+
         t_dataSync_handler  = threading.Thread( target      = self.dataRequest_process,
                                                 args        = (),
                                                 kwargs      = kwargs)
@@ -1080,7 +1096,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             self.data_asyncHandler(         request = d_dataRequest, 
                                             key     = str_key,
                                             op      = 'pushPath')
-
+            # pudb.set_trace()
             d_jobBlock                  = self.jobOperation_blockUntil(   
                                             key     = str_key,
                                             op      = 'pushPath',
