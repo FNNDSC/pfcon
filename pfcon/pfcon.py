@@ -797,7 +797,23 @@ class StoreHandler(BaseHTTPRequestHandler):
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeStatus                         = computeStatus()
         d_computeResponse                       = json.loads(d_computeStatus)
-        d_computeResponse['d_ret']['status']    = True 
+        # The following is a "circumstantial" hack predicated on fixing
+        # a symptom and not the underlying issue. It seems that some calls
+        # to the computeStatus() in the remote environment are not properly
+        # parsed on return and are not packed properly into the dictionary
+        # expected here. This is mostly observed in the openshift case.
+        #
+        # The "hack" catches this failure and attempts to communicate this
+        # to upstream processing. 
+        try:
+            d_computeResponse['d_ret']['status'] = True
+        except:
+            d_origResponse                      = d_computeResponse.copy()
+            d_computeResponse                   = {}
+            d_computeResponse['d_ret']          = {}
+            d_computeResponse['d_ret']['status']    = False
+            d_computeResponse['d_ret']['response']  = d_origResponse
+            d_computeResponse['status']         = False
         self.dp.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'tx')
         return d_computeResponse
 
@@ -866,6 +882,15 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_jobStatus      = self.jobOperation_computeStatusQuery(
                                                                 key     = str_keyID,
                                                                 request = d_request)
+                # If the status of the request to the computeStatusQuery is
+                # False (which in theory it never should be, but sometime is)
+                # then handle that by setting job status to False in the else
+                # condition. This has the net effect of having pfcon attempt to
+                # recheck the status condition. Note the idea of "False" or "True"
+                # was supposed to be a False and True on the actual call, not the
+                # results of the call.
+		#
+		# This "fix" is mostly only applicable to the openshift case.
                 if d_jobStatus['status']:
                     l_status            = d_jobStatus['d_ret']['l_status']
                     lb_status           = []
@@ -887,6 +912,13 @@ class StoreHandler(BaseHTTPRequestHandler):
                     b_jobStatusCheck    = lb_status[0]
                     for flag in lb_status:
                         b_jobStatusCheck    = flag and b_jobStatusCheck
+                    d_jobReturn         = d_jobStatus['d_ret']
+                else:
+                    self.jobStatus_do(      action      = 'set',
+                                            key         = str_keyID,
+                                            op          = str_op,
+                                            status      = False,
+                                            jobReturn   = d_jobStatus)
                     d_jobReturn         = d_jobStatus['d_ret']
             # self.dp.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
