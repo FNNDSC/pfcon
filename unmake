@@ -68,3 +68,7 @@ title -d 1 "Destroying persistent volumes..."
         fi
     done
 windowBottom
+
+title -d 1 "Stopping swarm cluster..."
+    docker swarm leave --force
+windowBottom
