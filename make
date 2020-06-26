@@ -133,6 +133,15 @@ else
         windowBottom
     fi
 
+    title -d 1 "Stopping and restarting the docker swarm... "
+    docker swarm leave --force
+    if (( b_swarmAdvertiseAdr )) ; then
+        docker swarm init --advertise-addr=$SWARMADVERTISEADDR
+    else
+        docker swarm init --advertise-addr 127.0.0.1
+    fi
+    windowBottom
+
     title -d 1 "Shutting down any running pfcon and pfcon related containers... "
     docker-compose stop
     docker-compose rm -vf
