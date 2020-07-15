@@ -14,6 +14,8 @@ import  pfcon
 import  socket
 from    argparse            import RawTextHelpFormatter
 from    argparse            import ArgumentParser
+import signal
+import threading
 #from    distutils.sysconfig import get_python_lib
 
 import  pudb
@@ -338,6 +340,17 @@ if args.b_test:
     sys.exit(0)
 
 if args.b_forever and not args.b_test:
-    server.serve_forever()
+    def exit_gracefully(signum, frame):
+        print("Gracefully shutting down!...")
+        server.shutdown()
+        server.server_close()
+
+    signal.signal(signal.SIGINT, exit_gracefully)
+    signal.signal(signal.SIGTERM, exit_gracefully)
+
+    # Start a thread with the server -- that thread will then start one
+    # more thread for each request
+    server_thread = threading.Thread(target=server.serve_forever)
+    server_thread.start()
 else:
     server.handle_request()

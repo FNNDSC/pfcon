@@ -1,1 +1,15 @@
-pfcon/__pycache__/
+
+# Python's compiled files
+*__pycache__
+
+# MAC-specific FS stuff
+*.DS_Store
+
+# PyCharm
+.idea
+
+# Setuptools distribution folder.
+/dist/
+
+# Python egg metadata, regenerated from source files by setuptools.
+/*.egg-info
