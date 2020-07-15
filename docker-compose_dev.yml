@@ -12,16 +12,17 @@ version: '3'
 
 services:
   pfcon_dev:
-    image:   ${CREPO}/pfcon
+    image: local/pfcon:dev
     volumes:
-      # - /var/run/docker.sock:/var/run/docker.sock
-      - ./pfcon/pfcon.py:/usr/local/lib/python3.6/dist-packages/pfcon/pfcon.py
-      # - ./pfcon/pfurl.py:/usr/local/lib/python3.6/dist-packages/pfurl/pfurl.py
-      # - .:/usr/local/lib/python3.6/dist-packages/pfcon
+      - ./pfcon/pfcon.py:/home/localuser/pfcon/pfcon/pfcon.py
+      - ./bin/pfcon:/home/localuser/pfcon/bin/pfcon
+      - ./pfcon/tests:/home/localuser/pfcon/pfcon/tests
     ports:
       - "5005:5005"
     depends_on:
       - swift_service
+      - pman_service
+      - pfioh_service
     labels:
       name: "pfcon"
       role: "PF controller, part of the CHRIS backend."
@@ -29,9 +30,13 @@ services:
     command: ["--forever", "--httpResponse", "--verbosity", "1", "--debugToDir", "/tmp"]
 
   swift_service:
-    image:   fnndsc/docker-swift-onlyone
+    image: fnndsc/docker-swift-onlyone
     volumes:
       - swift_storage:/srv
+    environment:
+      - SWIFT_USERNAME=chris:chris1234
+      - SWIFT_KEY=testing
+      - SWIFT_CONTAINER_NAME=users
     ports:
       - "8080:8080"
     labels:
@@ -42,11 +47,10 @@ services:
     # The following is a bit complicated... Basically we need to map a physical dir
     # in the HOST to the key store in pfioh. The keystore is specified by the
     # --storeBase flag.
-    image:  ${CREPO}/pfioh${TAG}
+    image: ${CREPO}/pfioh${TAG}
     command: ["--forever", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
     volumes:
       - ./FS/remote:/hostFS/storeBase
-#      - ../pfioh/pfioh/pfioh.py:/usr/lib/python3.6/site-packages/pfioh/pfioh.py
     ports:
       - "5055:5055"
     labels:
@@ -66,12 +70,11 @@ services:
     # full path to the spawned container should be ${STOREBASE} + keyStore!
     environment:
       - STOREBASE
-    image:  ${CREPO}/pman${TAG}
+    image: ${CREPO}/pman${TAG}
     command: ["--rawmode", "1", "--http", "--port", "5010", "--listeners", "12", "--verbosity", "1"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./FS/remote:/hostFS/storeBase
-#      - ../pman/pman/pman.py:/usr/local/lib/python3.6/dist-packages/pman/pman.py
     ports:
       - "5010:5010"
     labels:

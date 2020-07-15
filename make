@@ -10,7 +10,7 @@
 #
 # DESC
 # 
-#   'make' sets up a pfcon instance using docker-compose. It can also
+#   'make' sets up a pfcon development instance using docker-compose_dev. It can also
 #   optionally populate a swift container with sample data.
 #
 # ARGS
@@ -89,10 +89,10 @@ windowBottom
 
 if (( b_restart || b_kill )) ; then
     printf "${Red}Stopping $JOB...${NC}\n"
-    docker-compose stop ${JOB}_service && docker-compose rm -f ${JOB}_service
+    docker-compose -f docker-compose_dev.yml stop ${JOB}_service && docker-compose -f docker-compose_dev.yml rm -f ${JOB}_service
     if (( b_restart )) ; then
         printf "${Yellow}Restarting $JOB...${NC}\n"
-        docker-compose run --service-ports ${JOB}_service
+        docker-compose -f docker-compose_dev.yml run --service-ports ${JOB}_service
     fi
 else
     title -d 1 "Using <$CREPO> family containers..."
@@ -143,8 +143,8 @@ else
     windowBottom
 
     title -d 1 "Shutting down any running pfcon and pfcon related containers... "
-    docker-compose stop
-    docker-compose rm -vf
+    docker-compose -f docker-compose_dev.yml stop
+    docker-compose -f docker-compose_dev.yml rm -vf
     for CONTAINER in ${A_CONTAINER[@]} ; do
         printf "%30s" "$CONTAINER"
         docker ps -a                                                        |\
@@ -196,9 +196,9 @@ else
     windowBottom
 
 
-    title -d 1 "Starting pfcon containerized development environment using " " ./docker-compose.yml"
-    echo "docker-compose up -d"
-    docker-compose up -d
+    title -d 1 "Starting pfcon containerized development environment using " " ./docker-compose_dev.yml"
+    echo "docker-compose -f docker-compose_dev.yml up -d"
+    docker-compose -f docker-compose_dev.yml up -d
     windowBottom
 
     title -d 1 "Pause for manual restart of services?"
@@ -210,9 +210,9 @@ else
 
     if (( !  b_norestartinteractive_chris_dev )) ; then
         title -d 1 "Restarting pfcon development container in interactive mode..."
-        docker-compose stop pfcon_dev
-        docker-compose rm -f pfcon_dev
-        docker-compose run --service-ports pfcon_dev
+        docker-compose -f docker-compose_dev.yml stop pfcon_dev
+        docker-compose -f docker-compose_dev.yml rm -f pfcon_dev
+        docker-compose -f docker-compose_dev.yml run --service-ports pfcon_dev
         echo ""
         windowBottom
     fi

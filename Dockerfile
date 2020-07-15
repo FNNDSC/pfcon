@@ -1,5 +1,5 @@
 #
-# Dockerfile for pfcon repository.
+# Dockerfile for pfcon production.
 #
 # Build with
 #
@@ -28,28 +28,24 @@ MAINTAINER fnndsc "dev@babymri.org"
 
 # Pass a UID on build command line (see above) to set internal UID
 ARG UID=1001
-ENV UID=$UID
-
-ARG APPROOT="/usr/src/pfcon"  
-COPY . /tmp/pfcon
-COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
+ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPROOT="/home/localuser/pfcon"
 
 RUN apt-get update \
-  && apt-get install sudo                                             \
-  && useradd -u $UID -ms /bin/bash localuser                          \
-  && addgroup localuser sudo                                          \
-  && echo "localuser:localuser" | chpasswd                            \
-  && adduser localuser sudo                                           \
-  && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils vim net-tools inetutils-ping \
-  && pip install --upgrade pip                                        \
-  && pip3 install /tmp/pfcon                                          \
-  && rm -fr /tmp/pfcon                                                \
-  && chmod 777 /dock                                                  \
-  && chmod 777 /dock/docker-entrypoint.py                             \
-  && echo "localuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+  && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils net-tools inetutils-ping \
+  && pip install --upgrade pip \
+  && useradd -u $UID -ms /bin/bash localuser
 
-ENTRYPOINT ["/dock/docker-entrypoint.py"]
+# Copy source code
+COPY --chown=localuser ./bin ${APPROOT}/bin
+COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
+COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
+
+RUN pip3 install ${APPROOT}  \
+  && rm -fr ${APPROOT}
+
+# Start as user localuser
+#USER localuser
+
+WORKDIR "/home/localuser"
+ENTRYPOINT ["pfcon"]
 EXPOSE 5055
-
-# Start as user $UID
-# USER $UID
