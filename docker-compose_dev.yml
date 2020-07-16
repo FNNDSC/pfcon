@@ -8,11 +8,11 @@
 # specify them again in docker-compose.yml.
 #
 
-version: '3'
+version: '3.7'
 
 services:
   pfcon_dev:
-    image: local/pfcon:dev
+    image: ${CREPO}/pfcon:dev
     volumes:
       - ./pfcon/pfcon.py:/home/localuser/pfcon/pfcon/pfcon.py
       - ./bin/pfcon:/home/localuser/pfcon/bin/pfcon
@@ -31,6 +31,7 @@ services:
 
   swift_service:
     image: fnndsc/docker-swift-onlyone
+    init: true
     volumes:
       - swift_storage:/srv
     environment:
