@@ -37,7 +37,7 @@ services:
     environment:
       - SWIFT_USERNAME=chris:chris1234
       - SWIFT_KEY=testing
-      - SWIFT_CONTAINER_NAME=users
+      - SWIFT_DEFAULT_CONTAINER=users
     ports:
       - "8080:8080"
     labels:

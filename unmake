@@ -16,3 +16,7 @@ else
     docker-compose -f docker-compose_dev.yml down
 fi
 windowBottom
+
+title -d 1 "Stopping swarm cluster..."
+    docker swarm leave --force
+windowBottom
