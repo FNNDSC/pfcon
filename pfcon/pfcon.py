@@ -39,6 +39,11 @@ from    pfmisc._colors      import  Colors
 from    pfmisc.debug        import  debug
 from    pfmisc.C_snode      import *
 
+# flask dependencies
+from    flask_restful   import Resource, Api
+from    flask           import request, Response, send_file
+from    flask           import Flask, render_template, __version__
+
 # Horrible global var
 G_b_httpResponse            = False
 
@@ -142,8 +147,14 @@ Gd_internalvar  = {
 
 Gd_tree         = C_stree()
 
+# Initialize flask API
+StoreHandler = Flask(__name__)
+restful_api = Api(StoreHandler, prefix="/api/v1/cmd")
+StoreHandler.url_map.strict_slashes = False
+suppressFlaskOutput = sys.modules['flask.cli']
+suppressFlaskOutput.show_server_banner = lambda *x: None
 
-class StoreHandler(BaseHTTPRequestHandler):
+class HandleRequests(Resource):
 
     b_quiet     = False
     def __init__(self, *args, **kwargs):
@@ -162,11 +173,9 @@ class StoreHandler(BaseHTTPRequestHandler):
                                             within      = self.__name__
                                             )
         self.pp                 = pprint.PrettyPrinter(indent=4)
+        self.send_file          = False
         for k,v in kwargs.items():
             if k == 'test': b_test  = True
-
-        if not b_test:
-            BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
     def log_message(self, format, *args):
         """
@@ -174,13 +183,14 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         return
 
-    def do_GET(self):
+    def get(self):
+        self.path = request.headers.environ["RAW_URI"]
         d_server            = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(self.path).query))
         d_meta              = ast.literal_eval(d_server['meta'])
 
         d_msg               = {'action': d_server['action'], 'meta': d_meta}
         d_ret               = {}
-        print("Request: " + self.headers + '\n' + d_msg)
+        print("Request: " + str(request.headers) + '\n' + d_msg)
         self.dp.qprint(self.path, comms = 'rx')
         return d_ret
 
@@ -189,16 +199,10 @@ class StoreHandler(BaseHTTPRequestHandler):
         Returns a form from cgi.FieldStorage
         """
         return cgi.FieldStorage(
-            IO(data),
-            headers = self.headers,
-            environ =
-            {
-                'REQUEST_METHOD':   str_verb,
-                'CONTENT_TYPE':     self.headers['Content-Type'],
-            }
+            fp=IO(data),
+            environ=request.environ
         )
 
-    
 
     def internalctl_varprocess(self, *args, **kwargs):
         """
@@ -452,7 +456,9 @@ class StoreHandler(BaseHTTPRequestHandler):
             authToken                   = str_token,
             httpProxy                   = Gd_tree.cat('/self/httpProxy/httpSpec')
         )
+
         self.dp.qprint("Calling remote data service...",   comms = 'rx')
+
         d_dataComs = dataComs()
         str_response = d_dataComs.split('\n')
         str_responseStatus = str_response[0]
@@ -1871,7 +1877,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         }
 
 
-    def do_POST(self, *args, **kwargs):
+    def post(self, *args, **kwargs):
         """
         Main dispatching method for coordination service.
 
@@ -1890,10 +1896,10 @@ class StoreHandler(BaseHTTPRequestHandler):
         b_threaded  = False
 
         # Parse the form data posted
-        self.dp.qprint(str(self.headers), comms = 'rx')
+        self.dp.qprint(str(request.headers), comms = 'rx')
+        length              = int(request.headers['content-length'])
+        data                = request.environ['wsgi.input'].read(length)
 
-        length              = self.headers['content-length']
-        data                = self.rfile.read(int(length))
         form                = self.form_get('POST', data)
         d_form              = {}
         d_ret               = {
@@ -1943,7 +1949,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                 t_process.start()
                 time.sleep(0.1)
 
-        self.ret_client(d_ret)
         return d_ret
 
     def do_POST_serverctl(self, d_meta):
@@ -1960,25 +1965,13 @@ class StoreHandler(BaseHTTPRequestHandler):
                     'status':   True
                 }
                 self.dp.qprint(d_ret, comms = 'tx')
-                self.ret_client(d_ret)
                 os._exit(0)
 
-    def ret_client(self, d_ret):
-        """
-        Simply "writes" the d_ret using json and the client wfile.
 
-        :param d_ret:
-        :return:
-        """
-        if not G_b_httpResponse:
-            self.wfile.write(json.dumps(d_ret, indent = 4).encode())
-        else:
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(str(Response(json.dumps(d_ret, indent=4))).encode())
+restful_api.add_resource(HandleRequests, '/')
 
 
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+class SetupFlaskServer():
     """
     Handle requests in a separate thread.
     """
@@ -2005,7 +1998,6 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         """
         global Gd_internalvar
         global Gd_tree
-        HTTPServer.__init__(self, *args, **kwargs)
         self.LC             = 40
         self.RC             = 40
         self.args           = None
