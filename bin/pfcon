@@ -323,34 +323,8 @@ if args.b_version:
     sys.exit(1)
 
 # pudb.set_trace()
-server          = pfcon.ThreadedHTTPServer((args.ip, args.port), pfcon.StoreHandler)
-server.setup(args = vars(args), desc = str_desc, ver = str_version)
+configure_server = pfcon.SetupFlaskServer((args.ip, args.port))
+configure_server.setup(args = vars(args), desc = str_desc, ver = str_version)
 
-if args.b_test:
-    handler     = pfcon.StoreHandler(test = True)
-    handler.do_POST(
-        d_msg = {
-            "action": "hello",
-            "meta": {
-                "askAbout":     "sysinfo",
-                "echoBack":     "Hi there!"
-                }
-            }
-    )
-    sys.exit(0)
+pfcon.StoreHandler.run(host=args.ip, port=args.port)
 
-if args.b_forever and not args.b_test:
-    def exit_gracefully(signum, frame):
-        print("Gracefully shutting down!...")
-        server.shutdown()
-        server.server_close()
-
-    signal.signal(signal.SIGINT, exit_gracefully)
-    signal.signal(signal.SIGTERM, exit_gracefully)
-
-    # Start a thread with the server -- that thread will then start one
-    # more thread for each request
-    server_thread = threading.Thread(target=server.serve_forever)
-    server_thread.start()
-else:
-    server.handle_request()
