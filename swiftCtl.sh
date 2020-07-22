@@ -6,6 +6,7 @@ SWIFTPORT=8080
 SWIFTPATHPREFIX=""
 PULLDIR="./"
 PUSHDIR="./"
+PUSHFILE=""
 ACTION="list"
 
 declare -i Gb_verbose=0
@@ -14,14 +15,15 @@ G_SYNOPSIS="
 
  NAME
 
-	swiftCtl.sh
+    swiftCtl.sh
 
  SYNOPSIS
 
-	swiftCtl.sh             -A <action>                             \\
+    swiftCtl.sh                 -A <action>                             \\
                                 # If push:                              \\
                                         -D <pushDir>                    \\
                                         -E <extension>                  \\
+                                        -F <singletonFile>              \\
                                 # If pull:                              \\
                                         -O <pullDir>                    \\
                                 # All actions:                          \\
@@ -30,10 +32,10 @@ G_SYNOPSIS="
                                 [-p <SWIFTPORT>]                        \\
                                 [-V]
 
-                                
+
  ARGS
 
-        -V 
+        -V
         Be verbose. Typically this means echo the actual swift command.
 
         -A <action> (Default >> $ACTION <<)
@@ -44,28 +46,28 @@ G_SYNOPSIS="
           | | +-o list
           | | |
           | | +-> list
-          | |          
+          | |
           | |   List files in swift storage.
           | |
           | |   All actions understand:
-          | | 
+          | |
           | |   -P <SwiftPathPrefix>
-          | |   The path prefix to use for swift storage. Note that to conform 
+          | |   The path prefix to use for swift storage. Note that to conform
           | |   to CUBE-style conventions, this must be
-          | |   
+          | |
           | |           <cubeUser>/uploads
-          | |           
+          | |
           | |   so the path in swift is:
-          | |   
+          | |
           | |           <cubeUser>/uploads/<uploadPathPrefix>
           | |
           | +---> pull:
-          | 
+          |
           |     Pull files from swift storage.
-          | 
+          |
           |             -O <pullDir>
           |             Pull objects from swift to <pullDir>.
-          | 
+          |
           +----> push:
 
                 Push files to swift storage.
@@ -74,10 +76,11 @@ G_SYNOPSIS="
                         Examine <pushDir> for files to PUSH.
 
                         -E <extension>
-                        The extension of files in <pushDir> to PUSH 
+                        The extension of files in <pushDir> to PUSH
                         to swift storage.
-                
 
+                        -F <singletonFile>
+                        A single file to push.
 
         -S <SWIFTIP>
         The IP address of the swift instance to which files are pushed.
@@ -86,11 +89,17 @@ G_SYNOPSIS="
         -p <SWIFTPORT>
         The port address of the swift instance to which files are pushed.
         If not specified will default to >> $SWIFTPORT <<.
-        
+
  DESCRIPTION
- 
-        'swiftCtl.sh' is a simple shell script that interacts with a 
+
+        'swiftCtl.sh' is a simple shell script that interacts with a
         swift container.
+
+ EXAMPLES
+
+        o Push file, 'test.txt' to '/home/user/test.txt' in swift:
+
+            ./swiftCtl.sh -A push -P /home/localuser/data -F test.txt
 
 "
 
@@ -109,31 +118,37 @@ function CMD_eval
         eval $CMD
 }
 
-while getopts E:C:P:p:A:VO:D: option ; do 
-	case "$option"
-	in
-                D)      PUSHDIR=$OPTARG                 ;;
-                V)      Gb_verbose=1                    ;;
-                O)      PULLDIR=$OPTARG                 ;;
-                A)      ACTION=$OPTARG                  ;;
-	        P)      SWIFTPATHPREFIX=$OPTARG         ;;
-	        p)      SWIFTORT=$OPTARG                ;;
-	        E)      EXT=$OPTARG                     ;;
-	        S)      SWIFTIP=$OPTARG                 ;;
-		\?)     synopsis_show 
-                        exit 0;;
-	esac
+while getopts E:C:P:p:A:VO:D:F:S: option ; do
+    case "$option"
+    in
+        D)      PUSHDIR=$OPTARG                 ;;
+        F)      PUSHFILE=$OPTARG                ;;
+        V)      Gb_verbose=1                    ;;
+        O)      PULLDIR=$OPTARG                 ;;
+        A)      ACTION=$OPTARG                  ;;
+        P)      SWIFTPATHPREFIX=$OPTARG         ;;
+        p)      SWIFTORT=$OPTARG                ;;
+        E)      EXT=$OPTARG                     ;;
+        S)      SWIFTIP=$OPTARG                 ;;
+        \?)     synopsis_show
+                exit 0                          ;;
+    esac
 done
 
-case $ACTION 
+case $ACTION
 in
     "push")
         here=$(pwd)
         cd $PUSHDIR
+        if (( !${#EXT} )) ; then
+            EXT=$PUSHFILE
+        fi
         for FILE in *${EXT} ; do
+            if (( Gb_verbose )); then
                 printf "Pushing file: %s to ${SWIFTPATHPREFIX}/$FILE\n" $FILE
-                CMD="swift -U chris:chris1234 -A http://${SWIFTIP}:${SWIFTPORT}/auth/v1.0  -K testing upload users $FILE --object-name ${SWIFTPATHPREFIX}/$FILE"
-                CMD_eval "$CMD"
+            fi
+            CMD="swift -U chris:chris1234 -A http://${SWIFTIP}:${SWIFTPORT}/auth/v1.0  -K testing upload users $FILE --object-name ${SWIFTPATHPREFIX}/$FILE"
+            CMD_eval "$CMD"
         done
         cd $here
         ;;
@@ -154,17 +169,19 @@ in
         fi
         LINELISTING=$(eval $CMD)
         LIST=$(echo $LINELISTING | tr ' ' '\n')
-        
+
         if (( ${#PULLDIR} )) ; then
-                OUTPUTDIR="--output-dir $PULLDIR"
+            OUTPUTDIR="--output-dir $PULLDIR"
         else
-                OUTPUTDIR=""
+            OUTPUTDIR=""
         fi
 
         for FILE in $LIST ; do
-              printf "Pulling file: %s\n" $FILE
-              CMD="swift -U chris:chris1234 -A http://${SWIFTIP}:${SWIFTPORT}/auth/v1.0  -K testing download users $OUTPUTDIR --prefix $FILE"
-              CMD_eval "$CMD"
+            if (( Gb_verbose )) ; then
+                    printf "Pulling file: %s\n" $FILE
+            fi
+            CMD="swift -U chris:chris1234 -A http://${SWIFTIP}:${SWIFTPORT}/auth/v1.0  -K testing download users $OUTPUTDIR --prefix $FILE"
+            CMD_eval "$CMD"
         done
         ;;
 esac

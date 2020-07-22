@@ -11,8 +11,8 @@
 version: '3.7'
 
 services:
-  pfcon_dev:
-    image: ${CREPO}/pfcon:dev
+  pfcon_service:
+    image:   ${PFCONREPO}/pfcon
     volumes:
       - ./pfcon/pfcon.py:/home/localuser/pfcon/pfcon/pfcon.py
       - ./bin/pfcon:/home/localuser/pfcon/bin/pfcon
@@ -30,7 +30,7 @@ services:
     command: ["--forever", "--httpResponse", "--verbosity", "1", "--debugToDir", "/tmp"]
 
   swift_service:
-    image: fnndsc/docker-swift-onlyone
+    image:   ${SWIFTREPO}/docker-swift-onlyone
     init: true
     volumes:
       - swift_storage:/srv
@@ -41,14 +41,14 @@ services:
     ports:
       - "8080:8080"
     labels:
-      name: "swift"
-      role: "swift object storage service"
+      name: "Swift"
+      role: "Swift object storage service"
 
   pfioh_service:
     # The following is a bit complicated... Basically we need to map a physical dir
     # in the HOST to the key store in pfioh. The keystore is specified by the
     # --storeBase flag.
-    image: ${CREPO}/pfioh${TAG}
+    image:  ${PFIOHREPO}/pfioh${TAG}
     command: ["--forever", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
     volumes:
       - ./FS/remote:/hostFS/storeBase
@@ -71,7 +71,7 @@ services:
     # full path to the spawned container should be ${STOREBASE} + keyStore!
     environment:
       - STOREBASE
-    image: ${CREPO}/pman${TAG}
+    image:  ${PMANREPO}/pman${TAG}
     command: ["--rawmode", "1", "--http", "--port", "5010", "--listeners", "12", "--verbosity", "1"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -83,4 +83,4 @@ services:
       role: "pman service"
 
 volumes:
-  swift_storage:
+  swift_storage_dev:
