@@ -9,17 +9,18 @@
 #   make.sh                     [-r <service>]                  \
 #                               [-a <swarm-advertise-adr>]      \
 #                               [-p] [-i] [-s]                  \
+#                               [-f <fileToPushToSwift>]        \
+#                               [-D <dirToPushToSwift>]         \
+#                               [-P <swiftPrefix>]              \
 #                               [-S <storeBaseOverride>]        \
 #                               [local|fnndsc[:dev]]
 #
 # DESC
 #
-#   'make.sh' sets up a pfcon instance using docker-compose -f docker-compose_dev.yml.
-#
-#   'make.sh' sets up a pfcon development instance using docker-compose -f docker-compose_dev.yml_dev.
+#   'make.sh' sets up a pfcon development instance using docker-compose.
 #   It can also optionally populate a swift container with sample data, and
 #   creates a pattern of directories and symbolic links that reflect the
-#   declarative environment of the docker-compose -f docker-compose_dev.yml_dev.yml contents.
+#   declarative environment of the docker-compose contents.
 #
 # TYPICAL CASES:
 #
@@ -32,6 +33,20 @@
 #       unmake.sh ; sudo rm -fr FS; rm -fr FS; make.sh -s
 #
 # ARGS
+#
+#   [-f <fileToPushToSwift>]
+#
+#       If specified, push the file <fileToPushToSwift> into swift storage.
+#
+#   [-D <dirToPushToSwift>]
+#
+#       If specified, push all the files in directory <dirToPushToSwift>
+#       into swift storage.
+#
+#   [-P <swiftPrefix>]
+#
+#       The swift object prefix string. This is prepended to all files
+#       pushed into swift.
 #
 #   -r <service>
 #
@@ -94,16 +109,12 @@ source ./cparse.sh
 
 declare -i STEP=0
 declare -i b_restart=0
+declare -i b_filePush=0
+declare -i b_dirPush=0
+SWIFTPREFIX="/home/localuser/data"
 JOB=""
 HERE=$(pwd)
 echo "Starting script in dir $HERE"
-
-declare -a A_CONTAINER=(
-    "pfcon${TAG}"
-    "docker-swift-onlyone"
-    "pman${TAG}"
-    "pfioh${TAG}"
-)
 
 CREPO=fnndsc
 TAG=
@@ -112,10 +123,15 @@ if [[ -f .env ]] ; then
     source .env
 fi
 
-while getopts "k:r:psidUIa:S:" opt; do
+while getopts "r:psia:S:f:D:P:" opt; do
     case $opt in
         r) b_restart=1
            JOB=$OPTARG                          ;;
+        f) b_filePush=1
+           FILEPUSH=$OPTARG                     ;;
+        D) b_dirPush=1
+           DIRPUSH=$OPTARG                      ;;
+        P) SWIFTPREFIX=$OPTARG                  ;;
         p) b_pause=1                            ;;
         s) b_skipIntro=1                        ;;
         i) b_norestartinteractive_chris_dev=1   ;;
@@ -137,7 +153,7 @@ if (( $# == 1 )) ; then
 fi
 
 declare -a A_CONTAINER=(
-    "local/pfcon${TAG}^PFCONREPO"
+    "fnndsc/pfcon${TAG}^PFCONREPO"
     "fnndsc/pfurl${TAG}^PFURLREPO"
     "fnndsc/pfioh${TAG}^PFIOHREPO"
     "fnndsc/pman${TAG}^PMANREPO"
@@ -154,22 +170,20 @@ title -d 1 "Setting global exports..."
         STOREBASE=$(pwd)
         cd $HERE
     fi
-    echo -e "${STEP}.1 For pman override to swarm containers, exporting\nSTOREBASE=$STOREBASE " | ./boxes.sh
+    echo -e "${STEP}.1 For pman override to swarm containers,"          | ./boxes.sh
+    echo -e "exporting STOREBASE=$STOREBASE "                           | ./boxes.sh
     export STOREBASE=$STOREBASE
-    if (( b_debug )) ; then
-        echo -e "${STEP}.2 Setting debug quiet to OFF. Note this is noisy!" | ./boxes.sh
-        export CHRIS_DEBUG_QUIET=0
-    fi
 windowBottom
 
-if (( b_restart || b_kill )) ; then
+if (( b_restart )) ; then
     title -d 1 "Restarting ${JOB} service"                              \
                     "in interactive mode..."
     printf "${LightCyan}%40s${LightGreen}%40s\n"                        \
                 "Stopping" "${JOB}_service"                             | ./boxes.sh
     windowBottom
 
-    docker-compose -f docker-compose_dev.yml --no-ansi  stop ${JOB}_service >& dc.out > /dev/null
+    docker-compose -f docker-compose_dev.yml --no-ansi                  \
+        stop ${JOB}_service >& dc.out > /dev/null
     echo -en "\033[2A\033[2K"
     cat dc.out | ./boxes.sh
 
@@ -177,13 +191,14 @@ if (( b_restart || b_kill )) ; then
                 "rm -f" "${JOB}_service"                                | ./boxes.sh
     windowBottom
 
-    docker-compose -f docker-compose_dev.yml --no-ansi  rm -f ${JOB}_service >& dc.out > /dev/null
+    docker-compose -f docker-compose_dev.yml --no-ansi                  \
+        rm -f ${JOB}_service >& dc.out > /dev/null
     echo -en "\033[2A\033[2K"
     cat dc.out | ./boxes.sh
     windowBottom
 
-    docker-compose -f docker-compose_dev.yml  run --service-ports        \
-        ${JOB}_service
+    docker-compose -f docker-compose_dev.yml --no-ansi                  \
+        run --service-ports ${JOB}_service
 else
     title -d 1 "Pulling non-'local/' core containers where needed..."   \
                 "and creating appropriate .env for docker-compose_dev.yml"
@@ -247,10 +262,12 @@ else
     title -d 1 "Shutting down any running pfcon and related containers... "
         echo "This might take a few minutes... please be patient."              | ./boxes.sh ${Yellow}
         windowBottom
-        docker-compose -f docker-compose_dev.yml --no-ansi  stop >& dc.out > /dev/null
+        docker-compose -f docker-compose_dev.yml --no-ansi                      \
+            stop >& dc.out > /dev/null
         echo -en "\033[2A\033[2K"
         cat dc.out | sed -E 's/(.{80})/\1\n/g'                                  | ./boxes.sh ${LightBlue}
-        docker-compose -f docker-compose_dev.yml --no-ansi  rm -vf >& dc.out > /dev/null
+        docker-compose -f docker-compose_dev.yml --no-ansi                      \
+            rm -vf >& dc.out > /dev/null
         cat dc.out | sed -E 's/(.{80})/\1\n/g'                                  | ./boxes.sh ${LightCyan}
         for CORE in ${A_CONTAINER[@]} ; do
             cparse $CORE " " "REPO" "CONTAINER" "MMN" "ENV"
@@ -302,9 +319,10 @@ else
 
     title -d 1 "Starting pfcon containerized development environment "
         echo "This might take a few minutes... please be patient."      | ./boxes.sh ${Yellow}
-        echo "docker-compose -f docker-compose_dev.yml  up -d"           | ./boxes.sh ${LightCyan}
+        echo "docker-compose -f docker-compose_dev.yml  up -d"          | ./boxes.sh ${LightCyan}
         windowBottom
-        docker-compose -f docker-compose_dev.yml --no-ansi  up -d        >& dc.out > /dev/null
+        docker-compose -f docker-compose_dev.yml --no-ansi              \
+            up -d >& dc.out > /dev/null
         echo -en "\033[2A\033[2K"
         cat dc.out | sed -E 's/(.{80})/\1\n/g'                          | ./boxes.sh ${LightGreen}
     windowBottom
@@ -320,20 +338,47 @@ else
     fi
     windowBottom
 
+    if (( b_filePush )) ; then
+        title -d 1 "Push file to swift storage"
+        printf "${LightCyan}%40s${LightGreen}%40s${NC}\n"               \
+                "Pushing" $FILEPUSH                                     | ./boxes.sh
+        windowBottom
+        ./swiftCtl.sh -A push -P $SWIFTPREFIX -F $FILEPUSH -V           \
+            >& dc.out > /dev/null
+        echo -en "\033[2A\033[2K"
+        cat dc.out | sed -E 's/(.{80})/\1\n/g'                          | ./boxes.sh ${LightCyan}
+        windowBottom
+    fi
+
+    if (( b_dirPush )) ; then
+        title -d 1 "Push directory to swift storage"
+        printf "${LightCyan}%40s${LightGreen}%40s${NC}\n"               \
+                "Pushing" $DIRPUSH                                      | ./boxes.sh
+        windowBottom
+        ./swiftCtl.sh -A push -P $SWIFTPREFIX -D $DIRPUSH -V            \
+            >& dc.out > /dev/null
+        echo -en "\033[2A\033[2K"
+        cat dc.out | sed -E 's/(.{80})/\1\n/g'                          | ./boxes.sh ${LightCyan}
+        windowBottom
+    fi
+
+
     if (( !  b_norestartinteractive_chris_dev )) ; then
-        title -d 1 "Restarting pfcon development server"        \
+        title -d 1 "Restarting pfcon development server"                \
                             "in interactive mode..."
             printf "${LightCyan}%40s${LightGreen}%40s\n"                \
                         "Stopping" "pfcon_service"                      | ./boxes.sh
             windowBottom
-            docker-compose -f docker-compose_dev.yml --no-ansi  stop pfcon_service >& dc.out > /dev/null
+            docker-compose -f docker-compose_dev.yml --no-ansi          \
+                stop pfcon_service >& dc.out > /dev/null
             echo -en "\033[2A\033[2K"
             cat dc.out | ./boxes.sh
 
             printf "${LightCyan}%40s${LightGreen}%40s\n"                \
                         "rm -f" "pfcon_service"                         | ./boxes.sh
             windowBottom
-            docker-compose -f docker-compose_dev.yml --no-ansi  rm -f pfcon_service >& dc.out > /dev/null
+            docker-compose -f docker-compose_dev.yml --no-ansi          \
+                rm -f pfcon_service >& dc.out > /dev/null
             echo -en "\033[2A\033[2K"
             cat dc.out | ./boxes.sh
 
@@ -341,7 +386,8 @@ else
             printf "${LightCyan}%40s${LightGreen}%40s\n"                \
                         "Starting in interactive mode" "pfcon"          |./boxes.sh
             windowBottom
-            docker-compose -f docker-compose_dev.yml  run --service-ports pfcon_service
+            docker-compose -f docker-compose_dev.yml                    \
+                run --service-ports pfcon_service
     fi
 
 fi

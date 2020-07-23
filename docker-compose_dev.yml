@@ -33,7 +33,7 @@ services:
     image:   ${SWIFTREPO}/docker-swift-onlyone
     init: true
     volumes:
-      - swift_storage:/srv
+      - swift_storage_dev:/srv
     environment:
       - SWIFT_USERNAME=chris:chris1234
       - SWIFT_KEY=testing
