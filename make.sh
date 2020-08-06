@@ -153,7 +153,7 @@ if (( $# == 1 )) ; then
 fi
 
 declare -a A_CONTAINER=(
-    "fnndsc/pfcon${TAG}^PFCONREPO"
+    "fnndsc/pfcon:dev^PFCONREPO"
     "fnndsc/pfurl${TAG}^PFURLREPO"
     "fnndsc/pfioh${TAG}^PFIOHREPO"
     "fnndsc/pman${TAG}^PMANREPO"
@@ -238,11 +238,11 @@ else
         done
         # Determine the versions of pfurl *inside* pfcon
         windowBottom
-        CMD="docker run --entrypoint /usr/local/bin/pfurl ${PFCONREPO}/pfcon${TAG} --version"
+        CMD="docker run --entrypoint /usr/local/bin/pfurl ${PFCONREPO}/pfcon:dev --version"
         Ver=$(echo $CMD | sh | grep Version)
         echo -en "\033[2A\033[2K"
         printf "${White}%40s${Green}%40s${Yellow}\n"                    \
-                    "pfurl inside ${PFCONREPO}/pfcon${TAG}" "$Ver"      | ./boxes.sh
+                    "pfurl inside ${PFCONREPO}/pfcon:dev" "$Ver"      | ./boxes.sh
         windowBottom
     fi
 
