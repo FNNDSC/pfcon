@@ -150,6 +150,7 @@ Gd_tree         = C_stree()
 # Initialize flask API
 StoreHandler = Flask(__name__)
 restful_api = Api(StoreHandler, prefix="/api/v1/cmd")
+StoreHandler.url_map.strict_slashes = False
 suppressFlaskOutput = sys.modules['flask.cli']
 suppressFlaskOutput.show_server_banner = lambda *x: None
 
