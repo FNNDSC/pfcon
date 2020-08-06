@@ -131,7 +131,7 @@ Gd_internalvar  = {
         "openshiftlocal": {
             "compute": {
                 "addr":                         "pman-myproject.127.0.0.1.nip.io",
-                "baseURLpath":                  "api/v1/cmd/", 
+                "baseURLpath":                  "api/v1/cmd/",
                 "status":                       "undefined",
                 "authToken":                    "password"
             },
@@ -168,7 +168,7 @@ class HandleRequests(Resource):
         self.b_quiet            = True
 
         self.verbosity          = Gd_internalvar['self']['verbosity']
-        self.dp                 = pfmisc.debug(    
+        self.dp                 = pfmisc.debug(
                                             verbosity   = self.verbosity,
                                             within      = self.__name__
                                             )
@@ -202,7 +202,6 @@ class HandleRequests(Resource):
             fp=IO(data),
             environ=request.environ
         )
-
 
     def internalctl_varprocess(self, *args, **kwargs):
         """
@@ -256,7 +255,7 @@ class HandleRequests(Resource):
         str_var     = d_meta['var']
 
         T           = C_stree()
-         
+
         if d_meta:
             if 'get' in d_meta.keys():
                 if Gd_tree.isdir(str_var):
@@ -268,7 +267,7 @@ class HandleRequests(Resource):
 
             if 'set' in d_meta.keys():
                 b_tree          = False
-                 
+
                 try:
                     d_set       = json.loads(d_meta['set'])
                 except:
@@ -291,15 +290,15 @@ class HandleRequests(Resource):
                 # Find all the values in the internalctl tree
                 # and replace the value corresponding to 'var' with
                 # the field of 'valueReplace'
-                # 
+                #
                 str_target      = d_meta['var']
                 str_value       = d_meta['valueReplace']
                 if str_value    == 'ENV':
                     if str_target.strip('%') in os.environ:
                         str_value   = os.environ[str_target.strip('%')]
                 d_ret = Gd_tree.treeExplore(
-                        f       = fileContentsReplaceAtPath, 
-                        target  = str_target, 
+                        f       = fileContentsReplaceAtPath,
+                        target  = str_target,
                         value   = str_value
                         )
                 b_status        = d_ret['status']
@@ -347,17 +346,17 @@ class HandleRequests(Resource):
 
     def dataRequest_processPushPath(self, *args, **kwargs):
         """
-        This method handles the processing of data to push out to a 
+        This method handles the processing of data to push out to a
         compute environment. In the JSON input specification the
         'local' denotes the source to push -- this is a path-like
         descriptor that originally denoted an actual path on the
-        filesystem accessible to pfcon. 
+        filesystem accessible to pfcon.
 
         If, however, the 'local' has a directive:
 
             {'storageType': 'swift'}
 
-        then the path spec is a location in object storage. 
+        then the path spec is a location in object storage.
 
         This method will pull from object storage all elements that
         conform to the path spec, and store on the local filesystem
@@ -379,6 +378,7 @@ class HandleRequests(Resource):
         for k,v in kwargs.items():
             if k == 'd_meta':   d_meta = v
 
+        # pudb.set_trace()
         if 'local' in d_meta:
             d_local     = d_meta['local']
             if 'storageType' in d_local:
@@ -411,7 +411,7 @@ class HandleRequests(Resource):
 
         d_request       = {}
         d_meta          = {}
-        d_pushPath      = {} 
+        d_pushPath      = {}
         # The return from the remote call
         d_ret           = {}
         # The return from this method
@@ -459,11 +459,13 @@ class HandleRequests(Resource):
 
         self.dp.qprint("Calling remote data service...",   comms = 'rx')
 
-        d_dataComs = dataComs()
-        str_response = d_dataComs.split('\n')
-        str_responseStatus = str_response[0]
+        # pudb.set_trace()
+        d_dataComs          = dataComs()
+        str_response        = d_dataComs.split('\n')
+        str_responseStatus  = str_response[0]
         if len(str_response) > 1 and '200 OK' == str_responseStatus:
-            # Unusual case caused by pfurl returning a response string, during parsing of hello response, starting with "200 OK\n"
+            # Unusual case caused by pfurl returning a response string,
+            # during parsing of hello response, starting with "200 OK\n"
             # Isolates json payload from request headers
             d_dataComs = str_response[-1].replace('\\', '')
             if d_dataComs[-1] == '\"':
@@ -539,7 +541,7 @@ class HandleRequests(Resource):
             authToken                   = str_token,
             httpProxy                   = Gd_tree.cat('/self/httpProxy/httpSpec')
         )
-            
+
 
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeComs                           = computeComs()
@@ -658,7 +660,7 @@ class HandleRequests(Resource):
         """
         Sets/gets the status of a specific operation in a given job.
         """
-        global  Gd_tree 
+        global  Gd_tree
         # return status of this method
         b_status    = False
         # the info dictionary for all the jobs per key
@@ -682,11 +684,11 @@ class HandleRequests(Resource):
                 b_jobSubmit                     = True
                 d_jobSubmit                     = v
             if k == 'jobReturn':
-                b_jobReturn                     = True    
-                d_jobReturn                     = v 
+                b_jobReturn                     = True
+                d_jobReturn                     = v
             if k == 'jobSwift':
-                b_jobSwift                      = True    
-                d_jobSwift                      = v 
+                b_jobSwift                      = True
+                d_jobSwift                      = v
             if k == 'action':       str_action  = v
 
         # pudb.set_trace()
@@ -703,17 +705,19 @@ class HandleRequests(Resource):
                                                     key         = str_keyID,
                                                     op          = 'all',
                                                     status      = 'not found'
-                                            )   
+                                            )
                     b_status    = False
                     d_info      = d_ret['info']
             else:
                 T.cd(str_keyID)
             if T.exists('info'):
                 d_info  = T.cat('info')
+                # NB NB NB! DEBUGGING NOTES:
                 # The following creates terminal noise that should be commented out
                 # if doing debugging otherwise the pudb screen gets corrupted.
-                self.dp.qprint("d_info = %s" % self.pp.pformat(d_info).strip(), comms = 'status')
-                if not isinstance(d_info['compute']['status'], bool)  or \
+                self.dp.qprint( "d_info = %s" % self.pp.pformat(d_info).strip(),
+                                comms = 'status')
+                if not isinstance(d_info['compute']['status'],  bool) or \
                    not isinstance(d_info['pullPath']['status'], bool) or \
                    not isinstance(d_info['pushPath']['status'], bool) or \
                    not isinstance(d_info['swiftPut']['status'], bool):
@@ -723,7 +727,7 @@ class HandleRequests(Resource):
                                 d_info['pullPath']['status']    and \
                                 d_info['pullPath']['status']    and \
                                 d_info['swiftPut']['status']
-                                
+
             if str_op != 'none':
                 if str_op == 'all':
                     l_opKey = ['pushPath', 'compute', 'pullPath', 'swiftPut']
@@ -810,16 +814,16 @@ class HandleRequests(Resource):
         # expected here. This is mostly observed in the openshift case.
         #
         # The "hack" catches this failure and attempts to communicate this
-        # to upstream processing. 
+        # to upstream processing.
         try:
-            d_computeResponse['d_ret']['status'] = True
+            d_computeResponse['d_ret']['status']    = True
         except:
-            d_origResponse                      = d_computeResponse.copy()
-            d_computeResponse                   = {}
-            d_computeResponse['d_ret']          = {}
+            d_origResponse                          = d_computeResponse.copy()
+            d_computeResponse                       = {}
+            d_computeResponse['d_ret']              = {}
             d_computeResponse['d_ret']['status']    = False
             d_computeResponse['d_ret']['response']  = d_origResponse
-            d_computeResponse['status']         = False
+            d_computeResponse['status']             = False
         self.dp.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'tx')
         return d_computeResponse
 
@@ -889,26 +893,26 @@ class HandleRequests(Resource):
                                                                 key     = str_keyID,
                                                                 request = d_request)
                 # If the status of the request to the computeStatusQuery is
-                # False (which in theory it never should be, but sometime is)
+                # False (which in theory it never should be, but sometimes is)
                 # then handle that by setting job status to False in the else
                 # condition. This has the net effect of having pfcon attempt to
                 # recheck the status condition. Note the idea of "False" or "True"
                 # was supposed to be a False and True on the actual call, not the
                 # results of the call.
-		#
-		# This "fix" is mostly only applicable to the openshift case.
+                #
+                # This "fix" is mostly only applicable to the openshift case.
                 if d_jobStatus['status']:
                     l_status            = d_jobStatus['d_ret']['l_status']
                     lb_status           = []
                     for job in l_status:
-                        if 'finished' in job:   
+                        if 'finished' in job:
                             lb_status.append(True)
                             self.jobStatus_do(      action      = 'set',
                                                     key         = str_keyID,
                                                     op          = str_op,
                                                     status      = True,
                                                     jobReturn   = d_jobStatus)
-                        else:                   
+                        else:
                             lb_status.append(False)
                             self.jobStatus_do(      action      = 'set',
                                                     key         = str_keyID,
@@ -928,42 +932,29 @@ class HandleRequests(Resource):
                     d_jobReturn         = d_jobStatus['d_ret']
             # self.dp.qprint('blocking on %s' % str_op, comms = 'status')
             time.sleep(pollInterval)
-        self.dp.qprint('return from %s' % str_op, comms = 'status')
-        self.dp.qprint('d_jobReturn = \n%s' % self.pp.pformat(d_jobReturn).strip(), comms = 'status')
+        self.dp.qprint( 'return from %s' % str_op,
+                        comms = 'status')
+        self.dp.qprint( 'd_jobReturn = \n%s' % \
+                        self.pp.pformat(d_jobReturn).strip(),
+                        comms = 'status')
         return d_jobReturn
 
     def data_asyncHandler(self, *args, **kwargs):
         """
-        The data handler. This method performs the push/pull (depending on the 
+        The data handler. This method performs the push/pull (depending on the
         JSON input payload). Significantly, this method threads the actual data
-        IO operation and thus returns to caller immediately.
+        IO operation and thus returns to caller immediately. The data IO
+        operation, which uses `pfurl`, will itself block until the data IO is
+        done.
 
         Status of a particular data IO operation is stored in a global identifier
         which is indexed by some 'key' (typically a job id, 'jid' parameter) in
         the JSON directive supplied by the calling process.
 
         Downstream processing should block where appropriate based on examining
-        the global status.
-
-        'jobstatus': {
-            'purpose':  'this structure keeps track of job status: pathPush/pull and compute.',
-            'organization': 'the tree is /jobstatus/<someKey>/info',
-            'info': {
-                'pushPath': {
-                    'status':   '<statusString>',
-                    'return':   <d_ret>
-                    },
-                'compute':  {
-                    'status':   '<statusString>',
-                    'return':   <d_ret>
-                    },
-                'pullPath': {
-                    'status':   '<statusString>',
-                    'return':   <d_ret>
-                    }
-            }store_true
-        }
-
+        the global status by calling jobOperation_blockUntil() -- note that
+        this method will also call jobStatus_do() which is the method that
+        actually "prints"/logs the call status response.
         """
         d_request   = {}
         d_ret       = {}
@@ -975,13 +966,14 @@ class HandleRequests(Resource):
             if k == 'key':      str_key     = v
             if k == 'op':       str_op      = v
 
-        # 
+        #
         # NB NB NB -- DEBUGGING NOTE:
-        # If debugging the dataRequest_process, it is sometimes best to 
+        # If debugging the dataRequest_process, it is sometimes best to
         # call it directly instead of threading it. Breakpoints in the
-        # function seem to mess up pudb keys if threaded. In such a usecase
-        # uncomment the following call:
+        # function seem to mess up pudb keys if threaded. In such a use
+        # case uncomment the following call:
         ###
+        # pudb.set_trace()
         # self.dataRequest_process(**kwargs)
         ###
 
@@ -997,6 +989,7 @@ class HandleRequests(Resource):
         )
 
         # and start the thread about the actual push
+        # (comment the following thread start if testing in synchronous mode)
         t_dataSync_handler.start()
 
         # finally return a True
@@ -1007,14 +1000,14 @@ class HandleRequests(Resource):
         Given the 'coordinate' JSON payload, deference the 'key' and return
         its value in a dictionary.
 
-        {   
+        {
             'status', <status>,
             key': <val>
         }
 
         """
         self.dp.qprint("key_dereference()", comms = 'status')
-        
+
         b_status    = False
         d_request   = {}
         str_key     = ''
@@ -1116,7 +1109,7 @@ class HandleRequests(Resource):
             """
             Nested function for handling push to remote.
 
-            Input           -- d_dataRequestProcessPush holder 
+            Input           -- d_dataRequestProcessPush holder
             Return: bool    -- success
 
             """
@@ -1131,11 +1124,10 @@ class HandleRequests(Resource):
                 'meta':     d_metaData
             }
 
-            self.data_asyncHandler(         request = d_dataRequest, 
+            self.data_asyncHandler(         request = d_dataRequest,
                                             key     = str_key,
                                             op      = 'pushPath')
-            # pudb.set_trace()
-            d_jobBlock                  = self.jobOperation_blockUntil(   
+            d_jobBlock                  = self.jobOperation_blockUntil(
                                             key     = str_key,
                                             op      = 'pushPath',
                                             status  = True
@@ -1150,37 +1142,39 @@ class HandleRequests(Resource):
                                             status  = False
                 )
             if b_status:
-                d_jobStatus          = self.jobStatus_do( 
+                d_jobStatus          = self.jobStatus_do(
                                             key     = str_key,
                                             action  = 'getInfo',
                                             op      = 'pushPath')
-                self.dp.qprint('d_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(), comms = 'status')
-                                                
+                self.dp.qprint( 'd_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(),
+                                comms = 'status')
+
                 d_dataRequestProcessPush = d_jobStatus['info']['pushPath']['return']
             return b_status, d_dataRequestProcessPush
 
         def pullData_handler():
-            #######
-            # Pull data from remote location
-            #######
+            """
+            Nested function for handling pull from remote.
+            """
 
             str_localDestination                = d_metaData['localTarget']['path']
-            str_localParentPath, str_localDest  = os.path.split(str_localDestination)        
+            str_localParentPath, str_localDest  = os.path.split(str_localDestination)
             d_metaData['local']                 = {'path': str_localDestination}
             if 'createDir' in d_metaData['localTarget']:
                 d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
             d_metaData['transport']['compress']['name']   = str_localDest
-            self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
+            self.dp.qprint( 'metaData = %s' % self.pp.pformat(d_metaData).strip(),
+                            comms = 'status')
             d_dataRequest   = {
                 'action':   'pullPath',
                 'meta':     d_metaData
             }
             # pudb.set_trace()
-            self.data_asyncHandler(         request = d_dataRequest, 
+            self.data_asyncHandler(         request = d_dataRequest,
                                             key     = str_key,
                                             op      = 'pullPath')
 
-            d_jobBlock                  = self.jobOperation_blockUntil(   
+            d_jobBlock                  = self.jobOperation_blockUntil(
                                             key     = str_key,
                                             op      = 'pullPath',
                                             status  = True
@@ -1198,18 +1192,18 @@ class HandleRequests(Resource):
                                                                     action  = 'getInfo',
                                                                     op      = 'pullPath')
                 d_dataRequestProcessPull.update(d_jobStatus['info']['pullPath']['return'])
- 
-            return b_status, d_dataRequestProcessPull, str_localDestination       
+
+            return b_status, d_dataRequestProcessPull, str_localDestination
 
         def swift_handler():
             """
             Put data pulled from previous process into swift.
 
-            This is an "internal" process, so not asynchronous and does not require 
+            This is an "internal" process, so not asynchronous and does not require
             a separate blocking method.
             """
             if Gd_tree.exists('swift', path = '/'):
-                # There might be a timing issue with pushing files into swift and 
+                # There might be a timing issue with pushing files into swift and
                 # the swift container being able to report them as accessible. The
                 # solution is to push objects, and then poll on calls to swift 'ls'
                 # and compare results with push record.
@@ -1235,7 +1229,7 @@ class HandleRequests(Resource):
                 d_swift['d_swiftstore']                     = d_ret['d_swiftstore']
                 d_swift['status']                           = d_swift['d_swift_ls']['status'] and \
                                                               d_swift['d_swiftstore']['status']
-                self.jobStatus_do(      
+                self.jobStatus_do(
                                         action      = 'set',
                                         key         = str_key,
                                         op          = 'swiftPut',
@@ -1248,7 +1242,7 @@ class HandleRequests(Resource):
             if len(self.str_debugToDir):
                 self.dp.qprint( 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
                             comms = 'status',
-                            teeFile = '%s/d_internalInfo-%s.json' % (self.str_debugToDir, str_key), 
+                            teeFile = '%s/d_internalInfo-%s.json' % (self.str_debugToDir, str_key),
                             teeMode = 'w+')
             return d_swift['status']
 
@@ -1265,24 +1259,31 @@ class HandleRequests(Resource):
                 # This value will not be none in case of non-swift option.
                 str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
             d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
-            self.dp.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(), comms = 'status')
+            self.dp.qprint( 'metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(),
+                            comms = 'status')
             d_computeRequest   = {
                 'action':   'run',
                 'meta':     d_metaCompute
             }
 
-            d_computeRequestProcess.update(self.computeRequest_process(  request     = d_computeRequest,
-                                                                    key         = str_key,
-                                                                    op          = 'compute'))
+            d_computeRequestProcess.update(self.computeRequest_process(
+                                            request     = d_computeRequest,
+                                            key         = str_key,
+                                            op          = 'compute')
+            )
             # wait for processing...
-            self.dp.qprint('compute job submitted... waiting %ds for transients...' % coordBlockSeconds)
+            self.dp.qprint('compute job submitted... waiting %ds for transients...' % \
+                            coordBlockSeconds)
             time.sleep(coordBlockSeconds)
-            d_jobBlock                  = self.jobOperation_blockUntil(   
+            d_jobBlock                  = self.jobOperation_blockUntil(
                                             request = d_computeRequest,
                                             key     = str_key,
                                             op      = 'compute',
-                                            status  = True)
-            self.dp.qprint('compute d_jobBlock = %s' % self.pp.pformat(d_jobBlock).strip(), comms = 'status')
+                                            status  = True
+            )
+            self.dp.qprint( 'compute d_jobBlock = %s' % \
+                            self.pp.pformat(d_jobBlock).strip(),
+                            comms = 'status')
             b_status                    = d_jobBlock['status']
             if not b_status:
                 self.jobStatus_do(
@@ -1292,28 +1293,37 @@ class HandleRequests(Resource):
                                             status  = False
                 )
             if b_status:
-                d_jobStatus          = self.jobStatus_do( 
+                d_jobStatus             = self.jobStatus_do(
                                             key     = str_key,
                                             action  = 'getInfo',
-                                            op      = 'compute')
-                self.dp.qprint('d_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(), comms = 'status')
+                                            op      = 'compute'
+                )
+                self.dp.qprint( 'd_jobStatus = %s' % \
+                                self.pp.pformat(d_jobStatus).strip(),
+                                comms = 'status')
                 d_computeRequestProcess.update(d_jobStatus['info']['compute']['return'])
 
             return b_status, d_computeRequestProcess
 
         def jobStatusFiles_create():
-            # Note a potential issue here: the status and summary files can only be 
-            # pushed to swift after swift has completed (since these files contain
-            # information about the swift operation. We push them to object storage
-            # after creating them in the pfcon FS). This means that the files may 
-            # not be registered with CUBE since when CUBE might pull from swift storage
-            # these last two files might not be consistently reported to the pulling
-            # client.
+            # Note a potential issue here (almost a catch-22 of sorts):
+            #
+            # The status and summary files can only be pushed to swift after swift
+            # has completed. (since these files contain information about the swift
+            # operation itself, we push them to object storage after creating them
+            # in the pfcon FS).
+            #
+            # This means that the files may not be registered with CUBE due to the
+            # "delay" inherent in swift access IO (one method might push data to
+            # swift, and an immediately subsequent method that tries to access the
+            # data might get a "data not present" error as swift synchronizes).
+            #
+            # In practice though, this rarely happens.
             d_ret['d_jobStatus']            = self.jobStatus_do(        key     = str_key,
                                                                         action  = 'getInfo',
                                                                         op      = 'all')
             d_ret['d_jobStatusSummary']     = self.summaryStatus_process(d_ret['d_jobStatus'])
-            str_statusFile = os.path.join(str_localDestination, 'jobStatus.json') 
+            str_statusFile = os.path.join(str_localDestination, 'jobStatus.json')
             with open(str_statusFile, 'w') as f:
                 json.dump(d_ret['d_jobStatus'], f)
             f.close()
@@ -1327,7 +1337,7 @@ class HandleRequests(Resource):
             if len(self.str_debugToDir):
                 self.dp.qprint( 'Final return: d_ret = \n%s' % json.dumps(d_ret, indent=4),
                             comms = 'status',
-                            teeFile = '%s/d_ret-%s.json' % (self.str_debugToDir, str_key), 
+                            teeFile = '%s/d_ret-%s.json' % (self.str_debugToDir, str_key),
                             teeMode = 'w+')
         global Gd_internalvar, Gd_tree
 
@@ -1370,7 +1380,8 @@ class HandleRequests(Resource):
 
         # pudb.set_trace()
 
-        # does not propogate the error message. If the status is false, the client will not be notified
+        # Check on propogation of error message!
+        # If the status is false, the client will not be notified
         b_status, d_dataRequestProcessPush = pushData_handler()
         if b_status:
             b_status, d_computeRequestProcess = compute_handler()
@@ -1394,11 +1405,11 @@ class HandleRequests(Resource):
     def swiftstorage_connect(self, *args, **kwargs):
         """
         Connect to swift storage and return the connection object,
-        as well an optional "prepend" string to fully qualify 
+        as well an optional "prepend" string to fully qualify
         object location in swift storage.
 
         The 'prependBucketPath' is somewhat 'legacy' to a similar
-        method in charm.py and included here with the idea 
+        method in charm.py and included here with the idea
         to eventually converge on a single swift-based intermediary
         library for both pfcon and CUBE.
         """
@@ -1461,15 +1472,19 @@ class HandleRequests(Resource):
                 str_fullPath    = str_path
 
             # get the full list of objects in Swift storage with given prefix
-            ld_obj = conn.get_container( 
-                        d_conn['container_name'], 
-                        prefix          = str_fullPath,
-                        full_listing    = True)[1]        
+            try:
+                ld_obj = conn.get_container(
+                            d_conn['container_name'],
+                            prefix          = str_fullPath,
+                            full_listing    = True)[1]
 
-            for d_obj in ld_obj:
-                l_ls.append(d_obj['name'])
-                b_status    = True
-        
+                for d_obj in ld_obj:
+                    l_ls.append(d_obj['name'])
+                    b_status    = True
+            except:
+                b_status    = False
+                self.dp.qprint( "Could not get a list of objects in Swift",
+                                comms = 'error')
         return {
             'status':       b_status,
             'objectDict':   ld_obj,
@@ -1480,7 +1495,7 @@ class HandleRequests(Resource):
     def swiftstorage_objExists(self, *args, **kwargs):
         """
         Return True/False if passed object exists in swift storage
-        """        
+        """
         b_exists    = False
         str_obj     = ''
 
@@ -1512,7 +1527,7 @@ class HandleRequests(Resource):
 
                     /home/user/project/data/ ...
 
-        and we want to pack everything in the 'data' dir to 
+        and we want to pack everything in the 'data' dir to
         object storage, at location '/storage'. In this case, the
         pattern of kwargs specifying this would be:
 
@@ -1525,7 +1540,7 @@ class HandleRequests(Resource):
         will replace, for each file in <fileList>, the <mapLocationOver> with
         <inLocation>, resulting in a new list
 
-                    '/storage/file1', 
+                    '/storage/file1',
                     '/storage/dir1/file_d1',
                     '/storage/dir2/file_d2'
 
@@ -1570,7 +1585,7 @@ class HandleRequests(Resource):
         d_ret['localpath']  = os.path.dirname(l_localfile[0])
 
         if d_conn['status']:
-            for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile): 
+            for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile):
                 try:
                     d_ret['status'] = True and d_ret['status']
                     with open(str_localfilename, 'rb') as fp:
@@ -1598,7 +1613,7 @@ class HandleRequests(Resource):
                 user/someuser/uploads/project/data ...
 
         and we want to pack everything from 'data' to the local filesystem
-        to, for example, 
+        to, for example,
 
                 /some/dir/data
 
@@ -1697,7 +1712,7 @@ class HandleRequests(Resource):
         conn.put_container(Gd_tree.cat('/swift/container_name'))
 
         # put files into storage
-        for filename in l_files: 
+        for filename in l_files:
             try:
                 d_ret['status'] = True and d_ret['status']
                 with open(filename, 'rb') as fp:
@@ -1709,13 +1724,13 @@ class HandleRequests(Resource):
             except:
                 d_ret['status'] = False
             d_ret['d_result']['l_fileStore'].append(filename)
-        
+
         return d_ret
 
     def filesFind(self, *args, **kwargs):
         """
-        This method simply returns a list of files 
-        down a filesystem tree starting from the 
+        This method simply returns a list of files
+        down a filesystem tree starting from the
         kwarg:
 
             root = <someStartPath>
@@ -1736,7 +1751,7 @@ class HandleRequests(Resource):
                 for filename in files:
                     d_ret['l_fileFS'].append(os.path.join(root, filename))
                     d_ret['status'] = True
-        
+
         d_ret['numFiles']   = len(d_ret['l_fileFS'])
         return d_ret
 
@@ -1777,7 +1792,7 @@ class HandleRequests(Resource):
         Create a summary dictionary object from the main jobStatus dictionary.abs
 
         PRECONDITIONS
-        * A valid jobStatus dictionary. 
+        * A valid jobStatus dictionary.
         """
 
         d_jobStatusSummary                      = {
@@ -1860,7 +1875,7 @@ class HandleRequests(Resource):
 
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
-        
+
         d_meta      = d_request['meta']
         str_keyID   = d_meta['remote']['key']
 
@@ -1895,6 +1910,7 @@ class HandleRequests(Resource):
         d_done      = {}
         b_threaded  = False
 
+        # pudb.set_trace()
         # Parse the form data posted
         self.dp.qprint(str(request.headers), comms = 'rx')
         length              = int(request.headers['content-length'])
@@ -1926,6 +1942,7 @@ class HandleRequests(Resource):
         self.dp.qprint('d_msg = %s' % self.pp.pformat(d_msg).strip(), comms = 'status')
 
         if 'action' in d_msg:
+            # pudb.set_trace()
             self.dp.qprint("verb: %s detected." % d_msg['action'], comms = 'status')
             str_method      = '%s_process' % d_msg['action']
             self.dp.qprint("method to call: %s(request = d_msg) " % str_method, comms = 'status')
@@ -1934,7 +1951,7 @@ class HandleRequests(Resource):
                 pf_method   = getattr(self, str_method)
             except  AttributeError:
                 raise NotImplementedError("Class `{}` does not implement `{}`".format(self.__class__.__name__, pf_method))
-            
+
             if 'threadAction' in d_msg:
                 b_threaded  = int(d_msg['threadAction'])
 
@@ -1978,12 +1995,12 @@ class SetupFlaskServer():
 
     def col2_print(self, str_left, str_right, level = 1):
         self.dp.qprint(Colors.WHITE +
-              ('%*s' % (self.LC, str_left)), 
+              ('%*s' % (self.LC, str_left)),
               end       = '',
               syslog    = False,
               level     = level)
         self.dp.qprint(Colors.LIGHT_BLUE +
-              ('%*s' % (self.RC, str_right)) + 
+              ('%*s' % (self.RC, str_right)) +
               Colors.NO_COLOUR,
               syslog    = False,
               level     = level)
@@ -2094,19 +2111,19 @@ class SetupFlaskServer():
 
         Gd_tree.initFromDict(Gd_internalvar)
 
-        self.leaf_process(  where   = '/service/host/data/addr', 
-                            replace = '%PFIOH_IP', 
+        self.leaf_process(  where   = '/service/host/data/addr',
+                            replace = '%PFIOH_IP',
                             newVal  = str_defIPpfioh)
-        self.leaf_process(  where   = '/service/host/compute/addr', 
-                            replace = '%PMAN_IP', 
+        self.leaf_process(  where   = '/service/host/compute/addr',
+                            replace = '%PMAN_IP',
                             newVal  = str_defIPpman)
 
         self.dp.qprint(
-            Colors.YELLOW + "\n\t\tInternal data tree:", 
+            Colors.YELLOW + "\n\t\tInternal data tree:",
             level   = 1,
             syslog  = False)
         self.dp.qprint(
-            C_snode.str_blockIndent(str(Gd_tree), 3, 8), 
+            C_snode.str_blockIndent(str(Gd_tree), 3, 8),
             level   = 1,
             syslog  = False)
 
@@ -2122,8 +2139,8 @@ class SetupFlaskServer():
                 os.makedirs(self.str_debugToDir)
 
         self.dp.qprint(
-            Colors.LIGHT_GREEN + 
-            "\n\n\t\t\tWaiting for incoming data...\n" + 
+            Colors.LIGHT_GREEN +
+            "\n\n\t\t\tWaiting for incoming data...\n" +
             Colors.NO_COLOUR,
             level   = 1,
             syslog  = False)

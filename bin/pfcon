@@ -34,17 +34,17 @@ import  pudb
 from    pfmisc._colors             import Colors
 
 str_defIP = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-str_version = "2.2.4.3"
+str_version = "2.2.4.4"
 str_desc = Colors.CYAN + """
 
-        __                
-       / _|               
- _ __ | |_ ___ ___  _ __  
-| '_ \|  _/ __/ _ \| '_ \\ 
+        __
+       / _|
+ _ __ | |_ ___ ___  _ __
+| '_ \|  _/ __/ _ \| '_ \\
 | |_) | || (_| (_) | | | |
 | .__/|_| \___\___/|_| |_|
-| |                       
-|_|                       
+| |
+|_|
 
 
                             Process-File-CONtroller
@@ -66,12 +66,12 @@ str_desc = Colors.CYAN + """
 
 """ + \
         Colors.BLINK_RED +  """
-        
+
             +-----------------------------------------------------------+
             | NOTE THAT THIS SERVER DOES NOT CURRENTLY AUTHENTICATE AND |
             | WILL HONOR *ALL* DATA PUSH AND PROCESS CONTROL REQUESTS!  |
             +-----------------------------------------------------------+
-              
+
 """ + Colors.NO_COLOUR
 
 def synopsis(ab_shortOnly = False):
@@ -79,7 +79,7 @@ def synopsis(ab_shortOnly = False):
     shortSynopsis =  '''
     NAME
 
-	    pfcon 
+	    pfcon
 
         - process-and-file controller
 
@@ -118,13 +118,13 @@ def synopsis(ab_shortOnly = False):
     description =  '''
     DESCRIPTION
 
-        ``pfcon`` is a process/file controller, part of the ``pf`` 
+        ``pfcon`` is a process/file controller, part of the ``pf``
         suite of applications, and used mostly in the context of ChRIS.
 
-        Typically ``pfcon`` is launched on the localhost where it 
-        listens for directives directing data and compute. Target 
-        data is zipped and transmitted to a remote location, and 
-        once available on the remote, a containerized computation 
+        Typically ``pfcon`` is launched on the localhost where it
+        listens for directives directing data and compute. Target
+        data is zipped and transmitted to a remote location, and
+        once available on the remote, a containerized computation
         is started.
 
         An internal loop monitors the status of the remote processing,
@@ -132,13 +132,13 @@ def synopsis(ab_shortOnly = False):
 
     ARGS
 
-        [--ip <IP>]                            
+        [--ip <IP>]
         The IP interface on which to listen. Default %s.
 
         [--port <port>]
         The port on which to listen. Defaults to '5055'.
 
-        [--httpproxy <proxyHost>[:<port>]]                  
+        [--httpproxy <proxyHost>[:<port>]]
         If specified, use the passed proxy for http communication.
 
         [--man <manpage>]
@@ -161,7 +161,7 @@ def synopsis(ab_shortOnly = False):
         [--configFileSave <file>]
         Save configuration information to the JSON formatted <file>.
 
-        [-x|--desc]                                     
+        [-x|--desc]
         Provide an overview help page.
 
         [-y|--synopsis]
@@ -304,7 +304,7 @@ parser.add_argument(
     dest    = 'synopsis',
     action  = 'store_true',
     default = False
-) 
+)
 
 args            = parser.parse_args()
 args.port       = int(args.port)
