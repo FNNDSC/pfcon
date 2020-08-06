@@ -1,32 +1,19 @@
-#!/usr/bin/env python3.5
-import logging
-logging.disable(logging.CRITICAL)
-
-import  sys
 
 from    io              import  BytesIO as IO
-from    http.server     import  BaseHTTPRequestHandler, HTTPServer
-from    socketserver    import  ThreadingMixIn
-from    webob           import  Response
 from    pathlib         import  Path
 import  cgi
-import  json
 import  urllib
 import  ast
-import  shutil
 import  datetime
 import  time
-import  inspect
 import  pprint
 
 import  threading
 import  platform
 import  socket
 import  psutil
-import  os
 import  multiprocessing
 import  pfurl
-import  configparser
 import  swiftclient
 
 import  pfmisc
@@ -41,8 +28,8 @@ from    pfmisc.C_snode      import *
 
 # flask dependencies
 from    flask_restful   import Resource, Api
-from    flask           import request, Response, send_file
-from    flask           import Flask, render_template, __version__
+from    flask           import request
+from    flask           import Flask
 
 # Horrible global var
 G_b_httpResponse            = False
