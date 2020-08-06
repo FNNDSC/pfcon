@@ -12,7 +12,7 @@ version: '3.7'
 
 services:
   pfcon_service:
-    image:   ${PFCONREPO}/pfcon
+    image: ${PFCONREPO}/pfcon:dev
     volumes:
       - ./pfcon/pfcon.py:/home/localuser/pfcon/pfcon/pfcon.py
       - ./bin/pfcon:/home/localuser/pfcon/bin/pfcon
@@ -30,7 +30,7 @@ services:
     command: ["--forever", "--httpResponse", "--verbosity", "1", "--debugToDir", "/tmp"]
 
   swift_service:
-    image:   ${SWIFTREPO}/docker-swift-onlyone
+    image: ${SWIFTREPO}/docker-swift-onlyone
     init: true
     volumes:
       - swift_storage_dev:/srv
@@ -48,7 +48,7 @@ services:
     # The following is a bit complicated... Basically we need to map a physical dir
     # in the HOST to the key store in pfioh. The keystore is specified by the
     # --storeBase flag.
-    image:  ${PFIOHREPO}/pfioh${TAG}
+    image: ${PFIOHREPO}/pfioh${TAG}
     command: ["--forever", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
     volumes:
       - ./FS/remote:/hostFS/storeBase
