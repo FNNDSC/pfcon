@@ -143,6 +143,7 @@ Gd_tree         = C_stree()
 class StoreHandler(BaseHTTPRequestHandler):
 
     b_quiet     = False
+
     def __init__(self, *args, **kwargs):
         """
         """
@@ -158,17 +159,12 @@ class StoreHandler(BaseHTTPRequestHandler):
                                             within      = self.__name__
                                             )
         self.pp                 = pprint.PrettyPrinter(indent=4)
+
         for k,v in kwargs.items():
             if k == 'test': b_test  = True
 
         if not b_test:
             BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
-
-    def log_message(self, format, *args):
-        """
-        This silences the server from spewing to stdout!
-        """
-        return
 
     def do_GET(self):
         d_server            = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(self.path).query))
@@ -196,27 +192,23 @@ class StoreHandler(BaseHTTPRequestHandler):
 
     def internalctl_varprocess(self, *args, **kwargs):
         """
-
         get/set a specific variable as parsed from the meta JSON.
-
-        :param args:
-        :param kwargs:
-        :return:
         """
-
-        l_fileChanged   = []
         hits            = 0
 
         def fileContentsReplaceAtPath(str_path, **kwargs):
             nonlocal    hits
-            nonlocal    l_fileChanged
             b_status        = True
             str_target      = ''
             str_value       = ''
+            l_fileChanged = []
+
             self.dp.qprint('In dir = %s, hits = %d' % (str_path, hits))
+
             for k, v in kwargs.items():
                 if k == 'target':   str_target  = v
                 if k == 'value':    str_value   = v
+
             for str_hit in Gd_tree.lsf(str_path):
                 str_content = Gd_tree.cat(str_hit)
                 self.dp.qprint('%20s: %20s' % (str_hit, str_content))
@@ -295,7 +287,6 @@ class StoreHandler(BaseHTTPRequestHandler):
 
     def internalctl_process(self, *args, **kwargs):
         """
-
         Process the 'internalctl' action.
 
              {  "action": "internalctl",
@@ -312,11 +303,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                      }
              }
 
-        :param args:
-        :param kwargs:
-        :return:
         """
-
         d_request           = {}
         b_status            = False
         d_ret               = {
@@ -325,6 +312,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         for k,v in kwargs.items():
             if k == 'request':   d_request   = v
+
         if d_request:
             d_meta  = d_request['meta']
             d_ret   = self.internalctl_varprocess(d_meta = d_meta)
@@ -352,7 +340,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         storage out to local storage (prepending a leading '/' to the
         local storage path).
         """
-
         d_ret   = {
             'status':       False,
             'd_swiftPull':  {},
@@ -395,15 +382,16 @@ class StoreHandler(BaseHTTPRequestHandler):
         # The return from the remote call
         d_ret           = {}
         # The return from this method
-        d_return        = {}
         str_metaHeader  = 'meta'
         str_key         = 'none'
         str_op          = ''
+
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
             if k == 'metaHeader':       str_metaHeader      = v
             if k == 'key':              str_key             = v
             if k == 'op':               str_op              = v
+
         d_meta          = d_request[str_metaHeader]
 
         if str_op == 'pushPath':
@@ -475,17 +463,16 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return: JSON object from the 'pman' call.
         """
-
         self.dp.qprint("computeRequest_process()", comms = 'status')
 
         d_request       = {}
-
         # The return from the remote call
         d_ret           = {}
         # The return from this method
         str_metaHeader  = 'meta'
         str_key         = ''
         str_op          = ''
+
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
             if k == 'metaHeader':       str_metaHeader      = v
@@ -514,7 +501,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             httpProxy                   = Gd_tree.cat('/self/httpProxy/httpSpec')
         )
 
-
         self.dp.qprint("Calling remote compute service...", comms = 'rx')
         d_computeComs                           = computeComs()
         d_computeResponse                       = json.loads(d_computeComs)
@@ -534,22 +520,18 @@ class StoreHandler(BaseHTTPRequestHandler):
                                     op          = str_op,
                                     status      = True,
                                     jobSubmit   = d_return)
-
         return d_return
 
     def hello_process_remote(self, *args, **kwargs):
         """
         Process the 'hello' call on the remote services
-
-        :param args:
-        :param kwargs:
-        :return:
         """
         self.dp.qprint("hello_process_remote()", comms = 'status')
         # pudb.set_trace()
 
         d_request   = {}
         d_ret       = {}
+
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
 
@@ -568,22 +550,18 @@ class StoreHandler(BaseHTTPRequestHandler):
 
     def hello_process(self, *args, **kwargs):
         """
-
         The 'hello' action is merely to 'speak' with the server. The server
         can return current date/time, echo back a string, query the startup
         command line args, etc.
 
         This method is a simple means of checking if the server is "up" and
         running.
-
-        :param args:
-        :param kwargs:
-        :return:
         """
         self.dp.qprint("hello_process()", comms = 'status')
         b_status            = False
         d_ret               = {}
         d_request           = {}
+
         for k, v in kwargs.items():
             if k == 'request':      d_request   = v
 
@@ -743,7 +721,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                             "value":    str_keyID
             }
         }
-
         str_token = Gd_tree.cat('/service/%s/compute/authToken'% str_remoteService)
         if not str_token:
             str_token = None
@@ -781,24 +758,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_computeResponse['status']             = False
         self.dp.qprint("d_computeResponse = %s" % self.pp.pformat(d_computeResponse).strip(), comms = 'tx')
         return d_computeResponse
-
-    """
-    The following method adapted from:
-    https://stackoverflow.com/questions/9807634/find-all-occurrences-of-a-key-in-nested-python-dictionaries-and-lists
-    """
-    @staticmethod
-    def gen_dict_extract(key, var):
-        if hasattr(var,'items'):
-            for k, v in var.items():
-                if k == key:
-                    yield v
-                if isinstance(v, dict):
-                    for result in StoreHandler.gen_dict_extract(key, v):
-                        yield result
-                elif isinstance(v, list):
-                    for d in v:
-                        for result in StoreHandler.gen_dict_extract(key, d):
-                            yield result
 
     def jobOperation_blockUntil(self, *args, **kwargs):
         """
@@ -950,13 +909,13 @@ class StoreHandler(BaseHTTPRequestHandler):
             'status', <status>,
             key': <val>
         }
-
         """
         self.dp.qprint("key_dereference()", comms = 'status')
 
         b_status    = False
         d_request   = {}
         str_key     = ''
+
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
 
@@ -1044,260 +1003,16 @@ class StoreHandler(BaseHTTPRequestHandler):
                 "service":              "megalodon"
             }
         }
-        '
-
-        :param args:
-        :param kwargs:
-        :return:
         """
-
-        def pushData_handler():
-            """
-            Nested function for handling push to remote.
-
-            Input           -- d_dataRequestProcessPush holder
-            Return: bool    -- success
-
-            """
-            # default returns
-            d_dataRequestProcessPush = {}
-
-            d_metaData['local'] = d_metaData['localSource']
-            self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
-            d_dataRequest   = {
-                'action':   'pushPath',
-                'meta':     d_metaData
-            }
-
-            self.data_asyncHandler(         request = d_dataRequest,
-                                            key     = str_key,
-                                            op      = 'pushPath')
-            d_jobBlock                  = self.jobOperation_blockUntil(
-                                            key     = str_key,
-                                            op      = 'pushPath',
-                                            status  = True
-                                        )
-            b_status                    = d_jobBlock['status']
-
-            if not b_status:
-                self.jobStatus_do(
-                                            action  = 'set',
-                                            key     = str_key,
-                                            op      = 'pushPath',
-                                            status  = False
-                )
-            if b_status:
-                d_jobStatus          = self.jobStatus_do(
-                                            key     = str_key,
-                                            action  = 'getInfo',
-                                            op      = 'pushPath')
-                self.dp.qprint( 'd_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(),
-                                comms = 'status')
-
-                d_dataRequestProcessPush = d_jobStatus['info']['pushPath']['return']
-            return b_status, d_dataRequestProcessPush
-
-        def pullData_handler():
-            """
-            Nested function for handling pull from remote.
-            """
-
-            str_localDestination                = d_metaData['localTarget']['path']
-            str_localParentPath, str_localDest  = os.path.split(str_localDestination)
-            d_metaData['local']                 = {'path': str_localDestination}
-            if 'createDir' in d_metaData['localTarget']:
-                d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
-            d_metaData['transport']['compress']['name']   = str_localDest
-            self.dp.qprint( 'metaData = %s' % self.pp.pformat(d_metaData).strip(),
-                            comms = 'status')
-            d_dataRequest   = {
-                'action':   'pullPath',
-                'meta':     d_metaData
-            }
-            # pudb.set_trace()
-            self.data_asyncHandler(         request = d_dataRequest,
-                                            key     = str_key,
-                                            op      = 'pullPath')
-
-            d_jobBlock                  = self.jobOperation_blockUntil(
-                                            key     = str_key,
-                                            op      = 'pullPath',
-                                            status  = True
-                                        )
-            b_status                    = d_jobBlock['status']
-            if not b_status:
-                self.jobStatus_do(
-                                            action  = 'set',
-                                            key     = str_key,
-                                            op      = 'pullPath',
-                                            status  = False
-                )
-            if b_status:
-                d_jobStatus              = self.jobStatus_do(       key     = str_key,
-                                                                    action  = 'getInfo',
-                                                                    op      = 'pullPath')
-                d_dataRequestProcessPull.update(d_jobStatus['info']['pullPath']['return'])
-
-            return b_status, d_dataRequestProcessPull, str_localDestination
-
-        def swift_handler():
-            """
-            Put data pulled from previous process into swift.
-
-            This is an "internal" process, so not asynchronous and does not require
-            a separate blocking method.
-            """
-            if Gd_tree.exists('swift', path = '/'):
-                # There might be a timing issue with pushing files into swift and
-                # the swift container being able to report them as accessible. The
-                # solution is to push objects, and then poll on calls to swift 'ls'
-                # and compare results with push record.
-                waitPoll            = 0
-                maxWaitPoll         = 10
-                d_ret['d_swiftstore'] = SwiftManager.createFileList(
-                    root = str_localDestination,
-                    tree = Gd_tree
-                )
-                filesPushed         = len(d_ret['d_swiftstore']['d_put']['d_result']['l_fileStore'])
-                filesAccessible     = 0
-                while filesAccessible < filesPushed and waitPoll < maxWaitPoll:
-                    d_swift_ls      = SwiftManager.ls(path = str_localDestination, tree = Gd_tree)
-                    filesAccessible = len(d_swift_ls['lsList'])
-                    time.sleep(0.2)
-                    waitPoll        += 1
-                d_ret['d_swift_ls'] = d_swift_ls
-                d_ret['d_swiftstore']['waitPoll']           = waitPoll
-                d_ret['d_swiftstore']['filesPushed']        = filesPushed
-                d_ret['d_swiftstore']['filesAccessible']    = filesAccessible
-                d_swift                                     = {}
-                d_swift['useSwift']                         = True
-                d_swift['d_swift_ls']                       = d_swift_ls
-                d_swift['d_swiftstore']                     = d_ret['d_swiftstore']
-                d_swift['status']                           = d_swift['d_swift_ls']['status'] and \
-                                                              d_swift['d_swiftstore']['status']
-                self.jobStatus_do(
-                                        action      = 'set',
-                                        key         = str_key,
-                                        op          = 'swiftPut',
-                                        status      = True,
-                                        jobSwift    = d_swift
-                )
-
-                d_internalInfo  = Gd_tree.cat('/jobstatus/%s/info' % str_key)
-
-            if len(self.str_debugToDir):
-                self.dp.qprint( 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
-                            comms = 'status',
-                            teeFile = '%s/d_internalInfo-%s.json' % (self.str_debugToDir, str_key),
-                            teeMode = 'w+')
-            return d_swift['status']
-
-        def compute_handler():
-            """
-            Nested function for handling compute
-            """
-
-            coordBlockSeconds   = Gd_internalvar['self']['coordBlockSeconds']
-            str_serviceName     = d_dataRequestProcessPush['serviceName']
-            str_shareDir        = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop'].get('shareDir')
-            str_outDirPath      = d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout']['compress']['remoteServer']['postop'].get('outgoingPath')
-            if str_outDirPath is not None:
-                # This value will not be none in case of non-swift option.
-                str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
-            d_metaCompute['container']['manager']['env']['shareDir']    = str_shareDir
-            self.dp.qprint( 'metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(),
-                            comms = 'status')
-            d_computeRequest   = {
-                'action':   'run',
-                'meta':     d_metaCompute
-            }
-
-            d_computeRequestProcess.update(self.computeRequest_process(
-                                            request     = d_computeRequest,
-                                            key         = str_key,
-                                            op          = 'compute')
-            )
-            # wait for processing...
-            self.dp.qprint('compute job submitted... waiting %ds for transients...' % \
-                            coordBlockSeconds)
-            time.sleep(coordBlockSeconds)
-            d_jobBlock                  = self.jobOperation_blockUntil(
-                                            request = d_computeRequest,
-                                            key     = str_key,
-                                            op      = 'compute',
-                                            status  = True
-            )
-            self.dp.qprint( 'compute d_jobBlock = %s' % \
-                            self.pp.pformat(d_jobBlock).strip(),
-                            comms = 'status')
-            b_status                    = d_jobBlock['status']
-            if not b_status:
-                self.jobStatus_do(
-                                            action  = 'set',
-                                            key     = str_key,
-                                            op      = 'compute',
-                                            status  = False
-                )
-            if b_status:
-                d_jobStatus             = self.jobStatus_do(
-                                            key     = str_key,
-                                            action  = 'getInfo',
-                                            op      = 'compute'
-                )
-                self.dp.qprint( 'd_jobStatus = %s' % \
-                                self.pp.pformat(d_jobStatus).strip(),
-                                comms = 'status')
-                d_computeRequestProcess.update(d_jobStatus['info']['compute']['return'])
-
-            return b_status, d_computeRequestProcess
-
-        def jobStatusFiles_create():
-            # Note a potential issue here (almost a catch-22 of sorts):
-            #
-            # The status and summary files can only be pushed to swift after swift
-            # has completed. (since these files contain information about the swift
-            # operation itself, we push them to object storage after creating them
-            # in the pfcon FS).
-            #
-            # This means that the files may not be registered with CUBE due to the
-            # "delay" inherent in swift access IO (one method might push data to
-            # swift, and an immediately subsequent method that tries to access the
-            # data might get a "data not present" error as swift synchronizes).
-            #
-            # In practice though, this rarely happens.
-            d_ret['d_jobStatus']            = self.jobStatus_do(        key     = str_key,
-                                                                        action  = 'getInfo',
-                                                                        op      = 'all')
-            d_ret['d_jobStatusSummary']     = self.summaryStatus_process(d_ret['d_jobStatus'])
-            str_statusFile = os.path.join(str_localDestination, 'jobStatus.json')
-            with open(str_statusFile, 'w') as f:
-                json.dump(d_ret['d_jobStatus'], f)
-            f.close()
-            str_summaryFile = os.path.join(str_localDestination, 'jobStatusSummary.json')
-            with open(str_summaryFile, 'w') as f:
-                json.dump(d_ret['d_jobStatusSummary'], f)
-            f.close()
-            # Also put these two files into swift
-            SwiftManager.objPut( fileList = [str_statusFile, str_summaryFile], tree = Gd_tree)
-
-            if len(self.str_debugToDir):
-                self.dp.qprint( 'Final return: d_ret = \n%s' % json.dumps(d_ret, indent=4),
-                            comms = 'status',
-                            teeFile = '%s/d_ret-%s.json' % (self.str_debugToDir, str_key),
-                            teeMode = 'w+')
-
         self.dp.qprint("coordinate_process()", comms = 'status')
         b_status                    = False
         d_request                   = {}
         d_dataRequestProcessPush    = {}
         d_computeRequestProcess     = {}
         d_dataRequestProcessPull    = {}
-        str_localDestination        = ""
-        str_key                     = ""
 
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
-        # self.dp.qprint("d_request = %s" % d_request)
 
         str_key                     = self.key_dereference(request = d_request)['key']
         str_flatDict                = json.dumps(d_request)
@@ -1311,7 +1026,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                                 op          = 'all',
                                 status      = 'not started'
                             )
-
         d_ret = {
             'status':               b_status,
             'pushData':             d_dataRequestProcessPush,
@@ -1326,17 +1040,258 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         # Check on propogation of error message!
         # If the status is false, the client will not be notified
-        b_status, d_dataRequestProcessPush = pushData_handler()
+        b_status, d_dataRequestProcessPush = self.pushData_handler(d_metaData, str_key)
         if b_status:
-            b_status, d_computeRequestProcess = compute_handler()
+            b_status, d_computeRequestProcess = self.compute_handler(d_dataRequestProcessPush,
+                                                                     d_metaCompute,
+                                                                     d_computeRequestProcess,
+                                                                     str_key)
             if b_status:
-                b_status, d_dataRequestProcessPull, str_localDestination = pullData_handler()
+                b_status, d_dataRequestProcessPull, str_localDestination = self.pullData_handler(d_metaData,
+                                                                                                 str_key,
+                                                                                                 d_dataRequestProcessPull)
                 if b_status:
-                    b_status = swift_handler()
+                    b_status = self.swift_handler(d_ret, str_localDestination, str_key)
                     if b_status:
-                        jobStatusFiles_create()
-
+                        self.jobStatusFiles_create(d_ret, str_localDestination, str_key)
         return d_ret
+
+    def pushData_handler(self, d_metaData, str_key):
+        """
+        Handle push to remote.
+
+        Input           -- d_dataRequestProcessPush holder
+        Return: bool    -- success
+        """
+        # default returns
+        d_dataRequestProcessPush = {}
+
+        d_metaData['local'] = d_metaData['localSource']
+        self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(),
+                       comms='status')
+        d_dataRequest = {
+            'action': 'pushPath',
+            'meta': d_metaData
+        }
+
+        self.data_asyncHandler(request=d_dataRequest,
+                               key=str_key,
+                               op='pushPath')
+        d_jobBlock = self.jobOperation_blockUntil(
+            key=str_key,
+            op='pushPath',
+            status=True
+        )
+        b_status = d_jobBlock['status']
+
+        if not b_status:
+            self.jobStatus_do(
+                action='set',
+                key=str_key,
+                op='pushPath',
+                status=False
+            )
+        if b_status:
+            d_jobStatus = self.jobStatus_do(
+                key=str_key,
+                action='getInfo',
+                op='pushPath')
+            self.dp.qprint('d_jobStatus = %s' % self.pp.pformat(d_jobStatus).strip(),
+                           comms='status')
+
+            d_dataRequestProcessPush = d_jobStatus['info']['pushPath']['return']
+        return b_status, d_dataRequestProcessPush
+
+    def pullData_handler(self, d_metaData, str_key, d_dataRequestProcessPull):
+        """
+        Handle pull from remote.
+        """
+        str_localDestination = d_metaData['localTarget']['path']
+        str_localParentPath, str_localDest = os.path.split(str_localDestination)
+        d_metaData['local'] = {'path': str_localDestination}
+        if 'createDir' in d_metaData['localTarget']:
+            d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
+        d_metaData['transport']['compress']['name'] = str_localDest
+        self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(),
+                       comms='status')
+        d_dataRequest = {
+            'action': 'pullPath',
+            'meta': d_metaData
+        }
+        # pudb.set_trace()
+        self.data_asyncHandler(request=d_dataRequest,
+                               key=str_key,
+                               op='pullPath')
+
+        d_jobBlock = self.jobOperation_blockUntil(
+            key=str_key,
+            op='pullPath',
+            status=True
+        )
+        b_status = d_jobBlock['status']
+        if not b_status:
+            self.jobStatus_do(
+                action='set',
+                key=str_key,
+                op='pullPath',
+                status=False
+            )
+        if b_status:
+            d_jobStatus = self.jobStatus_do(key=str_key,
+                                            action='getInfo',
+                                            op='pullPath')
+            d_dataRequestProcessPull.update(d_jobStatus['info']['pullPath']['return'])
+
+        return b_status, d_dataRequestProcessPull, str_localDestination
+
+    def swift_handler(self, d_ret, str_localDestination, str_key):
+        """
+        Put data pulled from previous process into swift.
+
+        This is an "internal" process, so not asynchronous and does not require
+        a separate blocking method.
+        """
+        if Gd_tree.exists('swift', path='/'):
+            # There might be a timing issue with pushing files into swift and
+            # the swift container being able to report them as accessible. The
+            # solution is to push objects, and then poll on calls to swift 'ls'
+            # and compare results with push record.
+            waitPoll = 0
+            maxWaitPoll = 10
+            d_ret['d_swiftstore'] = SwiftManager.createFileList(
+                root=str_localDestination,
+                tree=Gd_tree
+            )
+            filesPushed = len(d_ret['d_swiftstore']['d_put']['d_result']['l_fileStore'])
+            filesAccessible = 0
+            while filesAccessible < filesPushed and waitPoll < maxWaitPoll:
+                d_swift_ls = SwiftManager.ls(path=str_localDestination, tree=Gd_tree)
+                filesAccessible = len(d_swift_ls['lsList'])
+                time.sleep(0.2)
+                waitPoll += 1
+            d_ret['d_swift_ls'] = d_swift_ls
+            d_ret['d_swiftstore']['waitPoll'] = waitPoll
+            d_ret['d_swiftstore']['filesPushed'] = filesPushed
+            d_ret['d_swiftstore']['filesAccessible'] = filesAccessible
+            d_swift = {}
+            d_swift['useSwift'] = True
+            d_swift['d_swift_ls'] = d_swift_ls
+            d_swift['d_swiftstore'] = d_ret['d_swiftstore']
+            d_swift['status'] = d_swift['d_swift_ls']['status'] and \
+                                d_swift['d_swiftstore']['status']
+            self.jobStatus_do(
+                action='set',
+                key=str_key,
+                op='swiftPut',
+                status=True,
+                jobSwift=d_swift
+            )
+
+            d_internalInfo = Gd_tree.cat('/jobstatus/%s/info' % str_key)
+
+        if len(self.str_debugToDir):
+            self.dp.qprint(
+                'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
+                comms='status',
+                teeFile='%s/d_internalInfo-%s.json' % (self.str_debugToDir, str_key),
+                teeMode='w+')
+        return d_swift['status']
+
+    def compute_handler(self, d_dataRequestProcessPush, d_metaCompute, d_computeRequestProcess, str_key):
+        """
+        Handle compute.
+        """
+        coordBlockSeconds = Gd_internalvar['self']['coordBlockSeconds']
+        str_serviceName = d_dataRequestProcessPush['serviceName']
+        str_shareDir = \
+        d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout'][
+            'compress']['remoteServer']['postop'].get('shareDir')
+        str_outDirPath = \
+        d_dataRequestProcessPush['d_ret']['%s-data' % str_serviceName]['stdout'][
+            'compress']['remoteServer']['postop'].get('outgoingPath')
+        if str_outDirPath is not None:
+            # This value will not be none in case of non-swift option.
+            str_outDirParent, str_outDirOnly = os.path.split(str_outDirPath)
+        d_metaCompute['container']['manager']['env']['shareDir'] = str_shareDir
+        self.dp.qprint('metaCompute = %s' % self.pp.pformat(d_metaCompute).strip(),
+                       comms='status')
+        d_computeRequest = {
+            'action': 'run',
+            'meta': d_metaCompute
+        }
+
+        d_computeRequestProcess.update(self.computeRequest_process(
+            request=d_computeRequest,
+            key=str_key,
+            op='compute')
+        )
+        # wait for processing...
+        self.dp.qprint('compute job submitted... waiting %ds for transients...' % \
+                       coordBlockSeconds)
+        time.sleep(coordBlockSeconds)
+        d_jobBlock = self.jobOperation_blockUntil(
+            request=d_computeRequest,
+            key=str_key,
+            op='compute',
+            status=True
+        )
+        self.dp.qprint('compute d_jobBlock = %s' % \
+                       self.pp.pformat(d_jobBlock).strip(),
+                       comms='status')
+        b_status = d_jobBlock['status']
+        if not b_status:
+            self.jobStatus_do(
+                action='set',
+                key=str_key,
+                op='compute',
+                status=False
+            )
+        if b_status:
+            d_jobStatus = self.jobStatus_do(
+                key=str_key,
+                action='getInfo',
+                op='compute'
+            )
+            self.dp.qprint('d_jobStatus = %s' % \
+                           self.pp.pformat(d_jobStatus).strip(),
+                           comms='status')
+            d_computeRequestProcess.update(d_jobStatus['info']['compute']['return'])
+
+        return b_status, d_computeRequestProcess
+
+    def jobStatusFiles_create(self, d_ret, str_localDestination, str_key):
+        # Note a potential issue here (almost a catch-22 of sorts):
+        #
+        # The status and summary files can only be pushed to swift after swift
+        # has completed. (since these files contain information about the swift
+        # operation itself, we push them to object storage after creating them
+        # in the pfcon FS).
+        #
+        # This means that the files may not be registered with CUBE due to the
+        # "delay" inherent in swift access IO (one method might push data to
+        # swift, and an immediately subsequent method that tries to access the
+        # data might get a "data not present" error as swift synchronizes).
+        #
+        # In practice though, this rarely happens.
+        d_ret['d_jobStatus'] = self.jobStatus_do(key=str_key,
+                                                 action='getInfo',
+                                                 op='all')
+        d_ret['d_jobStatusSummary'] = self.summaryStatus_process(d_ret['d_jobStatus'])
+        str_statusFile = os.path.join(str_localDestination, 'jobStatus.json')
+        with open(str_statusFile, 'w') as f:
+            json.dump(d_ret['d_jobStatus'], f)
+        f.close()
+        str_summaryFile = os.path.join(str_localDestination, 'jobStatusSummary.json')
+        with open(str_summaryFile, 'w') as f:
+            json.dump(d_ret['d_jobStatusSummary'], f)
+        f.close()
+        # Also put these two files into swift
+        SwiftManager.objPut(fileList=[str_statusFile, str_summaryFile], tree=Gd_tree)
+        if len(self.str_debugToDir):
+            self.dp.qprint('Final return: d_ret = \n%s' % json.dumps(d_ret, indent=4),
+                           comms='status',
+                           teeFile='%s/d_ret-%s.json' % (self.str_debugToDir, str_key),
+                           teeMode='w+')
 
     def filesFind(self, *args, **kwargs):
         """
@@ -1466,7 +1421,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             'jobOperation':         d_jobStatus,
             'jobOperationSummary':  d_jobStatusSummary
         }
-
 
     def do_POST(self, *args, **kwargs):
         """
