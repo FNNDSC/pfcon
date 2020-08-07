@@ -146,7 +146,6 @@ class StoreHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         """
         """
-        global Gd_internalvar
         b_test                  = False
         self.__name__           = 'StoreHandler'
         self.b_useDebug         = False
@@ -233,19 +232,14 @@ class StoreHandler(BaseHTTPRequestHandler):
                     'l_fileChanged':    l_fileChanged
                     }
 
-        global Gd_internalvar
-        global Gd_tree
         d_meta      = {}
         d_ret       = {}
-        str_var     = ''
         b_status    = False
-        b_tree      = False
 
         for k,v in kwargs.items():
             if k == 'd_meta':   d_meta  = v
 
         str_var     = d_meta['var']
-
         T           = C_stree()
 
         if d_meta:
@@ -365,7 +359,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             'localpath':    ""
         }
         d_meta  = {}
-        d_local = {}
 
         for k,v in kwargs.items():
             if k == 'd_meta':   d_meta = v
@@ -396,15 +389,9 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return: JSON object from the 'pfioh' call.
         """
-
-        global  Gd_tree
-        b_status    = False
-
         self.dp.qprint("dataRequest_process()", comms = 'status')
 
         d_request       = {}
-        d_meta          = {}
-        d_pushPath      = {}
         # The return from the remote call
         d_ret           = {}
         # The return from this method
@@ -415,7 +402,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
             if k == 'metaHeader':       str_metaHeader      = v
-            if k == 'return':           d_return            = v
             if k == 'key':              str_key             = v
             if k == 'op':               str_op              = v
         d_meta          = d_request[str_metaHeader]
@@ -490,24 +476,19 @@ class StoreHandler(BaseHTTPRequestHandler):
         :return: JSON object from the 'pman' call.
         """
 
-        global  Gd_tree
-        b_status    = False
-
         self.dp.qprint("computeRequest_process()", comms = 'status')
 
         d_request       = {}
-        d_meta          = {}
+
         # The return from the remote call
         d_ret           = {}
         # The return from this method
-        d_return        = {}
         str_metaHeader  = 'meta'
         str_key         = ''
         str_op          = ''
         for k,v in kwargs.items():
             if k == 'request':          d_request           = v
             if k == 'metaHeader':       str_metaHeader      = v
-            if k == 'return':           d_return            = v
             if k == 'key':              str_key             = v
             if k == 'op':               str_op              = v
 
@@ -564,9 +545,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return:
         """
-        global Gd_tree
-        b_status    = False
-
         self.dp.qprint("hello_process_remote()", comms = 'status')
         # pudb.set_trace()
 
@@ -602,13 +580,10 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return:
         """
-        global Gd_internalvar
-
         self.dp.qprint("hello_process()", comms = 'status')
         b_status            = False
         d_ret               = {}
         d_request           = {}
-        d_remote            = {}
         for k, v in kwargs.items():
             if k == 'request':      d_request   = v
 
@@ -651,7 +626,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         Sets/gets the status of a specific operation in a given job.
         """
-        global  Gd_tree
         # return status of this method
         b_status    = False
         # the info dictionary for all the jobs per key
@@ -750,19 +724,10 @@ class StoreHandler(BaseHTTPRequestHandler):
         Query the remote compute job status.
         """
         d_request           = {}
-        d_status            = {}
         str_keyID           = 'none'
-        str_op              = 'none'
-        str_status          = 'none'
-        str_action          = 'none'
-        timeout             = 60
-        pollInterval        = 1
 
         for k,v in kwargs.items():
             if k == 'key':      str_keyID   = v
-            if k == 'op':       str_op      = v
-            if k == 'status':   str_status  = v
-            if k == 'timeout':  timeout     = v
             if k == 'request':  d_request   = v
 
         # pudb.set_trace()
@@ -778,7 +743,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                             "value":    str_keyID
             }
         }
-
 
         str_token = Gd_tree.cat('/service/%s/compute/authToken'% str_remoteService)
         if not str_token:
@@ -844,19 +808,15 @@ class StoreHandler(BaseHTTPRequestHandler):
         b_jobStatusCheck    = False
         # d_request is used only by the compute ops
         d_request           = {}
-        d_status            = {}
         str_keyID           = 'none'
         str_op              = 'none'
         str_status          = 'none'
-        str_action          = 'none'
-        timeout             = 60
         pollInterval        = 1
 
         for k,v in kwargs.items():
             if k == 'key':      str_keyID   = v
             if k == 'op':       str_op      = v
             if k == 'status':   str_status  = v
-            if k == 'timeout':  timeout     = v
             if k == 'request':  d_request   = v
 
         kwargs['action']    = 'get'
@@ -875,11 +835,9 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_jobStatus      = self.jobStatus_do(           key     = str_keyID,
                                                                 action  = 'getInfo',
                                                                 op      = str_op)
-                str_jobStatus       = d_jobStatus['info'][str_op]['status']
                 d_jobReturn         = d_jobStatus['info'][str_op]['return']
 
             if str_op == 'compute':
-                d_jobReturn     = {'status': False}
                 d_jobStatus      = self.jobOperation_computeStatusQuery(
                                                                 key     = str_keyID,
                                                                 request = d_request)
@@ -947,13 +905,10 @@ class StoreHandler(BaseHTTPRequestHandler):
         this method will also call jobStatus_do() which is the method that
         actually "prints"/logs the call status response.
         """
-        d_request   = {}
-        d_ret       = {}
         str_key     = ''
         str_op      = ''
 
         for k,v in kwargs.items():
-            if k == 'request':  d_request   = v
             if k == 'key':      str_key     = v
             if k == 'op':       str_op      = v
 
@@ -1106,7 +1061,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             """
             # default returns
             d_dataRequestProcessPush = {}
-            b_status = False
 
             d_metaData['local'] = d_metaData['localSource']
             self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(), comms = 'status')
@@ -1331,12 +1285,10 @@ class StoreHandler(BaseHTTPRequestHandler):
                             comms = 'status',
                             teeFile = '%s/d_ret-%s.json' % (self.str_debugToDir, str_key),
                             teeMode = 'w+')
-        global Gd_internalvar, Gd_tree
 
         self.dp.qprint("coordinate_process()", comms = 'status')
         b_status                    = False
         d_request                   = {}
-        d_jobStatus                 = {}
         d_dataRequestProcessPush    = {}
         d_computeRequestProcess     = {}
         d_dataRequestProcessPull    = {}
@@ -1496,9 +1448,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         self.dp.qprint("status_process()", comms = 'status')
         d_request                   = {}
-        d_meta                      = {}
-        d_jobStatus                 = {}
-        d_jobStatusSummary          = {}
 
         for k,v in kwargs.items():
             if k == 'request':      d_request   = v
@@ -1533,8 +1482,6 @@ class StoreHandler(BaseHTTPRequestHandler):
         :param kwargs:
         :return:
         """
-        d_msg       = {}
-        d_done      = {}
         b_threaded  = False
 
         # pudb.set_trace()
@@ -1573,7 +1520,6 @@ class StoreHandler(BaseHTTPRequestHandler):
             self.dp.qprint("verb: %s detected." % d_msg['action'], comms = 'status')
             str_method      = '%s_process' % d_msg['action']
             self.dp.qprint("method to call: %s(request = d_msg) " % str_method, comms = 'status')
-            d_done          = {'status': False}
             try:
                 pf_method   = getattr(self, str_method)
             except  AttributeError:
@@ -1653,8 +1599,6 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         :return:
         """
-        global Gd_internalvar
-        global Gd_tree
         HTTPServer.__init__(self, *args, **kwargs)
         self.LC             = 40
         self.RC             = 40
@@ -1668,7 +1612,6 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         """
         Process the global Gd_tree and perform possible env substitutions.
         """
-        global Gd_tree
         str_path    = ''
         str_target  = ''
         str_newVal  = ''
@@ -1689,13 +1632,11 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     def setup(self, **kwargs):
         global G_b_httpResponse
         global Gd_internalvar
-        global Gd_tree
         str_defIP       = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
         str_defIPpman   = str_defIP
         str_defIPpfioh  = str_defIP
 
         if 'HOST_IP' in os.environ:
-            str_defIP       = os.environ['HOST_IP']
             str_defIPpman   = os.environ['HOST_IP']
             str_defIPpfioh  = os.environ['HOST_IP']
 
