@@ -48,4 +48,4 @@ RUN pip3 install ${APPROOT}  \
 
 WORKDIR "/home/localuser"
 ENTRYPOINT ["pfcon"]
-EXPOSE 5055
+EXPOSE 5005

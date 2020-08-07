@@ -14,9 +14,8 @@ services:
   pfcon_service:
     image: ${PFCONREPO}/pfcon:dev
     volumes:
-      - ./pfcon/pfcon.py:/home/localuser/pfcon/pfcon/pfcon.py
+      - ./pfcon:/home/localuser/pfcon/pfcon
       - ./bin/pfcon:/home/localuser/pfcon/bin/pfcon
-      - ./pfcon/tests:/home/localuser/pfcon/pfcon/tests
     ports:
       - "5005:5005"
     depends_on:
