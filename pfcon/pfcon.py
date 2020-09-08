@@ -160,10 +160,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                                             )
         self.pp                 = pprint.PrettyPrinter(indent=4)
 
-        self.b_treeLocked       = False
-        self.initial_wait       = 0.2
-        self.max_wait           = 120
-
         for k,v in kwargs.items():
             if k == 'test': b_test  = True
 
@@ -641,7 +637,7 @@ class StoreHandler(BaseHTTPRequestHandler):
         # pudb.set_trace()
 
         if str_keyID != 'none':
-            T           = self.tree_access()
+            T           = Gd_tree
             T.cd('/jobstatus')
             b_status    = True
             if not T.exists(str_keyID):
@@ -696,42 +692,10 @@ class StoreHandler(BaseHTTPRequestHandler):
                         if b_jobSwift:
                             d_info[k]           = d_jobSwift
                     T.touch('info', d_info)
-
-        # Unlock the Tree for other threads
-        self.b_treeLocked = False
-        time.sleep(1)
-
         return {
             'status':   b_status,
             'info':     d_info
         }
-
-    def exponential_backoff(self, attempt):
-        """
-
-        Returns exponential backoff value based on the
-        number of attempts
-
-        Useful for retrying certain operations until
-        a successful state is reached
-        """
-        return min(self.max_wait, self.initial_wait * 2 ** attempt)
-
-    def tree_access(self):
-        """
-
-        Return a pointer to Gd_tree if no other execution
-        thread is accessing the tree
-
-        Prevents RunTime Error when iterating through
-        Gd_tree or saving it to a local path
-        """
-        number_attempts = 0
-        while self.b_treeLocked:
-            time.sleep(self.exponential_backoff(number_attempts))
-            number_attempts += 1
-        self.b_treeLocked = True
-        return Gd_tree
 
     def jobOperation_computeStatusQuery(self, *args, **kwargs):
         """
@@ -1074,20 +1038,7 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         # pudb.set_trace()
 
-        # Stop file storage directory deletion by pfurl to prevent
-        # issues where running multiple jobs in parallel results in
-        # removal of files that have not been pushed to swift
-        if 'threadAction' in list(d_request.keys()):
-            if d_request['threadAction']:
-                d_metaData['localTarget']['createDir'] = False
-                FS_Directory = d_metaData['localTarget']['path']
-                if not os.path.exists(FS_Directory):
-                    os.makedirs(FS_Directory)
-
-                # The Line Below is useful for Debugging FS Directory
-                # d_metaData['specialHandling']['cleanup'] = False
-
-        # Check on propagation of error message!
+        # Check on propogation of error message!
         # If the status is false, the client will not be notified
         b_status, d_dataRequestProcessPush = self.pushData_handler(d_metaData, str_key)
         if b_status:
@@ -1149,8 +1100,6 @@ class StoreHandler(BaseHTTPRequestHandler):
                            comms='status')
 
             d_dataRequestProcessPush = d_jobStatus['info']['pushPath']['return']
-            time.sleep(0.2)
-
         return b_status, d_dataRequestProcessPush
 
     def pullData_handler(self, d_metaData, str_key, d_dataRequestProcessPull):
