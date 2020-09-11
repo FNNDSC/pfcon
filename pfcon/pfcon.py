@@ -346,7 +346,9 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         d_ret   = {
             'status':       False,
-            'd_swiftPull':  {},
+            'd_swiftPull':  {
+                'localFileList': []
+            },
             'localpath':    ""
         }
         d_meta  = {}
@@ -359,14 +361,51 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_local     = d_meta['local']
             if 'storageType' in d_local:
                 if d_local['storageType'] == 'swift':
-                    d_ret['d_swiftPull']    = SwiftManager.objPull(
-                                                    fromLocation = d_local['path'],
-                                                    tree = Gd_tree
-                                                )
-                    d_ret['status']         = True
-                    d_ret['localpath']      = d_ret['d_swiftPull']['localpath']
-                    d_meta['local']['path'] = d_ret['localpath']
+                    # A really bad workaround for plugin chaining support
+                    # when you add an ancestor plugin to a previous plugin
+                    # which is not done running yet, there will be nothing
+                    # in swift. We will wait for swift to be populated
+                    # before proceeding.
 
+                    # This "feature" should be deprecated when pipelines
+                    # are fully supported, and then in the very far future
+                    # perhaps reimplemented using the observer pattern
+                    # instead of polling.
+                    # In the near-ish future, pfcon will be moved to the
+                    # remote compute environment and lose access to swift.
+                    # The polling loop will have to target something else...
+
+                    # This is a flimsy solution (not scalable, data loss on crash).
+                    # Moreover, if we poll swift while the previous plugin
+                    # is still in the middle of writing a large result,
+                    # data corruption will occur.
+                    # Observer pattern is the ideal solution.
+                    # Alternatively, it would be better to somehow poll CUBE
+                    # for the previous plugin's status.
+                    number_attempts = 0
+                    storage_is_empty = True
+                    while storage_is_empty:
+                        d_ret['d_swiftPull']    = SwiftManager.objPull(
+                                                        fromLocation = d_local['path'],
+                                                        tree = Gd_tree
+                                                    )
+                        if len(d_ret['d_swiftPull']['localFileList']) == 0:
+                            number_attempts += 1
+                            duration = self.exponential_backoff(number_attempts)
+                            self.dp.qprint('swift storage is empty, previous plugin '
+                                           f'is probably busy. attempt {number_attempts} '
+                                           f'- will try to get files '
+                                           f'again in {duration} seconds')
+                            time.sleep(duration)
+                        else:
+                            storage_is_empty = False
+                            d_ret['status'] = True
+                            d_ret['localpath'] = d_ret['d_swiftPull']['localpath']
+                            d_meta['local']['path'] = d_ret['localpath']
+                    if number_attempts > 0:
+                        self.dp.qprint("finished waiting for results from "
+                                       "previous plugin to be saved "
+                                       "in swift storage.", comms='status')
         return d_ret
 
     def dataRequest_process(self, *args, **kwargs):
