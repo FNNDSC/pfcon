@@ -24,6 +24,9 @@ import  psutil
 import  multiprocessing
 import  pfurl
 
+from swiftclient.service import SwiftService
+import glob
+
 # debugging utilities
 import  pudb
 
@@ -34,7 +37,7 @@ from    pfmisc.debug        import  debug
 from    pfmisc.C_snode      import C_snode, C_stree
 
 from .swiftmanager import SwiftManager
-
+from .minesweeper import MismanagedStateException
 
 # Horrible global var
 G_b_httpResponse            = False
@@ -1195,58 +1198,98 @@ class StoreHandler(BaseHTTPRequestHandler):
 
         return b_status, d_dataRequestProcessPull, str_localDestination
 
-    def swift_handler(self, d_ret, str_localDestination, str_key):
+    def swift_handler(self, d_ret: dict, str_localDestination: str, str_key: str) -> bool:
         """
         Put data pulled from previous process into swift.
 
         This is an "internal" process, so not asynchronous and does not require
         a separate blocking method.
-        """
-        if Gd_tree.exists('swift', path='/'):
-            # There might be a timing issue with pushing files into swift and
-            # the swift container being able to report them as accessible. The
-            # solution is to push objects, and then poll on calls to swift 'ls'
-            # and compare results with push record.
-            waitPoll = 0
-            maxWaitPoll = 10
-            d_ret['d_swiftstore'] = SwiftManager.createFileList(
-                root=str_localDestination,
-                tree=Gd_tree
-            )
-            filesPushed = len(d_ret['d_swiftstore']['d_put']['d_result']['l_fileStore'])
-            filesAccessible = 0
-            while filesAccessible < filesPushed and waitPoll < maxWaitPoll:
-                d_swift_ls = SwiftManager.ls(path=str_localDestination, tree=Gd_tree)
-                filesAccessible = len(d_swift_ls['lsList'])
-                time.sleep(0.2)
-                waitPoll += 1
-            d_ret['d_swift_ls'] = d_swift_ls
-            d_ret['d_swiftstore']['waitPoll'] = waitPoll
-            d_ret['d_swiftstore']['filesPushed'] = filesPushed
-            d_ret['d_swiftstore']['filesAccessible'] = filesAccessible
-            d_swift = {}
-            d_swift['useSwift'] = True
-            d_swift['d_swift_ls'] = d_swift_ls
-            d_swift['d_swiftstore'] = d_ret['d_swiftstore']
-            d_swift['status'] = d_swift['d_swift_ls']['status'] and \
-                                d_swift['d_swiftstore']['status']
-            self.jobStatus_do(
-                action='set',
-                key=str_key,
-                op='swiftPut',
-                status=True,
-                jobSwift=d_swift
-            )
 
-            d_internalInfo = Gd_tree.cat('/jobstatus/%s/info' % str_key)
+        ACTUALLY
+        ========
+
+        This function seems to do a few simple things: push a folder to Swift,
+        and set a bunch of useless variables.
+        :param d_ret: a dictionary pointer which will get mutated
+        :param str_localDestination: folder to upload to swift
+        :param str_key: ???
+        :returns: True if successful, False if there were any errors
+        """
+
+        if not Gd_tree.exists('swift', path='/'):
+            raise MismanagedStateException('Why are you calling swift_handler()?')
+
+        # here is the actual functionality: folder upload to swift
+        b_status = True
+
+        list_of_files = glob.glob(os.path.join(str_localDestination, '**'), recursive=True)
+        successful_uploads = []
+
+        login = {
+            'auth_version': '1.0',
+            'auth': Gd_tree.cat('/swift/auth_url'),
+            'user': Gd_tree.cat('/swift/username'),
+            'key': Gd_tree.cat('/swift/key')
+        }
+        container_name = Gd_tree.cat('/swift/container_name')
+        with SwiftService(options=login) as swift:
+            # SwiftService.upload returns a generator which does not block until completion
+            # unless evaluated synchronously
+            for r in swift.upload(container_name, list_of_files, options={'segment_size': 1e9}):
+                if r['success']:
+                    if 'object' in r:
+                        successful_uploads.append(r['object'])
+                    # else: there was a successful upload_segment
+                else:
+                    b_status = False
+                    self.dp.qprint('Error in SwiftService.upload'
+                                   f' action={r["action"]}: {r["error"]}', comms='error')
+
+        # everything following is just setting useless variables for backwards compatibility
+        # trimming down this bloated response is future work
+
+        d_ret['d_swiftstore'] = {
+            'status': True,  # always was hard-coded
+            'd_create': {
+                'status': True,  # always was hard-coded
+                'd_result': {
+                    'l_fileFS': list_of_files
+                }
+            },
+            'd_put':    {
+                'status': b_status,
+                'd_result': {
+                    'l_fileStore':  successful_uploads
+                }
+            },
+            'waitPoll': 0,
+        }
+
+        d_ret['d_swift_ls'] = SwiftManager.ls(path=str_localDestination, tree=Gd_tree)
+        d_ret['d_swiftstore']['filesPushed'] = len(successful_uploads)
+        d_ret['d_swiftstore']['filesAccessible'] = len(d_ret['d_swift_ls']['lsList'])
+        d_swift = {
+            'useSwift': True,
+            'd_swift_ls': d_ret['d_swift_ls'],
+            'd_swiftstore': d_ret['d_swiftstore'],
+            'status': d_ret['d_swift_ls']['status'] and b_status
+        }
+        self.jobStatus_do(
+            action='set',
+            key=str_key,
+            op='swiftPut',
+            status=True,
+            jobSwift=d_swift
+        )
 
         if len(self.str_debugToDir):
+            d_internalInfo = Gd_tree.cat(f'/jobstatus/{str_key}/info')
             self.dp.qprint(
                 'Info: d_internalInfo = \n%s' % json.dumps(d_internalInfo, indent=4),
                 comms='status',
                 teeFile='%s/d_internalInfo-%s.json' % (self.str_debugToDir, str_key),
                 teeMode='w+')
-        return d_swift['status']
+        return b_status
 
     def compute_handler(self, d_dataRequestProcessPush, d_metaCompute, d_computeRequestProcess, str_key):
         """

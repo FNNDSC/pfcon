@@ -5,9 +5,12 @@ Swift storage manager module.
 import logging
 import os
 import swiftclient
+from swiftclient.service import SwiftService
+from    pfmisc.C_snode      import C_stree
 
+from .minesweeper import DeprecatedLegacyCodeException
 
-class SwiftManager(object):
+class SwiftManager:
 
     @staticmethod
     def connect(*args, **kwargs):
@@ -302,45 +305,8 @@ class SwiftManager(object):
         return d_ret
 
     @staticmethod
-    def putObjects(*args, **kwargs):
-        """
-        """
-        d_ret = {
-            'status': True,
-            'd_result': {
-                'l_fileStore':  []
-            }
-        }
-        l_files     = []
-        for k,v in kwargs.items():
-            if k == 'fileObjectList':   l_files = v
-            if k == 'tree':    Gd_tree = v
-
-        # initiate a swift service connection
-        conn = swiftclient.Connection(
-            user    = Gd_tree.cat('/swift/username'),
-            key     = Gd_tree.cat('/swift/key'),
-            authurl = Gd_tree.cat('/swift/auth_url')
-        )
-
-        # create container in case it doesn't already exist
-        conn.put_container(Gd_tree.cat('/swift/container_name'))
-
-        # put files into storage
-        for filename in l_files:
-            try:
-                d_ret['status'] = True and d_ret['status']
-                with open(filename, 'rb') as fp:
-                    conn.put_object(
-                        Gd_tree.cat('/swift/container_name'),
-                        filename,
-                        contents=fp.read()
-                    )
-            except:
-                d_ret['status'] = False
-            d_ret['d_result']['l_fileStore'].append(filename)
-
-        return d_ret
+    def putObjects(fileObjectList: list, tree: C_stree):
+        raise DeprecatedLegacyCodeException
 
     @staticmethod
     def createFileList(*args, **kwargs):
@@ -350,30 +316,4 @@ class SwiftManager(object):
         This method determines a list of files to put into
         swift storage.
         """
-
-        d_create   = {
-            'status': True,
-            'd_result': {
-                'l_fileFS': []
-            }
-        }
-        logging.info("starting...")
-        str_rootPath    = ''
-        for k,v in kwargs.items():
-            if k == 'root': str_rootPath = v
-            if k == 'tree':    Gd_tree = v
-
-        if len(str_rootPath):
-            # Create a list of all files down the <str_rootPath>
-            for root, dirs, files in os.walk(str_rootPath):
-                for filename in files:
-                    d_create['d_result']['l_fileFS'].append(os.path.join(root, filename))
-            d_swiftPut = SwiftManager.putObjects(
-                fileObjectList = d_create['d_result']['l_fileFS'],
-                tree = Gd_tree
-            )
-        return {
-            'status':   True,
-            'd_create': d_create,
-            'd_put':    d_swiftPut
-        }
+        raise DeprecatedLegacyCodeException
