@@ -662,18 +662,32 @@ class StoreHandler(BaseHTTPRequestHandler):
                 # NB NB NB! DEBUGGING NOTES:
                 # The following creates terminal noise that should be commented out
                 # if doing debugging otherwise the pudb screen gets corrupted.
+                self.dp.qprint( "action = %s" % str_action,
+                                comms = 'status')
                 self.dp.qprint( "d_info = %s" % self.pp.pformat(d_info).strip(),
                                 comms = 'status')
-                if not isinstance(d_info['compute']['status'],  bool) or \
-                   not isinstance(d_info['pullPath']['status'], bool) or \
-                   not isinstance(d_info['pushPath']['status'], bool) or \
-                   not isinstance(d_info['swiftPut']['status'], bool):
-                    b_status = False
-                else:
-                    b_status =  d_info['compute']['status']     and \
-                                d_info['pullPath']['status']    and \
-                                d_info['pullPath']['status']    and \
-                                d_info['swiftPut']['status']
+
+                # First, check if the dictionary is actually non-zero
+                b_info      = bool(d_info)
+                if b_info:
+                    try:
+                        if not isinstance(d_info['compute']['status'],  bool) or \
+                           not isinstance(d_info['pullPath']['status'], bool) or \
+                           not isinstance(d_info['pushPath']['status'], bool) or \
+                           not isinstance(d_info['swiftPut']['status'], bool):
+                            b_status = False
+                        else:
+                            b_status =  d_info['compute']['status']     and \
+                                        d_info['pullPath']['status']    and \
+                                        d_info['pushPath']['status']    and \
+                                        d_info['swiftPut']['status']
+                    except:
+                        b_info  = False
+                if not b_info:
+                    d_info['compute']   = {'status': False}
+                    d_info['pullPath']  = {'status': False}
+                    d_info['pushPath']  = {'status': False}
+                    d_info['swiftPut']  = {'status': False}
 
             if str_op != 'none':
                 if str_op == 'all':
