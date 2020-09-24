@@ -682,7 +682,8 @@ class StoreHandler(BaseHTTPRequestHandler):
                                         d_info['pushPath']['status']    and \
                                         d_info['swiftPut']['status']
                     except:
-                        b_info  = False
+                        b_info      = False
+                        b_status    = False
                 if not b_info:
                     d_info['compute']   = {'status': False}
                     d_info['pullPath']  = {'status': False}
