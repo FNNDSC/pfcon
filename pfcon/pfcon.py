@@ -662,10 +662,10 @@ class StoreHandler(BaseHTTPRequestHandler):
                 # NB NB NB! DEBUGGING NOTES:
                 # The following creates terminal noise that should be commented out
                 # if doing debugging otherwise the pudb screen gets corrupted.
-                self.dp.qprint( "action = %s" % str_action,
-                                comms = 'status')
-                self.dp.qprint( "d_info = %s" % self.pp.pformat(d_info).strip(),
-                                comms = 'status')
+                # self.dp.qprint( "action = %s" % str_action,
+                #                 comms = 'status')
+                # self.dp.qprint( "d_info = %s" % self.pp.pformat(d_info).strip(),
+                #                 comms = 'status')
 
                 # First, check if the dictionary is actually non-zero
                 b_info      = bool(d_info)
@@ -897,6 +897,38 @@ class StoreHandler(BaseHTTPRequestHandler):
                         self.pp.pformat(d_jobReturn).strip(),
                         comms = 'status')
         return d_jobReturn
+
+    def data_syncHandler(self, *args, **kwargs):
+        """
+        A synchronous data handler. This method performs the push/pull
+        (depending on the JSON input payload). Significantly, this method
+        only returns when the actual data IO operation is complete, and
+        is suitable for debugging workflows without asynchronous "block"
+        events interrupting the console.
+
+        Status of a particular data IO operation is stored in a global
+        identifier which is indexed by some 'key' (typically a job id,
+        'jid' parameter) in the JSON directive supplied by the calling process.
+
+        """
+        str_key     = ''
+        str_op      = ''
+
+        for k,v in kwargs.items():
+            if k == 'key':      str_key     = v
+            if k == 'op':       str_op      = v
+
+        # Set the state of the actual data jobOperation being called to
+        # 'pushing'...
+        self.jobStatus_do(      action      = 'set',
+                                key         = str_key,
+                                op          = str_op,
+                                status      = str_op
+        )
+
+        d_syncHandler   = self.dataRequest_process(**kwargs)
+
+        return d_syncHandler
 
     def data_asyncHandler(self, *args, **kwargs):
         """
@@ -1172,6 +1204,13 @@ class StoreHandler(BaseHTTPRequestHandler):
         """
         Handle pull from remote.
         """
+        str_localDestination:   str = ""
+        str_localParentPath:    str = ""
+        d_dataRequest               = {
+                    'action': 'pullPath',
+                    'meta': d_metaData
+        }
+
         str_localDestination = d_metaData['localTarget']['path']
         str_localParentPath, str_localDest = os.path.split(str_localDestination)
         d_metaData['local'] = {'path': str_localDestination}
@@ -1179,28 +1218,37 @@ class StoreHandler(BaseHTTPRequestHandler):
             d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
         d_metaData['transport']['compress']['name'] = str_localDest
         self.dp.qprint('metaData = %s' % self.pp.pformat(d_metaData).strip(),
-                       comms='status')
-        d_dataRequest = {
-            'action': 'pullPath',
-            'meta': d_metaData
-        }
-        # pudb.set_trace()
-        self.data_asyncHandler(request=d_dataRequest,
-                               key=str_key,
-                               op='pullPath')
+                       comms = 'status')
 
-        d_jobBlock = self.jobOperation_blockUntil(
-            key=str_key,
-            op='pullPath',
-            status=True
-        )
-        b_status = d_jobBlock['status']
+        ## pudb.set_trace()
+        b_asyncHandle    = True
+        if b_asyncHandle:
+            self.data_asyncHandler(
+                                    request = d_dataRequest,
+                                    key     = str_key,
+                                    op      = 'pullPath'
+            )
+
+            d_jobBlock      = self.jobOperation_blockUntil(
+                                    key=str_key,
+                                    op='pullPath',
+                                    status=True
+            )
+            b_status        = d_jobBlock['status']
+        else:
+            d_syncHandler   = self.data_syncHandler(
+                                    request = d_dataRequest,
+                                    key     = str_key,
+                                    op      = 'pullPath'
+            )
+            b_status        = d_syncHandler['status']
+
         if not b_status:
             self.jobStatus_do(
-                action='set',
-                key=str_key,
-                op='pullPath',
-                status=False
+                    action  = 'set',
+                    key     = str_key,
+                    op      = 'pullPath',
+                    status  = False
             )
         if b_status:
             d_jobStatus = self.jobStatus_do(key=str_key,
@@ -1212,48 +1260,105 @@ class StoreHandler(BaseHTTPRequestHandler):
 
     def swift_handler(self, d_ret, str_localDestination, str_key):
         """
-        Put data pulled from previous process into swift.
+        This method is responsible for:
+
+            1. Pushing files from the local (container) FS in swift
+               storage.
+
+            2. Rudimentary polling/checking on swift storage once objects
+               have been pushed to check that pushed files are listed
+               by swift (*)
+
+        (*) swift storage has "eventual" consistency, but might exihibit
+        some latency. This means, essentially, that even after a call to the
+        swift API to "put" an object has returned, a "pull" on that same object
+        might return "object not found" due to swift latency.
+
+        This particular method attempts to perform some basic latency handling
+        by checking if each object that was put is reported by a listing
+        operation. If not, a poll loop will wait and check again, eventually
+        polling out.
 
         This is an "internal" process, so not asynchronous and does not require
         a separate blocking method.
         """
+
+        def objPutIntoSwift_check():
+            """
+            Nested helper that returns a list of objects and the list length
+            """
+            l_objPutIntoSwift = d_ret['d_swiftstore']\
+                                     ['d_put']\
+                                     ['d_result']\
+                                     ['l_fileStore']
+            return l_objPutIntoSwift, len(l_objPutIntoSwift)
+
+        def objReportedBySwift_check():
+            """
+            Nested helper that returns a list of objects in swift
+            with a given string prefix and the list length
+            """
+            d_swift_ls          = SwiftManager.ls(
+                                        path    = str_localDestination,
+                                        tree    = Gd_tree
+                                    )
+            l_objCurrentlyReportedBySwift   = d_swift_ls['lsList']
+            filesAccessible = len(l_objCurrentlyReportedBySwift)
+            return d_swift_ls, l_objCurrentlyReportedBySwift, filesAccessible
+
+        b_status    = False
         if Gd_tree.exists('swift', path='/'):
+            ## pudb.set_trace()
             # There might be a timing issue with pushing files into swift and
             # the swift container being able to report them as accessible. The
             # solution is to push objects, and then poll on calls to swift 'ls'
             # and compare results with push record.
-            waitPoll = 0
-            maxWaitPoll = 10
-            d_ret['d_swiftstore'] = SwiftManager.createFileList(
-                root=str_localDestination,
-                tree=Gd_tree
+
+            l_objPutIntoSwift               : list      = []
+            l_objCurrentlyReportedBySwift   : list      = []
+
+            # Put a list of objects into swift...
+            d_ret['d_swiftstore'] = SwiftManager.putFileList(
+                root    = str_localDestination,
+                tree    = Gd_tree
             )
-            filesPushed = len(d_ret['d_swiftstore']['d_put']['d_result']['l_fileStore'])
-            filesAccessible = 0
-            while filesAccessible < filesPushed and waitPoll < maxWaitPoll:
-                d_swift_ls = SwiftManager.ls(path=str_localDestination, tree=Gd_tree)
-                filesAccessible = len(d_swift_ls['lsList'])
+
+            l_objPutIntoSwift, filesPushed = \
+                objPutIntoSwift_check()
+
+            d_swift_ls, l_objCurrentlyReportedBySwift, filesAccessible = \
+                objReportedBySwift_check()
+
+            # Now perform some polling if necessary.
+            waitPoll    = 0
+            maxWaitPoll = 10
+            while not all(obj in l_objCurrentlyReportedBySwift
+                         for obj in l_objPutIntoSwift) \
+                  and waitPoll < maxWaitPoll:
                 time.sleep(0.2)
                 waitPoll += 1
-            d_ret['d_swift_ls'] = d_swift_ls
-            d_ret['d_swiftstore']['waitPoll'] = waitPoll
-            d_ret['d_swiftstore']['filesPushed'] = filesPushed
-            d_ret['d_swiftstore']['filesAccessible'] = filesAccessible
+                d_swift_ls, l_objCurrentlyReportedBySwift, filesAccessible = \
+                    objReportedBySwift_check()
+            d_ret['d_swift_ls']                         = d_swift_ls
+            d_ret['d_swiftstore']['waitPoll']           = waitPoll
+            d_ret['d_swiftstore']['filesPushed']        = filesPushed
+            d_ret['d_swiftstore']['filesAccessible']    = filesAccessible
             d_swift = {}
             d_swift['useSwift'] = True
-            d_swift['d_swift_ls'] = d_swift_ls
+            d_swift['d_swift_ls']   = d_swift_ls
             d_swift['d_swiftstore'] = d_ret['d_swiftstore']
-            d_swift['status'] = d_swift['d_swift_ls']['status'] and \
-                                d_swift['d_swiftstore']['status']
+            d_swift['status']       = d_swift['d_swift_ls']['status'] and \
+                                      d_swift['d_swiftstore']['status']
             self.jobStatus_do(
-                action='set',
-                key=str_key,
-                op='swiftPut',
-                status=True,
-                jobSwift=d_swift
+                action      = 'set',
+                key         = str_key,
+                op          = 'swiftPut',
+                status      = True,
+                jobSwift    = d_swift
             )
 
             d_internalInfo = Gd_tree.cat('/jobstatus/%s/info' % str_key)
+            b_status = d_swift['status']
 
         if len(self.str_debugToDir):
             self.dp.qprint(
@@ -1261,7 +1366,8 @@ class StoreHandler(BaseHTTPRequestHandler):
                 comms='status',
                 teeFile='%s/d_internalInfo-%s.json' % (self.str_debugToDir, str_key),
                 teeMode='w+')
-        return d_swift['status']
+
+        return b_status
 
     def compute_handler(self, d_dataRequestProcessPush, d_metaCompute, d_computeRequestProcess, str_key):
         """
@@ -1467,6 +1573,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             }
         }'
         """
+        # pudb.set_trace()
         self.dp.qprint("status_process()", comms = 'status')
         d_request                   = {}
 
