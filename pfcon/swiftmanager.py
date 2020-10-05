@@ -304,6 +304,8 @@ class SwiftManager(object):
     @staticmethod
     def putObjects(*args, **kwargs):
         """
+        Iterate over a list of filesystem "file" objects
+        and put into swift storage using the connection API.
         """
         d_ret = {
             'status': True,
@@ -343,11 +345,12 @@ class SwiftManager(object):
         return d_ret
 
     @staticmethod
-    def createFileList(*args, **kwargs):
+    def putFileList(*args, **kwargs):
         """
         Initial entry point for swift storage processing.
 
-        This method determines a list of files to put into
+        This method makes a list of files down some directory
+        "root" location and pushes all those objects into
         swift storage.
         """
 
@@ -360,8 +363,8 @@ class SwiftManager(object):
         logging.info("starting...")
         str_rootPath    = ''
         for k,v in kwargs.items():
-            if k == 'root': str_rootPath = v
-            if k == 'tree':    Gd_tree = v
+            if k == 'root': str_rootPath    = v
+            if k == 'tree': Gd_tree         = v
 
         if len(str_rootPath):
             # Create a list of all files down the <str_rootPath>

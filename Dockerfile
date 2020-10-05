@@ -30,9 +30,14 @@ MAINTAINER fnndsc "dev@babymri.org"
 ARG UID=1001
 ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPROOT="/home/localuser/pfcon"
 
-RUN apt-get update \
-  && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils net-tools inetutils-ping \
-  && pip install --upgrade pip \
+RUN apt-get update                                                                              \
+  && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils net-tools inetutils-ping   \
+  && apt-get install -y locales                                                                 \
+  && export LANGUAGE=en_US.UTF-8                                                                \
+  && export LANG=en_US.UTF-8                                                                    \
+  && export LC_ALL=en_US.UTF-8                                                                  \
+  && locale-gen en_US.UTF-8                                                                     \
+  && dpkg-reconfigure locales  && pip install --upgrade pip                                     \
   && useradd -u $UID -ms /bin/bash localuser
 
 # Copy source code
