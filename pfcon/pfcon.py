@@ -1571,7 +1571,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                                                             'l_status']
                                 if l_execStatus[0] == 'started':
                                     d_statusPhase[str_computePhase] = False
-                                elif 'finished' in l_execStatus[0]:
+                                else:
                                     d_statusPhase[str_computePhase] = True
                         else:
                             d_statusPhase[str_computePhase] = \
