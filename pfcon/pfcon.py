@@ -1220,11 +1220,14 @@ class StoreHandler(BaseHTTPRequestHandler):
                     'meta': d_metaData
         }
 
-        str_localDestination = d_metaData['localTarget']['path']
-        str_localParentPath, str_localDest = os.path.split(str_localDestination)
+        str_localDestination                = d_metaData['localTarget'  ][
+                                                         'path'         ]
+        str_localParentPath, str_localDest  = \
+                os.path.split(str_localDestination)
         d_metaData['local'] = {'path': str_localDestination}
         if 'createDir' in d_metaData['localTarget']:
-            d_metaData['local']['createDir'] = d_metaData['localTarget']['createDir']
+            d_metaData['local']['createDir'] = d_metaData['localTarget' ][
+                                                          'createDir']
         d_metaData['transport']['compress']['name'] = str_localDest
         self.dp.qprint( 'metaData = %s' % \
                         # self.pp.pformat(d_metaData).strip(),
@@ -1241,9 +1244,9 @@ class StoreHandler(BaseHTTPRequestHandler):
             )
 
             d_jobBlock      = self.jobOperation_blockUntil(
-                                    key=str_key,
-                                    op='pullPath',
-                                    status=True
+                                    key     = str_key,
+                                    op      = 'pullPath',
+                                    status  = True
             )
             b_status        = d_jobBlock['status']
         else:
@@ -1262,10 +1265,14 @@ class StoreHandler(BaseHTTPRequestHandler):
                     status  = False
             )
         if b_status:
-            d_jobStatus = self.jobStatus_do(key=str_key,
-                                            action='getInfo',
-                                            op='pullPath')
-            d_dataRequestProcessPull.update(d_jobStatus['info']['pullPath']['return'])
+            d_jobStatus = self.jobStatus_do(
+                                    key     = str_key,
+                                    action  = 'getInfo',
+                                    op      = 'pullPath')
+            d_dataRequestProcessPull.update(
+                            d_jobStatus['info'      ][
+                                        'pullPath'  ][
+                                        'return'    ])
 
         return b_status, d_dataRequestProcessPull, str_localDestination
 
@@ -1558,16 +1565,20 @@ class StoreHandler(BaseHTTPRequestHandler):
             l_execStatus    :   list    = []
 
             for str_computePhase in l_phaseKeys:
-                if str_computePhase in ad_jobStatus['info']['compute']:
-                    if 'status' in ad_jobStatus['info']['compute'][
-                                                str_computePhase]:
+                if str_computePhase in ad_jobStatus['info'      ][
+                                                    'compute'   ]:
+                    if 'status' in ad_jobStatus[    'info'      ][
+                                                    'compute'   ][
+                                                    str_computePhase]:
                         if str_computePhase == 'return':
                             if 'l_status' in ad_jobStatus['info'        ][
                                                           'compute'     ][
-                                                          'return']:
+                                                          'return'      ][
+                                                          'd_ret'       ]:
                                 l_execStatus = ad_jobStatus['info'      ][
                                                             'compute'   ][
                                                             'return'    ][
+                                                            'd_ret'     ][
                                                             'l_status']
                                 if l_execStatus[0] == 'started':
                                     d_statusPhase[str_computePhase] = False
