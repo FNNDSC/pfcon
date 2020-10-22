@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# (c) 2017+ Fetal-Neonatal Neuroimaging & Developmental Science Center
+# (c) 2017-2020 Fetal-Neonatal Neuroimaging & Developmental Science Center
 #                   Boston Children's Hospital
 #
 #                       http://fnndsc.org
@@ -10,19 +10,17 @@
 import sys, os
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '..'))
 
-import  pfcon
+from pfcon.app import create_app
 import  socket
 from    argparse            import RawTextHelpFormatter
 from    argparse            import ArgumentParser
-import signal
-import threading
 
 import pudb
 
 from    pfmisc._colors             import Colors
 
 str_defIP = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-str_version = "2.2.6.4"
+str_version = "3.0.0.0"
 str_desc = Colors.CYAN + """
 
         __
@@ -46,7 +44,7 @@ str_desc = Colors.CYAN + """
     programmatically and CLI-driven) to coordinate data transfers and process control
     to remote pfioh (for data transfer) and pman (for process management).
 
-            (c) 2017+ Fetal-Neonatal Neuroimaging & Developmental Science Center
+            (c) 2017-2020 Fetal-Neonatal Neuroimaging & Developmental Science Center
                             Boston Children's Hospital
 
                                 http://fnndsc.org
@@ -63,7 +61,6 @@ str_desc = Colors.CYAN + """
 """ + Colors.NO_COLOUR
 
 def synopsis(ab_shortOnly = False):
-    scriptName = os.path.basename(sys.argv[0])
     shortSynopsis =  '''
     NAME
 
@@ -78,27 +75,18 @@ def synopsis(ab_shortOnly = False):
                 [--port <port>]                                     \\
                 [--httpProxy <proxyHost>[:<port>]]                  \\
                 [--man <manpage>]                                   \\
-                [--forever]                                         \\
                 [--coordBlockSeconds <secondsBlock>]                \\
                 [--verbosity <level>]                               \\
-                [--configFileLoad <file>]                           \\
-                [--configFileSave <file>]                           \\
-                [--test]                                            \\
-                [--httpResponse]                                    \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--version]                                         \\
-                [--debugToDir <dir>]                                \\
                 [--verbosity <level>]
 
     BRIEF EXAMPLE
 
             pfcon                                                   \\
-                --forever                                           \\
                 --port 5005                                         \\
-                --httpResponse                                      \\
                 --verbosity 1                                       \\
-                --debugToDir /tmp                                   \\
                 --ip %s
 
     ''' % str_defIP
@@ -132,22 +120,10 @@ def synopsis(ab_shortOnly = False):
         [--man <manpage>]
         Internal man page with more detail on specific calls.
 
-        [--forever]
-        Start service and do not terminate.
-
-        [--httpResponse]
-        Send return strings as HTTP formatted replies with content-type html.
-
         [--cordBlockSeconds <blockSeconds>]
         The number of seconds to block/wait internally in the coordination loop.
         This is the time between ``pfioh`` has indicated successful unpack of file
         data and the call to ``pman`` to start processing.
-
-        [--configFileLoad <file>]
-        Load configuration information from the JSON formatted <file>.
-
-        [--configFileSave <file>]
-        Save configuration information to the JSON formatted <file>.
 
         [-x|--desc]
         Provide an overview help page.
@@ -157,13 +133,6 @@ def synopsis(ab_shortOnly = False):
 
         [--version]
         Print internal version number and exit.
-
-        [--debugToDir <dir>]
-        A directory to contain various debugging output -- these are typically
-        JSON object strings capturing internal state. If empty string (default)
-        then no debugging outputs are captured/generated. If specified, then
-        ``pfcon`` will check for dir existence and attempt to create if
-        needed.
 
         [-v|--verbosity <level>]
         Set the verbosity level. "0" typically means no/minimal output. Allows for
@@ -175,11 +144,8 @@ def synopsis(ab_shortOnly = False):
     Start ``pfcon`` in forever mode:
 
             pfcon                                                   \\
-                --forever                                           \\
                 --port 5005                                         \\
-                --httpResponse                                      \\
                 --verbosity 1                                       \\
-                --debugToDir /tmp                                   \\
                 --ip %s
 
     ''' % (str_defIP, str_defIP)
@@ -188,7 +154,7 @@ def synopsis(ab_shortOnly = False):
     else:
         return shortSynopsis + description
 
-parser  = ArgumentParser(description = str_desc, formatter_class = RawTextHelpFormatter)
+parser = ArgumentParser(description=str_desc, formatter_class=RawTextHelpFormatter)
 
 parser.add_argument(
     '--ip',
@@ -226,53 +192,11 @@ parser.add_argument(
     default = ''
 )
 parser.add_argument(
-    '--forever',
-    help    = 'if specified, serve forever, otherwise terminate after single service.',
-    dest    = 'b_forever',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    '--test',
-    help    = 'if specified, perform internal tests',
-    dest    = 'b_test',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    '--httpResponse',
-    help    = 'if specified, return HTTP responses',
-    dest    = 'b_httpResponse',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
     '--coordBlockSeconds',
     help    = 'the number of seconds to block internally in the coordination loop',
     dest    = 'coordBlockSeconds',
     action  = 'store',
     default = 5
-)
-parser.add_argument(
-    '--configFileLoad',
-    help    = 'a file containing configuration information',
-    dest    = 'str_configFileLoad',
-    action  = 'store',
-    default = ''
-)
-parser.add_argument(
-    '--configFileSave',
-    help    = 'a file to store configuration information',
-    dest    = 'str_configFileSave',
-    action  = 'store',
-    default = ''
-)
-parser.add_argument(
-    '--debugToDir',
-    help    = 'a destination directory to contain debugging info',
-    dest    = 'str_debugToDir',
-    action  = 'store',
-    default = ''
 )
 parser.add_argument(
     "-v", "--verbosity",
@@ -311,34 +235,7 @@ if args.b_version:
     sys.exit(1)
 
 # pudb.set_trace()
-server          = pfcon.ThreadedHTTPServer((args.ip, args.port), pfcon.StoreHandler)
-server.setup(args = vars(args), desc = str_desc, ver = str_version)
-
-if args.b_test:
-    handler     = pfcon.StoreHandler(test = True)
-    handler.do_POST(
-        d_msg = {
-            "action": "hello",
-            "meta": {
-                "askAbout":     "sysinfo",
-                "echoBack":     "Hi there!"
-                }
-            }
-    )
-    sys.exit(0)
-
-if args.b_forever and not args.b_test:
-    def exit_gracefully(signum, frame):
-        print("Gracefully shutting down!...")
-        server.shutdown()
-        server.server_close()
-
-    signal.signal(signal.SIGINT, exit_gracefully)
-    signal.signal(signal.SIGTERM, exit_gracefully)
-
-    # Start a thread with the server -- that thread will then start one
-    # more thread for each request
-    server_thread = threading.Thread(target=server.serve_forever)
-    server_thread.start()
-else:
-    server.handle_request()
+config = vars(args)
+config.update({'desc': str_desc, 'ver': str_version})
+app = create_app(config)
+app.run(host=args.ip, port=args.port)

@@ -12,36 +12,23 @@ version: '3.7'
 
 services:
   pfcon_service:
-    image: ${PFCONREPO}/pfcon:dev
+    image: local/pfcon:dev
     volumes:
       - ./pfcon:/home/localuser/pfcon/pfcon
       - ./bin/pfcon:/home/localuser/pfcon/bin/pfcon
+      - ./tests:/home/localuser/pfcon/tests
     ports:
       - "5005:5005"
     depends_on:
-      - swift_service
       - pman_service
       - pfioh_service
+    networks:
+      - remote
     labels:
       name: "pfcon"
       role: "PF controller, part of the CHRIS backend."
-    # command: ["--forever", "--httpResponse", "--verbosity", "1", "--debugToDir", "/tmp", "--httpProxy", "http://proxy.tch.harvard.edu:3128"]
-    command: ["--forever", "--httpResponse", "--verbosity", "1", "--debugToDir", "/tmp"]
-
-  swift_service:
-    image: ${SWIFTREPO}/docker-swift-onlyone
-    init: true
-    volumes:
-      - swift_storage_dev:/srv
-    environment:
-      - SWIFT_USERNAME=chris:chris1234
-      - SWIFT_KEY=testing
-      - SWIFT_DEFAULT_CONTAINER=users
-    ports:
-      - "8080:8080"
-    labels:
-      name: "Swift"
-      role: "Swift object storage service"
+    # command: ["--verbosity", "1", "--httpProxy", "http://proxy.tch.harvard.edu:3128"]
+    command: ["--verbosity", "1"]
 
   pfioh_service:
     # The following is a bit complicated... Basically we need to map a physical dir
@@ -53,6 +40,10 @@ services:
       - ./FS/remote:/hostFS/storeBase
     ports:
       - "5055:5055"
+    networks:
+      remote:
+        aliases:
+          - pfioh.remote
     labels:
       name: "pfioh"
       role: "pfioh service"
@@ -77,9 +68,14 @@ services:
       - ./FS/remote:/hostFS/storeBase
     ports:
       - "5010:5010"
+    networks:
+      remote:
+        aliases:
+          - pman.remote
     labels:
       name: "pman"
       role: "pman service"
 
-volumes:
-  swift_storage_dev:
+
+networks:
+  remote:

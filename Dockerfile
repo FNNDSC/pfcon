@@ -28,7 +28,7 @@ MAINTAINER fnndsc "dev@babymri.org"
 
 # Pass a UID on build command line (see above) to set internal UID
 ARG UID=1001
-ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPROOT="/home/localuser/pfcon"
+ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPLICATION_MODE="production" APPROOT="/home/localuser/pfcon"
 
 RUN apt-get update                                                                              \
   && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils net-tools inetutils-ping   \
@@ -40,7 +40,7 @@ RUN apt-get update                                                              
   && dpkg-reconfigure locales  && pip install --upgrade pip                                     \
   && useradd -u $UID -ms /bin/bash localuser
 
-# Copy source code
+# Copy source code and make localuser the owner
 COPY --chown=localuser ./bin ${APPROOT}/bin
 COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
 COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
@@ -49,8 +49,8 @@ RUN pip3 install ${APPROOT}  \
   && rm -fr ${APPROOT}
 
 # Start as user localuser
-#USER localuser
+USER localuser
 
-WORKDIR "/home/localuser"
+WORKDIR ${APPROOT}
 ENTRYPOINT ["pfcon"]
 EXPOSE 5005

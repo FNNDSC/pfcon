@@ -109,8 +109,6 @@ source ./cparse.sh
 
 declare -i STEP=0
 declare -i b_restart=0
-declare -i b_filePush=0
-declare -i b_dirPush=0
 SWIFTPREFIX="/home/localuser/data"
 JOB=""
 HERE=$(pwd)
@@ -127,11 +125,6 @@ while getopts "r:psia:S:f:D:P:" opt; do
     case $opt in
         r) b_restart=1
            JOB=$OPTARG                          ;;
-        f) b_filePush=1
-           FILEPUSH=$OPTARG                     ;;
-        D) b_dirPush=1
-           DIRPUSH=$OPTARG                      ;;
-        P) SWIFTPREFIX=$OPTARG                  ;;
         p) b_pause=1                            ;;
         s) b_skipIntro=1                        ;;
         i) b_norestartinteractive_chris_dev=1   ;;
@@ -158,7 +151,6 @@ declare -a A_CONTAINER=(
     "fnndsc/pfioh${TAG}^PFIOHREPO"
     "fnndsc/pman${TAG}^PMANREPO"
     "fnndsc/swarm^SWARMREPO"
-    "fnndsc/docker-swift-onlyone^SWIFTREPO"
 )
 
 title -d 1 "Setting global exports..."
@@ -337,30 +329,6 @@ else
         echo "Resuming..."                                              | ./boxes.sh
     fi
     windowBottom
-
-    if (( b_filePush )) ; then
-        title -d 1 "Push file to swift storage"
-        printf "${LightCyan}%40s${LightGreen}%40s${NC}\n"               \
-                "Pushing" $FILEPUSH                                     | ./boxes.sh
-        windowBottom
-        ./swiftCtl.sh -A push -P $SWIFTPREFIX -F $FILEPUSH -V           \
-            >& dc.out > /dev/null
-        echo -en "\033[2A\033[2K"
-        cat dc.out | sed -E 's/(.{80})/\1\n/g'                          | ./boxes.sh ${LightCyan}
-        windowBottom
-    fi
-
-    if (( b_dirPush )) ; then
-        title -d 1 "Push directory to swift storage"
-        printf "${LightCyan}%40s${LightGreen}%40s${NC}\n"               \
-                "Pushing" $DIRPUSH                                      | ./boxes.sh
-        windowBottom
-        ./swiftCtl.sh -A push -P $SWIFTPREFIX -D $DIRPUSH -V            \
-            >& dc.out > /dev/null
-        echo -en "\033[2A\033[2K"
-        cat dc.out | sed -E 's/(.{80})/\1\n/g'                          | ./boxes.sh ${LightCyan}
-        windowBottom
-    fi
 
 
     if (( !  b_norestartinteractive_chris_dev )) ; then

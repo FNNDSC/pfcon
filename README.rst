@@ -1,5 +1,5 @@
 ################
-pfcon  v2.2.6.4
+pfcon  v3.0.0.0
 ################
 
 .. image:: https://badge.fury.io/py/pfcon.svg
@@ -84,13 +84,13 @@ The easiest option however, is to just use the ``fnndsc/pfcon`` dock.
 
 .. code-block:: bash
 
-    docker pull fnndsc/pfcon
+    docker pull fnndsc/pfcon:dev
     
 and then run
 
 .. code-block:: bash
 
-    docker run --name pfcon -v /home:/Users --rm -ti fnndsc/pfcon --forever --httpResponse
+    docker run --name pfcon -p 5005:5005 --rm -ti fnndsc/pfcon:dev
 
 *****
 Usage
@@ -115,22 +115,10 @@ For ``pfcon`` detailed information, see the `pfcon wiki page <https://github.com
         [--man <manpage>]
         Internal man page with more detail on specific calls.
 
-        [--forever]
-        Start service and do not terminate.
-
-        [--httpResponse]
-        Send return strings as HTTP formatted replies with content-type html.
-
         [--cordBlockSeconds <blockSeconds>]
         The number of seconds to block/wait internally in the coordination loop.
         This is the time between ``pfioh`` has indicated successful unpack of file
         data and the call to ``pman`` to start processing.
-
-        [--configFileLoad <file>]
-        Load configuration information from the JSON formatted <file>.
-
-        [--configFileSave <file>]
-        Save configuration information to the JSON formatted <file>.
 
         [-x|--desc]                                     
         Provide an overview help page.
@@ -140,13 +128,6 @@ For ``pfcon`` detailed information, see the `pfcon wiki page <https://github.com
 
         [--version]
         Print internal version number and exit.
-
-        [--debugToDir <dir>]
-        A directory to contain various debugging output -- these are typically
-        JSON object strings capturing internal state. If empty string (default)
-        then no debugging outputs are captured/generated. If specified, then
-        ``pfcon`` will check for dir existence and attempt to create if
-        needed.
 
         [-v|--verbosity <level>]
         Set the verbosity level. "0" typically means no/minimal output. Allows for
@@ -162,11 +143,6 @@ Start ``pfcon`` in forever mode:
 .. code-block:: bash
 
             pfcon                                                   \\
-                --forever                                           \\
                 --port 5005                                         \\
-                --httpResponse                                      \\
                 --verbosity 1                                       \\
-                --debugToDir /tmp                                   \\
                 --ip 127.0.0.1
-
-

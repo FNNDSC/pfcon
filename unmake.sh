@@ -5,32 +5,9 @@ source ./decorate.sh
 declare -i STEP=0
 
 title -d 1 "Destroying pfcon containerized development environment" \
-                    "from ./docker-compose_dev.yml"
-        echo "Do you want to also remove persistent volumes? [y/n]"         | ./boxes.sh
-        windowBottom
-        old_stty_cfg=$(stty -g)
-        stty raw -echo ; REPLY=$(head -c 1) ; stty $old_stty_cfg
-        echo -en "\033[2A\033[2K"
-        # read -p  " " -n 1 -r REPLY
-        if [[ $REPLY =~ ^[Yy]$ ]] ; then
-            printf "Removing persistent volumes...\n"                       | ./boxes.sh ${Yellow}
-            echo "This might take a few minutes... please be patient."      | ./boxes.sh ${Yellow}
-            windowBottom
-            docker-compose -f docker-compose_dev.yml                        \
-                --no-ansi down -v >& dc.out >/dev/null
-            echo -en "\033[2A\033[2K"
-            cat dc.out | ./boxes.sh
-            echo "Removing ./FS tree"                                       | ./boxes.sh
-            rm -fr ./FS
-        else
-            printf "Keeping persistent volumes...\n"                        | ./boxes.sh ${Yellow}
-            echo "This might take a few minutes... please be patient."      | ./boxes.sh ${Yellow}
-            windowBottom
-            docker-compose -f docker-compose_dev.yml                        \
-                --no-ansi down >& dc.out >/dev/null
-            echo -en "\033[2A\033[2K"
-            cat dc.out | ./boxes.sh
-        fi
+                    "from ./docker-compose_dev.yml..."
+    docker-compose -f docker-compose_dev.yml --no-ansi down >& dc.out >/dev/null
+    cat dc.out                                                              | ./boxes.sh
 windowBottom
 
 title -d 1 "Stopping swarm cluster..."
