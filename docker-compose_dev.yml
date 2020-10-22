@@ -12,13 +12,13 @@ version: '3.7'
 
 services:
   pfcon_service:
-    image: local/pfcon:dev
+    image: ${PFCONREPO}/pfcon:dev
     volumes:
       - ./pfcon:/home/localuser/pfcon/pfcon
       - ./bin/pfcon:/home/localuser/pfcon/bin/pfcon
       - ./tests:/home/localuser/pfcon/tests
     ports:
-      - "5005:5005"
+      - "5006:5005"
     depends_on:
       - pman_service
       - pfioh_service
@@ -39,7 +39,7 @@ services:
     volumes:
       - ./FS/remote:/hostFS/storeBase
     ports:
-      - "5055:5055"
+      - "5056:5055"
     networks:
       remote:
         aliases:
@@ -67,7 +67,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./FS/remote:/hostFS/storeBase
     ports:
-      - "5010:5010"
+      - "5011:5010"
     networks:
       remote:
         aliases:
