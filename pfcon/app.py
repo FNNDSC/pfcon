@@ -5,7 +5,7 @@ from flask import Flask
 from flask_restful import Api
 
 from .config import DevConfig, ProdConfig
-from pfcon.resources import JobList
+from pfcon.resources import JobList, Job
 
 
 def create_app(config=None):
@@ -20,7 +20,8 @@ def create_app(config=None):
 
     api = Api(app, prefix='/api/v1/')
 
+    # url mappings
     api.add_resource(JobList, '/')
-    #api.add_resource(Job, '/<string:id>')
+    api.add_resource(Job, '/<string:job_id>/')
 
     return app

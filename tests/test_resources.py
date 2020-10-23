@@ -21,6 +21,5 @@ class TestJobList(ResourceTests):
     Test the JobList resource.
     """
     def test_get(self):
-        response = self.client.get('/')
-        print('response.json:', response.json)
-        self.assertTrue(response.json == {'status': 'API under construction'})
+        response = self.client.get('/api/v1/')
+        self.assertTrue(response.json['status'] == 'API under construction')
