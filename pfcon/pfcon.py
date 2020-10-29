@@ -1869,33 +1869,6 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     def setup(self, **kwargs):
         global G_b_httpResponse
         global Gd_internalvar
-        str_defIP       = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-        str_defIPpman   = str_defIP
-        str_defIPpfioh  = str_defIP
-
-        if 'HOST_IP' in os.environ:
-            str_defIPpman   = os.environ['HOST_IP']
-            str_defIPpfioh  = os.environ['HOST_IP']
-
-        # For old docker-compose
-        if 'PMAN_PORT_5010_TCP_ADDR' in os.environ:
-            str_defIPpman   = os.environ['PMAN_PORT_5010_TCP_ADDR']
-        if 'PFIOH_PORT_5055_TCP_ADDR' in os.environ:
-            str_defIPpfioh  = os.environ['PFIOH_PORT_5055_TCP_ADDR']
-
-        # For newer docker-compose
-        try:
-            pman_service    = socket.gethostbyname('pman_service')
-            if pman_service != "127.0.0.1":
-                str_defIPpman   = pman_service
-        except:
-            pass
-        try:
-            pfioh_service   = socket.gethostbyname('pfioh_service')
-            if pfioh_service != "127.0.0.1":
-                str_defIPpfioh  = pfioh_service
-        except:
-            pass
 
         for k,v in kwargs.items():
             if k == 'args': self.args           = v
@@ -1930,12 +1903,14 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         Gd_tree.initFromDict(Gd_internalvar)
 
+        pfioh_ip, pman_ip = get_service_ips()
+
         self.leaf_process(  where   = '/service/host/data/addr',
                             replace = '%PFIOH_IP',
-                            newVal  = str_defIPpfioh)
+                            newVal  = pfioh_ip)
         self.leaf_process(  where   = '/service/host/compute/addr',
                             replace = '%PMAN_IP',
-                            newVal  = str_defIPpman)
+                            newVal  = pman_ip)
 
         self.dp.qprint(
             Colors.YELLOW + "\n\t\tInternal data tree:",
@@ -1963,3 +1938,58 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             Colors.NO_COLOUR,
             level   = 1,
             syslog  = False)
+
+
+def get_service_ips():
+    str_defIP = get_str_defIp()
+    pman_ip = str_defIP
+    pfioh_ip = str_defIP
+
+    if 'HOST_IP' in os.environ:
+        pman_ip = os.environ['HOST_IP']
+        pfioh_ip = os.environ['HOST_IP']
+
+    # For old docker-compose
+    if 'PMAN_PORT_5010_TCP_ADDR' in os.environ:
+        pman_ip = os.environ['PMAN_PORT_5010_TCP_ADDR']
+    if 'PFIOH_PORT_5055_TCP_ADDR' in os.environ:
+        pfioh_ip = os.environ['PFIOH_PORT_5055_TCP_ADDR']
+
+    # For newer docker-compose
+    try:
+        pman_service = socket.gethostbyname('pman_service')
+        if pman_service != "127.0.0.1":
+            pman_ip = pman_service
+    except:
+        pass
+    try:
+        pfioh_service = socket.gethostbyname('pfioh_service')
+        if pfioh_service != "127.0.0.1":
+            pfioh_ip = pfioh_service
+    except:
+        pass
+
+    return pfioh_ip, pman_ip
+
+
+def get_str_defIp():
+    str_defIP = [
+        l for l in (
+            [
+                ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+                if not ip.startswith("127.")
+            ][:1],
+            [
+                [
+                    (
+                        s.connect(('8.8.8.8', 53)),
+                        s.getsockname()[0],
+                        s.close()
+                    )
+                    for s
+                    in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]
+                ][0][1]
+            ]
+        ) if l
+    ][0][0]
+    return str_defIP
