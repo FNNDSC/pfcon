@@ -138,6 +138,10 @@ Gd_internalvar  = {
 }
 
 Gd_tree         = C_stree()
+PMAN_HOST_NAME_ENVIRONMENT_VARIABLE = 'PMAN_HOST_NAME'
+PMAN_HOST_NAME_DEFAULT = 'pman_service'
+PFIOH_HOST_NAME_ENVIRONMENT_VARIABLE = 'PFIOH_HOST_NAME'
+PFIOH_HOST_NAME_DEFAULT = 'pfioh_service'
 
 
 class StoreHandler(BaseHTTPRequestHandler):
@@ -1956,14 +1960,20 @@ def get_service_ips():
         pfioh_ip = os.environ['PFIOH_PORT_5055_TCP_ADDR']
 
     # For newer docker-compose
+    pman_host_name = os.environ.get(
+        PMAN_HOST_NAME_ENVIRONMENT_VARIABLE, PMAN_HOST_NAME_DEFAULT
+    )
+    pfioh_host_name = os.environ.get(
+        PFIOH_HOST_NAME_ENVIRONMENT_VARIABLE, PFIOH_HOST_NAME_DEFAULT
+    )
     try:
-        pman_service = socket.gethostbyname('pman_service')
+        pman_service = socket.gethostbyname(pman_host_name)
         if pman_service != "127.0.0.1":
             pman_ip = pman_service
     except:
         pass
     try:
-        pfioh_service = socket.gethostbyname('pfioh_service')
+        pfioh_service = socket.gethostbyname(pfioh_host_name)
         if pfioh_service != "127.0.0.1":
             pfioh_ip = pfioh_service
     except:
