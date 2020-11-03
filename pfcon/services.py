@@ -1,9 +1,11 @@
 
 import logging
-import os
+import json
 from abc import ABC, abstractmethod
+import requests
 
 from flask import g, current_app as app
+from werkzeug.utils import secure_filename
 
 
 logger = logging.getLogger(__name__)
@@ -18,15 +20,6 @@ class Service(ABC):
 
         # base url of the service
         self.base_url = base_url
-
-        # local data dir to store zip files before transmitting to the remote
-        self.data_dir = os.path.join(os.path.expanduser("~"), 'data')
-        if not os.path.exists(self.data_dir):
-            try:
-                os.makedirs(self.data_dir)  # create data dir
-            except OSError as e:
-                msg = 'Creation of dir %s failed, detail: %s' % (self.data_dir, str(e))
-                logger.error(msg)
 
     @abstractmethod
     def get(self):
@@ -75,6 +68,37 @@ class PfiohService(Service):
     def get(self):
         super().get()
         print("The enrichment from PfiohService")
+
+    def push_data(self, job_id, d_data, file_obj):
+        fname = secure_filename(file_obj.filename)
+        remote_path = '/hostFS/storeBase/key-%s' % job_id
+        d_msg = {
+            "action": "pushPath",
+            "meta": {
+                "remote": {"path": remote_path},
+                "local": {"path": fname},
+                "transport": {
+                    "mechanism": "compress",
+                    "compress": {
+                        "archive":  "zip",
+                        "unpack": True,
+                        "cleanup":  True
+                    }
+                }
+            }
+        }
+
+        logger.info('sending data to pfioh service at -->%s<--', self.base_url)
+        logger.info('file sent = %s', fname)
+        logger.info('message sent: %s', json.dumps(d_msg, indent=4))
+
+        r = requests.post(self.base_url,
+                          files={'local': file_obj},
+                          data={'d_msg': json.dumps(d_msg), 'filename': fname},
+                          headers={'Mode': 'file'},
+                          timeout=30)
+        logger.info('response from pfioh: %s', r.text)
+        return r.text
 
     @staticmethod
     def get_service_obj():

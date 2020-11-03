@@ -16,7 +16,7 @@ setup(
       url              =   'https://github.com/FNNDSC/pfcon',
       packages         =   find_packages(),
       install_requires =   ['pudb', 'nose', 'pfurl', 'pfmisc', 'Flask', 'Flask_RESTful',
-                            'environs'],
+                            'environs', 'requests'],
       test_suite       =   'nose.collector',
       tests_require    =   ['nose'],
       scripts          =   ['bin/pfcon'],

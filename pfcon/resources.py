@@ -1,15 +1,12 @@
 
 import logging
-import os
 
-from werkzeug.utils import secure_filename
 from flask import request, current_app as app
 from flask_restful import reqparse, abort, Resource
 
 from .services import PmanService, PfiohService
 
 import  pudb
-import  pfurl
 
 
 logger = logging.getLogger(__name__)
@@ -34,12 +31,11 @@ class JobList(Resource):
         d_dataRequestProcessPull    = {}
         d_metaData                  = request.form['meta-data']
         d_metaCompute               = request.form['meta-compute']
+        job_id = request.form['jid']
 
         f = request.files['data_file']
-        fname = secure_filename(f.filename)
-        logger.info('Received file = %s', fname)
         pfioh = PfiohService.get_service_obj()
-        f.save(os.path.join(pfioh.data_dir, fname))
+        pfioh.push_data(job_id, d_metaData, f)
 
         return {
             'pushData':             d_dataRequestProcessPush,
