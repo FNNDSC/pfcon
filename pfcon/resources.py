@@ -1,18 +1,19 @@
 
 import logging
+import json
 
 from flask import request, current_app as app
 from flask_restful import reqparse, abort, Resource
 
 from .services import PmanService, PfiohService
 
-import  pudb
+import pudb
 
 
 logger = logging.getLogger(__name__)
 
 parser = reqparse.RequestParser()
-parser.add_argument('cmd')
+parser.add_argument('jid')
 
 
 class JobList(Resource):
@@ -26,20 +27,25 @@ class JobList(Resource):
         }
 
     def post(self):
-        d_dataRequestProcessPush    = {}
-        d_computeRequestProcess     = {}
+        d_compute_response = {}
         d_dataRequestProcessPull    = {}
-        d_metaData                  = request.form['meta-data']
-        d_metaCompute               = request.form['meta-compute']
-        job_id = request.form['jid']
-
+        msg = request.form['msg']
+        d_msg = json.loads(msg)
+        d_meta_data = d_msg['meta-data']
+        d_meta_compute  = d_msg['meta-compute']
+        job_id = d_msg['jid']
         f = request.files['data_file']
         pfioh = PfiohService.get_service_obj()
-        pfioh.push_data(job_id, d_metaData, f)
+        d_data_push_response = pfioh.push_data(job_id, f)
+        if d_data_push_response['status']:
+            pman = PmanService.get_service_obj()
+            data_share_dir = d_data_push_response['remoteServer']['postop']['shareDir']
+            d_compute_response = pman.compute(job_id, d_meta_compute, data_share_dir)
+
 
         return {
-            'pushData':             d_dataRequestProcessPush,
-            'compute':              d_computeRequestProcess,
+            'pushData':             d_data_push_response,
+            'compute':              d_compute_response,
             'pullData':             d_dataRequestProcessPull,
             'd_jobStatus':          {},
             'd_jobStatusSummary':   {}

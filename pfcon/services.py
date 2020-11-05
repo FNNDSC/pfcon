@@ -3,6 +3,7 @@ import logging
 import json
 from abc import ABC, abstractmethod
 import requests
+from requests.exceptions import Timeout, RequestException
 
 from flask import g, current_app as app
 from werkzeug.utils import secure_filename
@@ -54,6 +55,28 @@ class PmanService(Service):
     def delete_job(self, job_id):
         del self.JOBS[job_id]
 
+    def compute(self, job_id, d_meta_compute, data_share_dir):
+        d_msg = {
+            "action": "run",
+            "meta": d_meta_compute
+        }
+        d_msg['meta']['container']['manager']['env']['shareDir'] = data_share_dir
+        logger.info('sending cmd to pman service at -->%s<--', self.base_url)
+        logger.info('message sent: %s', json.dumps(d_msg, indent=4))
+
+        try:
+            r = requests.post(self.base_url,
+                              data={'payload': json.dumps(d_msg)},
+                              timeout=30)
+        except (Timeout, RequestException) as e:
+            logging.error('fatal error in talking to pman service, detail: %s' % str(e))
+            return {"status": False,  "remoteServer": {}}
+
+        d_response = r.json()
+        logger.info('response from pman: %s', json.dumps(d_response, indent=4))
+        return {"status": True, "remoteServer": d_response}
+
+
     @staticmethod
     def get_service_obj():
         if 'pman' not in g:
@@ -69,14 +92,20 @@ class PfiohService(Service):
         super().get()
         print("The enrichment from PfiohService")
 
-    def push_data(self, job_id, d_data, file_obj):
+    def push_data(self, job_id, file_obj):
+        """
+        Push zip data file to pfioh.
+        """
         fname = secure_filename(file_obj.filename)
-        remote_path = '/hostFS/storeBase/key-%s' % job_id
         d_msg = {
             "action": "pushPath",
             "meta": {
-                "remote": {"path": remote_path},
+                "remote": {"key": job_id},
                 "local": {"path": fname},
+                "specialHandling": {
+                    "op": "plugin",
+                    "cleanup": True
+                },
                 "transport": {
                     "mechanism": "compress",
                     "compress": {
@@ -87,18 +116,22 @@ class PfiohService(Service):
                 }
             }
         }
-
         logger.info('sending data to pfioh service at -->%s<--', self.base_url)
-        logger.info('file sent = %s', fname)
         logger.info('message sent: %s', json.dumps(d_msg, indent=4))
 
-        r = requests.post(self.base_url,
-                          files={'local': file_obj},
-                          data={'d_msg': json.dumps(d_msg), 'filename': fname},
-                          headers={'Mode': 'file'},
-                          timeout=30)
-        logger.info('response from pfioh: %s', r.text)
-        return r.text
+        try:
+            r = requests.post(self.base_url,
+                              files={'local': file_obj},
+                              data={'d_msg': json.dumps(d_msg), 'filename': fname},
+                              headers={'Mode': 'file'},
+                              timeout=30)
+        except (Timeout, RequestException) as e:
+            logging.error('fatal error in talking to pfioh service, detail: %s' % str(e))
+            return {"status": False,  "remoteServer": {}}
+
+        d_response = r.json()
+        logger.info('response from pfioh: %s', json.dumps(d_response, indent=4))
+        return {"status": True, "remoteServer": d_response}
 
     @staticmethod
     def get_service_obj():
