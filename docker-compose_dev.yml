@@ -35,7 +35,7 @@ services:
     # in the HOST to the key store in pfioh. The keystore is specified by the
     # --storeBase flag.
     image: ${PFIOHREPO}/pfioh${TAG}
-    command: ["--forever", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
+    command: ["--forever", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
     volumes:
       - ./FS/remote:/hostFS/storeBase
     ports:
