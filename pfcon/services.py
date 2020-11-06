@@ -64,9 +64,14 @@ class PmanService(Service):
         logger.info('sending cmd to pman service at -->%s<--', self.base_url)
         logger.info('message sent: %s', json.dumps(d_msg, indent=4))
 
+        headers = {
+            'Mode': 'control',
+            'Authorization': 'bearer password'
+        }
         try:
             r = requests.post(self.base_url,
-                              data={'payload': json.dumps(d_msg)},
+                              headers=headers,
+                              data=json.dumps({'payload': d_msg}),
                               timeout=30)
         except (Timeout, RequestException) as e:
             logging.error('fatal error in talking to pman service, detail: %s' % str(e))
