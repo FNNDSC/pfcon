@@ -1,6 +1,7 @@
 
 import logging
 import json
+import urllib.parse
 from abc import ABC, abstractmethod
 import requests
 from requests.exceptions import Timeout, RequestException
@@ -75,7 +76,7 @@ class PmanService(Service):
                               timeout=30)
         except (Timeout, RequestException) as e:
             logging.error('fatal error in talking to pman service, detail: %s' % str(e))
-            return {"status": False,  "remoteServer": {}}
+            return {"status": False}
 
         d_response = r.json()
         logger.info('response from pman: %s', json.dumps(d_response, indent=4))
@@ -121,7 +122,7 @@ class PfiohService(Service):
                 }
             }
         }
-        logger.info('sending data to pfioh service at -->%s<--', self.base_url)
+        logger.info('sending PUSH data request to pfioh at -->%s<--', self.base_url)
         logger.info('message sent: %s', json.dumps(d_msg, indent=4))
 
         try:
@@ -132,11 +133,50 @@ class PfiohService(Service):
                               timeout=30)
         except (Timeout, RequestException) as e:
             logging.error('fatal error in talking to pfioh service, detail: %s' % str(e))
-            return {"status": False,  "remoteServer": {}}
+            return {"status": False}
 
         d_response = r.json()
         logger.info('response from pfioh: %s', json.dumps(d_response, indent=4))
         return {"status": True, "remoteServer": d_response}
+
+    def pull_data(self, job_id):
+        """
+        Pull zip data file from pfioh.
+        """
+        d_msg = {
+            "action": "pullPath",
+            "meta": {
+                "remote": {"key": job_id},
+                "local": {
+                    "path": "/tmp/sbin/%s" % job_id,
+                    "createDir": True
+                },
+                "specialHandling": {
+                    "op": "plugin",
+                    "cleanup": True
+                },
+                "transport": {
+                    "mechanism": "compress",
+                    "compress": {
+                        "archive":  "zip",
+                        "unpack": True,
+                        "cleanup":  True
+                    }
+                }
+            }
+        }
+        query = urllib.parse.urlencode(d_msg)
+
+        logger.info('sending PULL data request to pfioh at -->%s<--', self.base_url)
+        logger.info('message query sent: %s', query)
+
+        try:
+            r = requests.get(self.base_url + '?' + query, timeout=30)
+        except (Timeout, RequestException) as e:
+            logging.error('fatal error in talking to pfioh service, detail: %s' % str(e))
+            return {"status": False}
+
+        return {"status": True, "remoteServer": r.content}
 
     @staticmethod
     def get_service_obj():

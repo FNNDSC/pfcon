@@ -2,12 +2,10 @@
 import logging
 import json
 
-from flask import request, current_app as app
+from flask import request, Response, current_app as app
 from flask_restful import reqparse, abort, Resource
 
 from .services import PmanService, PfiohService
-
-import pudb
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +26,7 @@ class JobList(Resource):
 
     def post(self):
         d_compute_response = {}
-        d_dataRequestProcessPull    = {}
+        d_data_pull_response    = {}
         msg = request.form['msg']
         d_msg = json.loads(msg)
         d_meta_data = d_msg['meta-data']
@@ -42,11 +40,9 @@ class JobList(Resource):
             data_share_dir = d_data_push_response['remoteServer']['postop']['shareDir']
             d_compute_response = pman.compute(job_id, d_meta_compute, data_share_dir)
 
-
         return {
             'pushData':             d_data_push_response,
             'compute':              d_compute_response,
-            'pullData':             d_dataRequestProcessPull,
             'd_jobStatus':          {},
             'd_jobStatusSummary':   {}
         }
@@ -71,3 +67,17 @@ class Job(Resource):
         except KeyError:
             abort(404, message="Job {} doesn't exist".format(job_id))
         return '', 204
+
+
+class JobFile(Resource):
+    """
+    Resource representing a job's data file.
+    """
+    def get(self, job_id):
+        pfioh = PfiohService.get_service_obj()
+        d_data_pull_response = pfioh.pull_data(job_id)
+        #return Response(d_data_pull_response['remoteServer'])
+        return Response(
+            d_data_pull_response['remoteServer'],
+            mimetype='application/zip'
+        )
