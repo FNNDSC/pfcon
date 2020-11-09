@@ -422,7 +422,7 @@ class StoreHandler(BaseHTTPRequestHandler):
             http                        = '%s/%s' % (str_dataServiceAddr, str_dataServiceURL),
             b_quiet                     = False,
             b_raw                       = True,
-            b_httpResponseBodyParse     = True,
+            b_httpResponseBodyParse     = False,
             jsonwrapper                 = '',
             authToken                   = str_token,
             httpProxy                   = Gd_tree.cat('/self/httpProxy/httpSpec')
