@@ -21,7 +21,6 @@ class JobList(Resource):
     def get(self):
         return {
             'server_version': app.config.get('ver'),
-            'status': 'API under construction',
         }
 
     def post(self):
@@ -38,7 +37,7 @@ class JobList(Resource):
         if d_data_push_response['status']:
             pman = PmanService.get_service_obj()
             data_share_dir = d_data_push_response['remoteServer']['postop']['shareDir']
-            d_compute_response = pman.compute(job_id, d_meta_compute, data_share_dir)
+            d_compute_response = pman.run_job(job_id, d_meta_compute, data_share_dir)
 
         return {
             'pushData':             d_data_push_response,
@@ -56,7 +55,7 @@ class Job(Resource):
         pman = PmanService.get_service_obj()
         try:
             job = pman.get_job(job_id)
-        except KeyError:
+        except Exception:
             abort(404, message="Job {} doesn't exist".format(job_id))
         return job
 
@@ -64,7 +63,7 @@ class Job(Resource):
         pman = PmanService.get_service_obj()
         try:
             pman.delete_job(job_id)
-        except KeyError:
+        except Exception:
             abort(404, message="Job {} doesn't exist".format(job_id))
         return '', 204
 
