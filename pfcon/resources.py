@@ -75,7 +75,6 @@ class JobFile(Resource):
     def get(self, job_id):
         pfioh = PfiohService.get_service_obj()
         d_data_pull_response = pfioh.pull_data(job_id)
-        #return Response(d_data_pull_response['remoteServer'])
         return Response(
             d_data_pull_response['remoteServer'],
             mimetype='application/zip'

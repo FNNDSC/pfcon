@@ -23,6 +23,6 @@ def create_app(config=None):
     # url mappings
     api.add_resource(JobList, '/')
     api.add_resource(Job, '/<string:job_id>/')
-    api.add_resource(JobFile, '/<string:job_id>/file')
+    api.add_resource(JobFile, '/<string:job_id>/file/')
 
     return app
