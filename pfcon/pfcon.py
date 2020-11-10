@@ -429,19 +429,9 @@ class StoreHandler(BaseHTTPRequestHandler):
         )
         self.dp.qprint("Calling remote data service...",   comms = 'rx')
         # pudb.set_trace()
-        d_dataComs          = dataComs()
-        str_response        = d_dataComs.split('\n')
-        str_responseStatus  = str_response[0]
-        if len(str_response) > 1 and '200 OK' == str_responseStatus:
-            # Unusual case caused by pfurl returning a response string,
-            # during parsing of hello response, starting with "200 OK\n"
-            # Isolates json payload from request headers
-            d_dataComs = str_response[-1].replace('\\', '')
-            if d_dataComs[-1] == '\"':
-                d_dataComs = d_dataComs[:-1]
-
-        d_dataResponse                          = json.loads(d_dataComs)
-        d_ret['%s-data' % str_remoteService]    = d_dataResponse
+        d_dataComs = dataComs()
+        d_dataResponse = json.loads(d_dataComs)
+        d_ret['%s-data' % str_remoteService] = d_dataResponse
 
         d_return = {
             'd_ret':        d_ret,
