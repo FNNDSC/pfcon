@@ -1968,13 +1968,13 @@ def get_service_ips():
     )
     try:
         pman_service = socket.gethostbyname(pman_host_name)
-        if pman_service != "127.0.0.1":
+        if pman_service != '127.0.0.1':
             pman_ip = pman_service
     except:
         pass
     try:
         pfioh_service = socket.gethostbyname(pfioh_host_name)
-        if pfioh_service != "127.0.0.1":
+        if pfioh_service != '127.0.0.1':
             pfioh_ip = pfioh_service
     except:
         pass
