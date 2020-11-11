@@ -1944,6 +1944,42 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             syslog  = False)
 
 
+def get_pman_ip():
+    default_ip = get_default_ip()
+    pman_ip = default_ip
+
+    if 'HOST_IP' in os.environ:
+        pman_ip = os.environ['HOST_IP']
+
+    # For old docker-compose
+    if 'PMAN_PORT_5010_TCP_ADDR' in os.environ:
+        pman_ip = os.environ['PMAN_PORT_5010_TCP_ADDR']
+
+    pman_ip = read_ip_by_host_name_environment_variable(
+        PMAN_HOST_NAME_ENVIRONMENT_VARIABLE, default=PMAN_HOST_NAME_DEFAULT) \
+        or read_from_environment(PMAN_IP_ENVIRONMENT_VARIABLE) \
+        or read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE) \
+        or read_local_host_ip()
+
+    return pman_ip
+
+
+def read_ip_by_host_name_environment_variable(
+        host_name_environment_variable, default_host_name=''):
+    '''For newer docker-compose'''
+
+    pman_host_name = os.environ.get(
+        host_name_environment_variable, default_host_name
+    )
+    try:
+        pman_service = socket.gethostbyname(pman_host_name)
+        if pman_service != '127.0.0.1':
+            pman_ip = pman_service
+    except:
+        pass
+
+
+
 def get_service_ips():
     default_ip = get_default_ip()
     pman_ip = default_ip
