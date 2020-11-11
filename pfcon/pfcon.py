@@ -1945,9 +1945,9 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
 
 def get_service_ips():
-    str_defIP = get_str_defIp()
-    pman_ip = str_defIP
-    pfioh_ip = str_defIP
+    default_ip = get_default_ip()
+    pman_ip = default_ip
+    pfioh_ip = default_ip
 
     if 'HOST_IP' in os.environ:
         pman_ip = os.environ['HOST_IP']
@@ -1982,8 +1982,8 @@ def get_service_ips():
     return pfioh_ip, pman_ip
 
 
-def get_str_defIp():
-    str_defIP = [
+def get_default_ip():
+    default_ip = [
         l for l in (
             [
                 ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
@@ -2002,4 +2002,4 @@ def get_str_defIp():
             ]
         ) if l
     ][0][0]
-    return str_defIP
+    return default_ip
