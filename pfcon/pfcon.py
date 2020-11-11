@@ -2018,7 +2018,7 @@ def get_service_ips():
     return pfioh_ip, pman_ip
 
 
-def get_default_ip():
+def read_local_host_ip():
     default_ip = [
         l for l in (
             [
@@ -2038,4 +2038,4 @@ def get_default_ip():
             ]
         ) if l
     ][0][0]
-    return default_ip
+    return local_host_ip
