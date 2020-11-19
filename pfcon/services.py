@@ -40,13 +40,46 @@ class PmanService(Service):
     """
     Class for the pman service.
     """
-    def run_job(self, job_id, d_meta_compute, data_share_dir):
+    def run_job(self, job_id, compute_data, data_share_dir):
         """
         Run process job on the compute environment ('run' action on pman).
         """
         payload = {
-            "action": "run",
-            "meta": d_meta_compute
+            'action': 'run',
+            'meta': {
+                    'cmd': compute_data['cmd'],
+                    'threaded': True,
+                    'auid': compute_data['auid'],
+                    'jid': job_id,
+                    'number_of_workers': compute_data['number_of_workers'],
+                    'cpu_limit': compute_data['cpu_limit'],
+                    'memory_limit': compute_data['memory_limit'],
+                    'gpu_limit': compute_data['gpu_limit'],
+                    'container':
+                        {
+                            'target':
+                                {
+                                    'image': compute_data['image'],
+                                    'cmdParse': False,
+                                    'selfexec': compute_data['selfexec'],
+                                    'selfpath': compute_data['selfpath'],
+                                    'execshell': compute_data['execshell']
+                                },
+                            'manager':
+                                {
+                                    'image': 'fnndsc/swarm',
+                                    'app': "swarm.py",
+                                    'env':
+                                        {
+                                            'meta-store': 'key',
+                                            'serviceType': 'docker',
+                                            'shareDir': '%shareDir',
+                                            'serviceName': job_id
+                                        }
+                                }
+                        },
+                    'service': compute_data['service']
+                }
         }
         payload['meta']['container']['manager']['env']['shareDir'] = data_share_dir
         return self.do_POST(payload)
@@ -56,10 +89,10 @@ class PmanService(Service):
         Get job info from the compute environment ('status' action on pman).
         """
         payload = {
-            "action": "status",
-            "meta": {
-                "key": "jid",
-                "value": job_id
+            'action': 'status',
+            'meta': {
+                'key': 'jid',
+                'value': job_id
             }
         }
         return self.do_POST(payload)
@@ -79,7 +112,7 @@ class PmanService(Service):
         post_data = json.dumps({'payload': payload})
         # form data must be provided already urlencoded:
         # post_data = urlencode({'payload': json.dumps(d_msg)})
-        # but pman (wrongly) does not comply with this
+        # but pman (wrongly) does not comply with this.
         # the next sets request method to POST,
         # Content-Type header to application/x-www-form-urlencoded
         # and data to send in request body.
@@ -116,20 +149,20 @@ class PfiohService(Service):
         """
         fname = secure_filename(file_obj.filename)
         payload = {
-            "action": "pushPath",
-            "meta": {
-                "remote": {"key": job_id},
-                "local": {"path": fname},  # deprecated field
-                "specialHandling": {
-                    "op": "plugin",
-                    "cleanup": True
+            'action': 'pushPath',
+            'meta': {
+                'remote': {'key': job_id},
+                'local': {'path': fname},  # deprecated field
+                'specialHandling': {
+                    'op': 'plugin',
+                    'cleanup': True
                 },
-                "transport": {
-                    "mechanism": "compress",
-                    "compress": {
-                        "archive":  "zip",
-                        "unpack": True,
-                        "cleanup":  True
+                'transport': {
+                    'mechanism': 'compress',
+                    'compress': {
+                        'archive':  'zip',
+                        'unpack': True,
+                        'cleanup':  True
                     }
                 }
             }
@@ -155,23 +188,23 @@ class PfiohService(Service):
         Pull zip data file from pfioh ('pullPath' action on pfioh).
         """
         d_query = {
-            "action": "pullPath",
-            "meta": {
-                "remote": {"key": job_id},
-                "local": {
-                    "path": job_id,  # deprecated field
-                    "createDir": True
+            'action': 'pullPath',
+            'meta': {
+                'remote': {'key': job_id},
+                'local': {
+                    'path': job_id,  # deprecated field
+                    'createDir': True
                 },
-                "specialHandling": {
-                    "op": "plugin",
-                    "cleanup": True
+                'specialHandling': {
+                    'op': "plugin",
+                    'cleanup': True
                 },
-                "transport": {
-                    "mechanism": "compress",
-                    "compress": {
-                        "archive":  "zip",
-                        "unpack": True,
-                        "cleanup":  True
+                'transport': {
+                    'mechanism': 'compress',
+                    'compress': {
+                        'archive':  'zip',
+                        'unpack': True,
+                        'cleanup':  True
                     }
                 }
             }

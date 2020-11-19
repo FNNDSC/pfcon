@@ -24,13 +24,20 @@ class JobList(Resource):
         }
 
     def post(self):
-        d_compute_response = {}
-        d_data_pull_response    = {}
-        msg = request.form['msg']
-        d_msg = json.loads(msg)
-        d_meta_data = d_msg['meta-data']
-        d_meta_compute  = d_msg['meta-compute']
-        job_id = d_msg['jid']
+        job_id = request.form['jid']
+        compute_data = {
+            'cmd': request.form.get('cmd'),
+            'auid': request.form.get('auid'),
+            'number_of_workers': request.form.get('number_of_workers'),
+            'cpu_limit': request.form.get('cpu_limit'),
+            'memory_limit': request.form.get('memory_limit'),
+            'gpu_limit': request.form.get('gpu_limit'),
+            'image': request.form.get('image'),
+            'selfexec': request.form.get('selfexec'),
+            'selfpath': request.form.get('selfpath'),
+            'execshell': request.form.get('execshell'),
+            'service': request.form.get('service'),
+        }
         f = request.files['data_file']
         pfioh = PfiohService.get_service_obj()
         try:
@@ -40,10 +47,9 @@ class JobList(Resource):
         pman = PmanService.get_service_obj()
         data_share_dir = d_data_push_response['postop']['shareDir']
         try:
-            d_compute_response = pman.run_job(job_id, d_meta_compute, data_share_dir)
+            d_compute_response = pman.run_job(job_id, compute_data, data_share_dir)
         except ServiceException as e:
             abort(400, message=str(e))
-
         return {
             'pushData':             d_data_push_response,
             'compute':              d_compute_response,
