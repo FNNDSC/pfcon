@@ -35,7 +35,6 @@ class JobList(Resource):
             'selfexec': request.form.get('selfexec'),
             'selfpath': request.form.get('selfpath'),
             'execshell': request.form.get('execshell'),
-            'service': request.form.get('service'),
         }
         f = request.files['data_file']
         pfioh = PfiohService.get_service_obj()
@@ -50,10 +49,8 @@ class JobList(Resource):
         except ServiceException as e:
             abort(503, message=str(e))  # 503 Service Unavailable (pman)
         return {
-            'pushData':             d_data_push_response,
-            'compute':              d_compute_response,
-            'jobOperation':          {},
-            'jobOperationSummary':   {}
+            'pushData': d_data_push_response,
+            'compute': d_compute_response
         }
 
 
@@ -64,12 +61,14 @@ class Job(Resource):
     def get(self, job_id):
         pman = PmanService.get_service_obj()
         try:
-            response = pman.get_job(job_id)
+            d_compute_response = pman.get_job(job_id)
         except ServiceException as e:
             abort(503, message=str(e))  # 503 Service Unavailable (pman)
-        if not response['status']:
+        if not d_compute_response['status']:
             abort(404, message="Not found.")  # 404 Not Found (job not found)
-        return response
+        return {
+            'compute': d_compute_response
+        }
 
 
 class JobFile(Resource):

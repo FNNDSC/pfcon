@@ -77,8 +77,7 @@ class PmanService(Service):
                                             'serviceName': job_id
                                         }
                                 }
-                        },
-                    'service': compute_data['service']
+                        }
                 }
         }
         payload['meta']['container']['manager']['env']['shareDir'] = data_share_dir
