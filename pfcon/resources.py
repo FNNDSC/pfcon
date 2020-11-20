@@ -1,6 +1,5 @@
 
 import logging
-import json
 
 from flask import request, Response, current_app as app
 from flask_restful import reqparse, abort, Resource
@@ -43,18 +42,18 @@ class JobList(Resource):
         try:
             d_data_push_response = pfioh.push_data(job_id, f)
         except ServiceException as e:
-            abort(400, message=str(e))
+            abort(503, message=str(e))  # 503 Service Unavailable (pfioh)
         pman = PmanService.get_service_obj()
         data_share_dir = d_data_push_response['postop']['shareDir']
         try:
             d_compute_response = pman.run_job(job_id, compute_data, data_share_dir)
         except ServiceException as e:
-            abort(400, message=str(e))
+            abort(503, message=str(e))  # 503 Service Unavailable (pman)
         return {
             'pushData':             d_data_push_response,
             'compute':              d_compute_response,
-            'd_jobStatus':          {},
-            'd_jobStatusSummary':   {}
+            'jobOperation':          {},
+            'jobOperationSummary':   {}
         }
 
 
@@ -65,18 +64,12 @@ class Job(Resource):
     def get(self, job_id):
         pman = PmanService.get_service_obj()
         try:
-            job = pman.get_job(job_id)
+            response = pman.get_job(job_id)
         except ServiceException as e:
-            abort(404, message=str(e))
-        return job
-
-    def delete(self, job_id):
-        pman = PmanService.get_service_obj()
-        try:
-            pman.delete_job(job_id)
-        except ServiceException as e:
-            abort(404, message=str(e))
-        return '', 204
+            abort(503, message=str(e))  # 503 Service Unavailable (pman)
+        if not response['status']:
+            abort(404, message="Not found.")  # 404 Not Found (job not found)
+        return response
 
 
 class JobFile(Resource):
@@ -88,7 +81,7 @@ class JobFile(Resource):
         try:
             data_pull_content = pfioh.pull_data(job_id)
         except ServiceException as e:
-            abort(404, message=str(e))
+            abort(404, message=str(e))  # 404 Not Found (job file not found)
         return Response(
             data_pull_content,
             mimetype='application/zip'
