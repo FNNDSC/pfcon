@@ -1957,7 +1957,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             or read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
             or read_local_host_ip()
         )
-        self.dp.print(f'Found pman IP address: {pman_ip}.')
+        self.dp.qprint(f'Found pman IP address: {pman_ip}.')
         return pman_ip
 
     def get_pfioh_ip(self):
@@ -1969,7 +1969,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             or read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
             or read_local_host_ip()
         )
-        self.dp.print(f'Found pfioh IP address: {pfioh_ip}.')
+        self.dp.qprint(f'Found pfioh IP address: {pfioh_ip}.')
         return pfioh_ip
 
     def read_ip_by_host_name_environment_variable(
