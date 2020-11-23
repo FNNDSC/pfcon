@@ -23,7 +23,8 @@
 #   docker run -ti --rm -e HOST_IP=$(ip route | grep -v docker | awk '{if(NF==11) print $9}') --entrypoint /bin/bash local/pfcon
 #
 
-FROM fnndsc/ubuntu-python3:latest AS build
+#FROM fnndsc/ubuntu-python3:latest AS build
+FROM python:3.8.6-buster AS build
   MAINTAINER fnndsc "dev@babymri.org"
 
   # Pass a UID on build command line (see above) to set internal UID
@@ -31,8 +32,8 @@ FROM fnndsc/ubuntu-python3:latest AS build
   ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPROOT="/home/localuser/pfcon"
 
   RUN apt-get update                                                                              \
-    && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils net-tools inetutils-ping   \
-    && apt-get install -y locales                                                                 \
+    && apt-get install -y --no-install-recommends libssl-dev libcurl4-openssl-dev bsdmainutils    \
+       net-tools inetutils-ping locales                                                           \
     && export LANGUAGE=en_US.UTF-8                                                                \
     && export LANG=en_US.UTF-8                                                                    \
     && export LC_ALL=en_US.UTF-8                                                                  \
@@ -41,9 +42,11 @@ FROM fnndsc/ubuntu-python3:latest AS build
     && useradd -u $UID -ms /bin/bash localuser
 
   # Copy source code
+  COPY --chown=localuser ./setup.cfg ./setup.py README.rst ./requirements.txt ${APPROOT}/
+  RUN pip3 install -r ${APPROOT}/requirements.txt
+
   COPY --chown=localuser ./bin ${APPROOT}/bin
   COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
-  COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
 
   RUN pip3 install ${APPROOT}  
 
