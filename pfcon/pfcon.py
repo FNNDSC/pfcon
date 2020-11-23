@@ -1965,8 +1965,8 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             self.read_ip_by_host_name_environment_variable(
                 PMAN_HOST_NAME_ENVIRONMENT_VARIABLE,
                 default_host_name=PMAN_HOST_NAME_DEFAULT)
-            or read_from_environment(PMAN_IP_ENVIRONMENT_VARIABLE)
-            or read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
+            or self.read_from_environment(PMAN_IP_ENVIRONMENT_VARIABLE)
+            or self.read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
             or read_local_host_ip()
         )
         self.dp.qprint(f'Found pman IP address: {pman_ip}.')
@@ -1979,10 +1979,13 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         host_name = os.environ.get(
             host_name_environment_variable, default_host_name
         )
+        self.dp.qprint(f'Reading IP address of {host_name}.')
         try:
             ip_address = socket.gethostbyname(host_name)
         except Exception as exception:
-            self.dp.qprint(f'Could not obtain IP address ({exception}).')
+            self.dp.qprint(
+                f'Could not obtain IP address of host {host_name} ({exception}).'
+            )
             return None
 
         if ip_address == '127.0.0.1':
@@ -1990,8 +1993,13 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         return ip_address
 
 
-def read_from_environment(environment_variable, default=None):
-    return os.environ.get(environment_variable, default)
+    def read_from_environment(self, environment_variable, default=None):
+        value = os.environ.get(environment_variable, default)
+        self.dp.qprint(
+            f'Obtained {value} from environment variable {environment_variable}'
+            f' (default: {default})'
+        )
+        return value
 
 
 def read_local_host_ip():
