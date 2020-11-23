@@ -1,0 +1,8 @@
+pycurl == 7.43.0.6
+pyzmq == 20.0.0
+webob == 1.8.6
+pudb == 2019.2
+psutil == 5.7.3
+pfurl == 2.3.0.1
+pfmisc == 2.0.2
+python-swiftclient == 3.10.1
