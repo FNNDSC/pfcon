@@ -23,34 +23,37 @@
 #   docker run -ti --rm -e HOST_IP=$(ip route | grep -v docker | awk '{if(NF==11) print $9}') --entrypoint /bin/bash local/pfcon
 #
 
-FROM fnndsc/ubuntu-python3:latest
-MAINTAINER fnndsc "dev@babymri.org"
+FROM fnndsc/ubuntu-python3:latest AS build
+  MAINTAINER fnndsc "dev@babymri.org"
 
-# Pass a UID on build command line (see above) to set internal UID
-ARG UID=1001
-ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPROOT="/home/localuser/pfcon"
+  # Pass a UID on build command line (see above) to set internal UID
+  ARG UID=1001
+  ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPROOT="/home/localuser/pfcon"
 
-RUN apt-get update                                                                              \
-  && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils net-tools inetutils-ping   \
-  && apt-get install -y locales                                                                 \
-  && export LANGUAGE=en_US.UTF-8                                                                \
-  && export LANG=en_US.UTF-8                                                                    \
-  && export LC_ALL=en_US.UTF-8                                                                  \
-  && locale-gen en_US.UTF-8                                                                     \
-  && dpkg-reconfigure locales  && pip install --upgrade pip                                     \
-  && useradd -u $UID -ms /bin/bash localuser
+  RUN apt-get update                                                                              \
+    && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils net-tools inetutils-ping   \
+    && apt-get install -y locales                                                                 \
+    && export LANGUAGE=en_US.UTF-8                                                                \
+    && export LANG=en_US.UTF-8                                                                    \
+    && export LC_ALL=en_US.UTF-8                                                                  \
+    && locale-gen en_US.UTF-8                                                                     \
+    && dpkg-reconfigure locales  && pip install --upgrade pip                                     \
+    && useradd -u $UID -ms /bin/bash localuser
 
-# Copy source code
-COPY --chown=localuser ./bin ${APPROOT}/bin
-COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
-COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
+  # Copy source code
+  COPY --chown=localuser ./bin ${APPROOT}/bin
+  COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
+  COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
 
-RUN pip3 install ${APPROOT}  \
-  && rm -fr ${APPROOT}
+  RUN pip3 install ${APPROOT}  
 
-# Start as user localuser
-#USER localuser
+FROM build as tests
 
-WORKDIR "/home/localuser"
-ENTRYPOINT ["pfcon"]
-EXPOSE 5005
+  RUN python3 -m unittest ${APPROOT}/pfcon/tests/*.py
+  RUN rm -fr ${APPROOT}
+
+FROM build as runtime
+
+  WORKDIR "/home/localuser"
+  ENTRYPOINT ["pfcon"]
+  EXPOSE 5005
