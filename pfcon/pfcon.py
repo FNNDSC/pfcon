@@ -1948,6 +1948,18 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             level   = 1,
             syslog  = False)
 
+    def get_pfioh_ip(self):
+        pfioh_ip = (
+            self.read_ip_by_host_name_environment_variable(
+                PFIOH_HOST_NAME_ENVIRONMENT_VARIABLE,
+                default_host_name=PFIOH_HOST_NAME_DEFAULT)
+            or self.read_from_environment(PFIOH_IP_ENVIRONMENT_VARIABLE)
+            or self.read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
+            or read_local_host_ip()
+        )
+        self.dp.qprint(f'Found pfioh IP address: {pfioh_ip}.')
+        return pfioh_ip
+
     def get_pman_ip(self):
         pman_ip = (
             self.read_ip_by_host_name_environment_variable(
@@ -1959,18 +1971,6 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         )
         self.dp.qprint(f'Found pman IP address: {pman_ip}.')
         return pman_ip
-
-    def get_pfioh_ip(self):
-        pfioh_ip = (
-            self.read_ip_by_host_name_environment_variable(
-                PFIOH_HOST_NAME_ENVIRONMENT_VARIABLE,
-                default_host_name=PFIOH_HOST_NAME_DEFAULT)
-            or read_from_environment(PFIOH_IP_ENVIRONMENT_VARIABLE)
-            or read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
-            or read_local_host_ip()
-        )
-        self.dp.qprint(f'Found pfioh IP address: {pfioh_ip}.')
-        return pfioh_ip
 
     def read_ip_by_host_name_environment_variable(
             self, host_name_environment_variable, default_host_name=''):
