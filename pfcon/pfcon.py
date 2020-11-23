@@ -1976,11 +1976,11 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             self, host_name_environment_variable, default_host_name=''):
         '''For newer docker-compose'''
 
-        pman_host_name = os.environ.get(
+        host_name = os.environ.get(
             host_name_environment_variable, default_host_name
         )
         try:
-            ip_address = socket.gethostbyname(pman_host_name)
+            ip_address = socket.gethostbyname(host_name)
         except Exception as exception:
             self.dp.qprint(f'Could not obtain IP address ({exception}).')
             return None
