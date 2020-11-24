@@ -48,7 +48,7 @@ FROM python:3.8.6-buster AS build
   COPY --chown=localuser ./bin ${APPROOT}/bin
   COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
 
-  RUN pip3 install ${APPROOT}  
+  RUN pip3 install --no-dependencies ${APPROOT}  
 
 FROM build as tests
 
