@@ -37,7 +37,9 @@ RUN apt-get update                                                              
   && export LANG=en_US.UTF-8                                                                    \
   && export LC_ALL=en_US.UTF-8                                                                  \
   && locale-gen en_US.UTF-8                                                                     \
-  && dpkg-reconfigure locales  && pip install --upgrade pip                                     \
+  && dpkg-reconfigure locales                                                                   \
+  && apt-get install -y apache2 apache2-dev                                                     \
+  && pip install --upgrade pip                                                                  \
   && useradd -u $UID -ms /bin/bash localuser
 
 # Copy source code and make localuser the owner
@@ -45,12 +47,19 @@ COPY --chown=localuser ./bin ${APPROOT}/bin
 COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
 COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
 
-RUN pip3 install ${APPROOT}  \
-  && rm -fr ${APPROOT}
+RUN pip3 install ${APPROOT}
 
 # Start as user localuser
 USER localuser
 
 WORKDIR ${APPROOT}
-ENTRYPOINT ["pfcon"]
+ENTRYPOINT ["mod_wsgi-express"]
 EXPOSE 5005
+
+# Start pfon production server
+CMD ["start-server", "pfcon/wsgi.py", "--host", "0.0.0.0", "--port", "5005", "--processes", "8", "--server-root", "/home/localuser/mod_wsgi-0.0.0.0:5005"]
+#mod_wsgi-express setup-server config/wsgi.py --host 0.0.0.0 --port 5005 --processes 8 --server-name localhost --server-root /home/localuser/mod_wsgi-0.0.0.0:5005
+#to start daemon:
+#/home/localuser/mod_wsgi-0.0.0.0:5005/apachectl start
+#to stop deamon
+#/home/localuser/mod_wsgi-0.0.0.0:5005/apachectl stop

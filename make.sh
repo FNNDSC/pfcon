@@ -147,7 +147,6 @@ fi
 
 declare -a A_CONTAINER=(
     "fnndsc/pfcon:dev^PFCONREPO"
-    "fnndsc/pfurl${TAG}^PFURLREPO"
     "fnndsc/pfioh${TAG}^PFIOHREPO"
     "fnndsc/pman${TAG}^PMANREPO"
     "fnndsc/swarm^SWARMREPO"
@@ -228,14 +227,6 @@ else
                         "${REPO}/$CONTAINER" "$Ver"                     | ./boxes.sh
             fi
         done
-        # Determine the versions of pfurl *inside* pfcon
-        windowBottom
-        CMD="docker run --entrypoint /usr/local/bin/pfurl ${PFCONREPO}/pfcon:dev --version"
-        Ver=$(echo $CMD | sh | grep Version)
-        echo -en "\033[2A\033[2K"
-        printf "${White}%40s${Green}%40s${Yellow}\n"                    \
-                    "pfurl inside ${PFCONREPO}/pfcon:dev" "$Ver"      | ./boxes.sh
-        windowBottom
     fi
 
     title -d 1 "Stopping and restarting the docker swarm... "

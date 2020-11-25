@@ -28,14 +28,14 @@ services:
       name: "pfcon"
       role: "PF controller, part of the CHRIS backend."
     # command: ["--verbosity", "1", "--httpProxy", "http://proxy.tch.harvard.edu:3128"]
-    command: ["--verbosity", "1"]
+    command: ["--ip", "0.0.0.0", "--verbosity", "1"]
 
   pfioh_service:
     # The following is a bit complicated... Basically we need to map a physical dir
     # in the HOST to the key store in pfioh. The keystore is specified by the
     # --storeBase flag.
     image: ${PFIOHREPO}/pfioh${TAG}
-    command: ["--forever", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
+    command: ["--forever", "--ip", "0.0.0.0", "--port", "5055", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
     volumes:
       - ./FS/remote:/hostFS/storeBase
     ports:
@@ -61,8 +61,8 @@ services:
     # full path to the spawned container should be ${STOREBASE} + keyStore!
     environment:
       - STOREBASE
-    image:  ${PMANREPO}/pman${TAG}
-    command: ["--rawmode", "1", "--http", "--port", "5010", "--listeners", "12", "--verbosity", "1"]
+    image: ${PMANREPO}/pman${TAG}
+    command: ["--rawmode", "1", "--ip", "0.0.0.0", "--port", "5010", "--listeners", "12", "--verbosity", "1"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./FS/remote:/hostFS/storeBase

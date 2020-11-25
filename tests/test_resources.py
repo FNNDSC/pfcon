@@ -22,4 +22,4 @@ class TestJobList(ResourceTests):
     """
     def test_get(self):
         response = self.client.get('/api/v1/')
-        self.assertTrue(response.json['status'] == 'API under construction')
+        self.assertTrue('server_version' in response.json)

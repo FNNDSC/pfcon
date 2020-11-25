@@ -8,21 +8,22 @@ from .config import DevConfig, ProdConfig
 from pfcon.resources import JobList, Job, JobFile
 
 
-def create_app(config=None):
+def create_app(config_dict=None):
     app_mode = os.environ.get("APPLICATION_MODE", default="development")
-    app = Flask(__name__)
-
     if app_mode == 'development':
-        app.config.from_object(DevConfig())
+        config_obj = DevConfig()
     else:
-        app.config.from_object(ProdConfig())
-    app.config.update(config or {})
+        config_obj = ProdConfig()
+
+    app = Flask(__name__)
+    app.config.from_object(config_obj)
+    app.config.update(config_dict or {})
 
     api = Api(app, prefix='/api/v1/')
 
     # url mappings
-    api.add_resource(JobList, '/')
-    api.add_resource(Job, '/<string:job_id>/')
-    api.add_resource(JobFile, '/<string:job_id>/file/')
+    api.add_resource(JobList, '/', endpoint="api.joblist")
+    api.add_resource(Job, '/<string:job_id>/', endpoint="api.job")
+    api.add_resource(JobFile, '/<string:job_id>/file/', endpoint="api.jobfile")
 
     return app

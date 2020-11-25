@@ -10,6 +10,7 @@ class Config:
     STATIC_FOLDER = 'static'
     DEBUG = False
     TESTING = False
+    SERVER_VERSION = "3.0.0.0"
 
 
 class DevConfig(Config):
@@ -97,6 +98,11 @@ class ProdConfig(Config):
                 '': {  # root logger
                     'level': 'INFO',
                     'handlers': ['console_simple'],
+                },
+                'pfcon': {  # pfcon package logger
+                    'level': 'INFO',
+                    'handlers': ['file'],
+                    'propagate': False
                 },
             }
         })

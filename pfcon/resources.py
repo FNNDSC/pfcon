@@ -9,8 +9,19 @@ from .services import PmanService, PfiohService, ServiceException
 
 logger = logging.getLogger(__name__)
 
-parser = reqparse.RequestParser()
-parser.add_argument('jid')
+parser = reqparse.RequestParser(bundle_errors=True)
+parser.add_argument('jid', dest='jid', required=True, location='form')
+parser.add_argument('cmd', dest='cmd', required=True, location='form')
+parser.add_argument('auid', dest='auid', required=True, location='form')
+parser.add_argument('number_of_workers', dest='number_of_workers', required=True,
+                    location='form')
+parser.add_argument('cpu_limit', dest='cpu_limit', required=True, location='form')
+parser.add_argument('memory_limit', dest='memory_limit', required=True, location='form')
+parser.add_argument('gpu_limit', dest='gpu_limit', required=True, location='form')
+parser.add_argument('image', dest='image', required=True, location='form')
+parser.add_argument('selfexec', dest='selfexec', required=True, location='form')
+parser.add_argument('selfpath', dest='selfpath', required=True, location='form')
+parser.add_argument('execshell', dest='execshell', required=True, location='form')
 
 
 class JobList(Resource):
@@ -18,23 +29,25 @@ class JobList(Resource):
     Resource representing the list of jobs running on the compute.
     """
     def get(self):
+        logger.info('got GET request')
         return {
-            'server_version': app.config.get('ver'),
+            'server_version': app.config.get('SERVER_VERSION'),
         }
 
     def post(self):
-        job_id = request.form['jid']
+        args = parser.parse_args()
+        job_id = args.jid
         compute_data = {
-            'cmd': request.form.get('cmd'),
-            'auid': request.form.get('auid'),
-            'number_of_workers': request.form.get('number_of_workers'),
-            'cpu_limit': request.form.get('cpu_limit'),
-            'memory_limit': request.form.get('memory_limit'),
-            'gpu_limit': request.form.get('gpu_limit'),
-            'image': request.form.get('image'),
-            'selfexec': request.form.get('selfexec'),
-            'selfpath': request.form.get('selfpath'),
-            'execshell': request.form.get('execshell'),
+            'cmd': args.cmd,
+            'auid': args.auid,
+            'number_of_workers': args.number_of_workers,
+            'cpu_limit': args.cpu_limit,
+            'memory_limit': args.memory_limit,
+            'gpu_limit': args.gpu_limit,
+            'image': args.image,
+            'selfexec': args.selfexec,
+            'selfpath': args.selfpath,
+            'execshell': args.execshell,
         }
         f = request.files['data_file']
         pfioh = PfiohService.get_service_obj()

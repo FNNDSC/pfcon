@@ -17,12 +17,12 @@ pfcon  v3.0.0.0
 Overview
 ********
 
-This repository provides ``pfcon`` -- a controlling service that speaks to remote ``pman`` and ``pfioh`` services.
+This repository provides ``pfcon`` -- a controlling service that acts as the interface to remote ``pman`` and ``pfioh`` services.
 
 pfcon
 =====
 
-Most simply, ``pfcon`` pushes local data to a remote location (by talking to a remote ``pfioh`` service), runs some process on this data in the remote space using ``pman``, and then copies the resultant data back to a local target space.
+Most simply, local data can be pushed to ``pfcon`` (which is in turn forwarded to the controlled ``pfioh`` service), then some process is run on this data in the remote space using the controlled ``pman`` service. The resultant data can then be downloaded back to a local target space.
 
 It can be used to query and control the following (for example):
 
@@ -114,11 +114,6 @@ For ``pfcon`` detailed information, see the `pfcon wiki page <https://github.com
 
         [--man <manpage>]
         Internal man page with more detail on specific calls.
-
-        [--cordBlockSeconds <blockSeconds>]
-        The number of seconds to block/wait internally in the coordination loop.
-        This is the time between ``pfioh`` has indicated successful unpack of file
-        data and the call to ``pman`` to start processing.
 
         [-x|--desc]                                     
         Provide an overview help page.
