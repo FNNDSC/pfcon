@@ -19,6 +19,7 @@ before_script:
   ./cube_before_script.sh;
 
 # command to run tests
+script:
   cd ../ChRIS_ultron_backEnd/; docker-compose -f docker-compose_dev.yml exec chris_dev python manage.py test --tag integration;
 
 after_script:
