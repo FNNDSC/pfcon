@@ -22,8 +22,6 @@ setup(
       author_email     =   'rudolph.pienaar@gmail.com',
       url              =   'https://github.com/FNNDSC/pfcon',
       packages         =   ['pfcon'],
-      test_suite       =   'nose.collector',
-      tests_require    =   ['nose'],
       scripts          =   ['bin/pfcon'],
       license          =   'MIT',
       zip_safe         =   False

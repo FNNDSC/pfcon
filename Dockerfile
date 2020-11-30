@@ -37,7 +37,7 @@ FROM python:3.8.6-buster AS build
     && export LANG=en_US.UTF-8                                                                    \
     && export LC_ALL=en_US.UTF-8                                                                  \
     && locale-gen en_US.UTF-8                                                                     \
-    && dpkg-reconfigure locales  && pip install --upgrade pip                                     \
+    && dpkg-reconfigure locales  && pip install --upgrade pip pytest                              \
     && useradd -u $UID -ms /bin/bash localuser
 
   # Copy source code
@@ -51,7 +51,7 @@ FROM python:3.8.6-buster AS build
 
 FROM build as tests
 
-  RUN python3 -m unittest ${APPROOT}/pfcon/tests/*.py
+  RUN pytest ${APPROOT}/pfcon/tests/*.py
   RUN rm -fr ${APPROOT}
 
 FROM build as runtime
