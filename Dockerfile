@@ -23,7 +23,6 @@
 #   docker run -ti --rm -e HOST_IP=$(ip route | grep -v docker | awk '{if(NF==11) print $9}') --entrypoint /bin/bash local/pfcon
 #
 
-#FROM fnndsc/ubuntu-python3:latest AS build
 FROM python:3.8.6-buster AS build
   MAINTAINER fnndsc "dev@babymri.org"
 
