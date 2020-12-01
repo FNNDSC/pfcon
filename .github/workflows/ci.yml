@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - name: install other dependencies
-        run: sudo apt-get install -qq libgnutls28-dev
+      - name: install deps for pycurl
+        run: sudo apt-get install -qq libssl-dev libcurl4-openssl-dev
       - name: install pip dependencies
         run: |
           pip install .
