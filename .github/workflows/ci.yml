@@ -53,7 +53,9 @@ jobs:
           docker-compose exec -T chris_dev_db sh -c 'while ! mysqladmin -uroot -prootp status 2> /dev/null; do sleep 5; done;'
           docker-compose exec -T chris_dev_db mysql -uroot -prootp -e 'GRANT ALL PRIVILEGES ON *.* TO "chris"@"%"'
       - name: run CUBE integration tests
-        run: docker-compose exec chris_dev python manage.py test --tag integration
+        run: |
+          cd ChRIS_ultron_backEnd
+          docker-compose -f docker-compose_dev.yml exec chris_dev python manage.py test --tag integration
       - name: teardown CUBE
         run: |
           docker-compose down -v
