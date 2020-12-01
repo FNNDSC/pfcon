@@ -11,7 +11,7 @@ on:
 jobs:
   nose:
     name: Nose tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: install other dependencies
@@ -25,7 +25,7 @@ jobs:
         run: nosetests
   cube:
     name: CUBE tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
         with:
