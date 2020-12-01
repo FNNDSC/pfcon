@@ -1,0 +1,61 @@
+# run pfcon unit tests (nosetests) and cube integration tests
+
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  nose:
+    name: Nose tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: install other dependencies
+        run: sudo apt-get install -qq libgnutls28-dev
+      - name: install pip dependencies
+        run: |
+          pip install .
+          pip install nose
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: nosetests
+        run: nosetests
+  cube:
+    name: CUBE tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: pfcon
+      - name: download CUBE
+        uses: actions/checkout@v2
+        with:
+          repository: FNNDSC/ChRIS_ultron_backEnd
+          path: ChRIS_ultron_backEnd
+      - name: build container image
+        run: |
+          docker build -t fnndsc/pfcon:latest pfcon
+      - name: local CUBE provisioning
+        run: |
+          cd ChRIS_ultron_backEnd
+          docker pull fnndsc/pfdcm
+          docker pull fnndsc/swarm
+          docker swarm init --advertise-addr 127.0.0.1
+          chmod -R 755 $PWD
+          docker build -t fnndsc/chris:dev -f Dockerfile_dev .
+          mkdir -p FS/remote
+          chmod -R 777 FS
+          export STOREBASE=$PWD/FS/remote COMPOSE_FILE=$PWD/docker-compose_dev.yml
+          docker-compose up -d
+          docker-compose exec chris_dev_db sh -c 'while ! mysqladmin -uroot -prootp status 2> /dev/null; do sleep 5; done;'
+          docker-compose exec chris_dev_db mysql -uroot -prootp -e 'GRANT ALL PRIVILEGES ON *.* TO "chris"@"%"'
+      - name: run CUBE integration tests
+        run: docker-compose exec chris_dev python manage.py test --tag integration
+      - name: teardown CUBE
+        run: |
+          docker-compose down -v
+          sudo rm -rf ./FS
+          docker swarm leave --force
