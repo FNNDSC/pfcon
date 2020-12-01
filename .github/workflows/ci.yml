@@ -55,7 +55,7 @@ jobs:
       - name: run CUBE integration tests
         run: |
           cd ChRIS_ultron_backEnd
-          docker-compose -f docker-compose_dev.yml exec chris_dev python manage.py test --tag integration
+          docker-compose -f docker-compose_dev.yml exec -T chris_dev python manage.py test --tag integration
       - name: teardown CUBE
         run: |
           docker-compose down -v
