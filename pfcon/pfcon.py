@@ -591,7 +591,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_ret['sysinfo']['loadavg']     = os.getloadavg()
                 d_ret['sysinfo']['cpu_percent'] = psutil.cpu_percent()
                 d_ret['sysinfo']['hostname']    = socket.gethostname()
-                d_ret['sysinfo']['inet']        = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
+                d_ret['sysinfo']['inet']        = pfmisc.local_ip_address()
                 b_status                        = True
             if str_askAbout == 'echoBack':
                 d_ret['echoBack']               = {}
@@ -1957,7 +1957,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
                 default_host_name=PFIOH_HOST_NAME_DEFAULT)
             or self.read_from_environment(PFIOH_IP_ENVIRONMENT_VARIABLE)
             or self.read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
-            or read_local_host_ip()
+            or pfmisc.local_ip_address()
         )
         self.dp.qprint(f'Found pfioh IP address: {pfioh_ip}.')
         return pfioh_ip
@@ -1969,7 +1969,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
                 default_host_name=PMAN_HOST_NAME_DEFAULT)
             or self.read_from_environment(PMAN_IP_ENVIRONMENT_VARIABLE)
             or self.read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
-            or read_local_host_ip()
+            or pfmisc.local_ip_address()
         )
         self.dp.qprint(f'Found pman IP address: {pman_ip}.')
         return pman_ip
@@ -2002,26 +2002,3 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             f' (default: {default})'
         )
         return value
-
-
-def read_local_host_ip():
-    local_host_ip = [
-        l for l in (
-            [
-                ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
-                if not ip.startswith("127.")
-            ][:1],
-            [
-                [
-                    (
-                        s.connect(('8.8.8.8', 53)),
-                        s.getsockname()[0],
-                        s.close()
-                    )
-                    for s
-                    in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]
-                ][0][1]
-            ]
-        ) if l
-    ][0][0]
-    return local_host_ip
