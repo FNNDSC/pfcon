@@ -1,5 +1,4 @@
-# run pfcon unit tests and CUBE integration tests
-# pfcon's nosetests are run during docker build
+# run pfcon unit tests (nosetests) and cube integration tests
 
 name: CI
 
@@ -10,7 +9,22 @@ on:
     branches: [ master ]
 
 jobs:
-  test:
+  nose:
+    name: Nose tests
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: install deps for pycurl
+        run: sudo apt-get install -qq libssl-dev libcurl4-openssl-dev
+      - name: install pip dependencies
+        run: |
+          pip install .
+          pip install nose
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: nosetests
+        run: nosetests
+  cube:
+    name: CUBE tests
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
