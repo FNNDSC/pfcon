@@ -1,28 +1,20 @@
-import sys
-import os
-# Make sure we are running python3.5+
-if 10 * sys.version_info[0]  + sys.version_info[1] < 35:
-    sys.exit("Sorry, only Python 3.5+ is supported.")
-
+from os import path
 from setuptools import setup
 
-
-def readme():
-    print("Current dir = %s" % os.getcwd())
-    print(os.listdir())
-    with open('README.rst') as f:
-        return f.read()
+with open(path.join(path.abspath(path.dirname(__file__)), 'README.rst')) as f:
+    readme = f.read()
 
 setup(
-      name             =   'pfcon',
-      version          =   '2.2.7.0',
-      description      =   '(Python) Process and File Controller',
-      long_description =   readme(),
-      author           =   'Rudolph Pienaar',
-      author_email     =   'rudolph.pienaar@gmail.com',
-      url              =   'https://github.com/FNNDSC/pfcon',
-      packages         =   ['pfcon'],
-      scripts          =   ['bin/pfcon'],
-      license          =   'MIT',
-      zip_safe         =   False
-     )
+    name             =   'pfcon',
+    version          =   '2.2.7.0',
+    description      =   '(Python) Process and File Controller',
+    long_description =   readme,
+    author           =   'Rudolph Pienaar',
+    author_email     =   'rudolph.pienaar@gmail.com',
+    url              =   'https://github.com/FNNDSC/pfcon',
+    packages         =   ['pfcon'],
+    scripts          =   ['bin/pfcon'],
+    license          =   'MIT',
+    zip_safe         =   False,
+    python_requires  =   '>=3.6'
+)
