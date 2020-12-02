@@ -16,7 +16,7 @@ import signal
 import threading
 
 from    pfmisc._colors             import Colors
-from    pfmisc                     local_ip_address
+from    pfmisc                     import local_ip_address
 
 str_defIP = local_ip_address()
 str_version = "2.2.7.0"
