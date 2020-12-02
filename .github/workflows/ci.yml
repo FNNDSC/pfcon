@@ -1,0 +1,43 @@
+# run pfcon tests (nosetests) and CUBE integration tests.
+
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  pfcon:
+    name: pfcon tests
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: build development container image
+        run: docker build -t fnndsc/pfcon:dev -f Dockerfile_dev .
+      - name: provision local services
+        run: |
+          docker pull fnndsc/swarm
+          docker swarm init --advertise-addr 127.0.0.1
+          chmod -R 755 $PWD
+          mkdir -p FS/remote
+          chmod -R 777 FS
+          export STOREBASE=$PWD/FS/remote
+          docker-compose -f docker-compose_dev.yml up -d
+      - name: nosetests
+        run: docker-compose -f docker-compose_dev.yml exec -T pfcon_service nosetests --exe tests
+      - name: teardown
+        run: |
+          docker-compose -f docker-compose_dev.yml down -v
+          sudo rm -fr ./FS
+          docker swarm leave --force
+  cube:
+    name: CUBE tests
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker build -t fnndsc/pfcon .
+      - uses: FNNDSC/cube-integration-action@v1
+        with:
+          branch: pfcon_flask

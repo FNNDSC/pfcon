@@ -2,14 +2,8 @@
 pfcon  v3.0.0.0
 ################
 
-.. image:: https://badge.fury.io/py/pfcon.svg
-    :target: https://badge.fury.io/py/pfcon
-
-.. image:: https://travis-ci.org/FNNDSC/pfcon.svg?branch=master
-    :target: https://travis-ci.org/FNNDSC/pfcon
-
-.. image:: https://img.shields.io/badge/python-3.5%2B-blue.svg
-    :target: https://badge.fury.io/py/pfcon
+.. image:: https://github.com/fnndsc/pfcon/workflows/CI/badge.svg
+    :target: https://github.com/fnndsc/pfcon/actions
 
 .. contents:: Table of Contents
 
