@@ -9,9 +9,6 @@
 #   make.sh                     [-r <service>]                  \
 #                               [-a <swarm-advertise-adr>]      \
 #                               [-p] [-i] [-s]                  \
-#                               [-f <fileToPushToSwift>]        \
-#                               [-D <dirToPushToSwift>]         \
-#                               [-P <swiftPrefix>]              \
 #                               [-S <storeBaseOverride>]        \
 #                               [local|fnndsc[:dev]]
 #
@@ -34,19 +31,6 @@
 #
 # ARGS
 #
-#   [-f <fileToPushToSwift>]
-#
-#       If specified, push the file <fileToPushToSwift> into swift storage.
-#
-#   [-D <dirToPushToSwift>]
-#
-#       If specified, push all the files in directory <dirToPushToSwift>
-#       into swift storage.
-#
-#   [-P <swiftPrefix>]
-#
-#       The swift object prefix string. This is prepended to all files
-#       pushed into swift.
 #
 #   -r <service>
 #
@@ -109,7 +93,6 @@ source ./cparse.sh
 
 declare -i STEP=0
 declare -i b_restart=0
-SWIFTPREFIX="/home/localuser/data"
 JOB=""
 HERE=$(pwd)
 echo "Starting script in dir $HERE"
@@ -121,7 +104,7 @@ if [[ -f .env ]] ; then
     source .env
 fi
 
-while getopts "r:psia:S:f:D:P:" opt; do
+while getopts "r:psiUa:S:" opt; do
     case $opt in
         r) b_restart=1
            JOB=$OPTARG                          ;;
@@ -130,6 +113,7 @@ while getopts "r:psia:S:f:D:P:" opt; do
         i) b_norestartinteractive_chris_dev=1   ;;
         a) b_swarmAdvertiseAdr=1
             SWARMADVERTISEADDR=$OPTARG          ;;
+        U) b_skipUnitTests=1                    ;;
         S) b_storeBaseOverride=1
            STOREBASE=$OPTARG                    ;;
     esac
@@ -150,6 +134,7 @@ declare -a A_CONTAINER=(
     "fnndsc/pfioh${TAG}^PFIOHREPO"
     "fnndsc/pman${TAG}^PMANREPO"
     "fnndsc/swarm^SWARMREPO"
+    "fnndsc/pl-dircopy"
 )
 
 title -d 1 "Setting global exports..."
@@ -270,27 +255,26 @@ else
     windowBottom
 
     title -d 1 "Checking that FS directory tree is empty..."
-        mkdir -p FS/local
         mkdir -p FS/remote
-        mkdir -p FS/data
         chmod -R 777 FS
         b_FSOK=1
         type -all tree >/dev/null 2>/dev/null
         if (( ! $? )) ; then
             tree FS                                                     | ./boxes.sh
             report=$(tree FS | tail -n 1)
-            if [[ "$report" != "3 directories, 0 files" ]] ; then
+            if [[ "$report" != "1 directory, 0 files" ]] ; then
                 b_FSOK=0
             fi
         else
             report=$(find FS 2>/dev/null)
             lines=$(echo "$report" | wc -l)
-            if (( lines != 4 )) ; then
+            if (( lines != 2 )) ; then
                 b_FSOK=0
             fi
+            echo "lines is $lines"
         fi
         if (( ! b_FSOK )) ; then
-            printf "There should only be 3 directories and no files in the FS tree!\n"  | ./boxes.sh ${Red}
+            printf "There should only be 1 directory and no files in the FS tree!\n"    | ./boxes.sh ${Red}
             printf "Please manually clean/delete the entire FS tree and re-run.\n"      | ./boxes.sh ${Yellow}
             printf "\nThis script will now exit with code '1'.\n\n"                     | ./boxes.sh ${Yellow}
             exit 1
@@ -298,7 +282,6 @@ else
         printf "${LightCyan}%40s${LightGreen}%40s\n"                    \
                     "Tree state" "[ OK ]"                               | ./boxes.sh
     windowBottom
-
 
     title -d 1 "Starting pfcon containerized development environment "
         echo "This might take a few minutes... please be patient."      | ./boxes.sh ${Yellow}
@@ -309,6 +292,46 @@ else
         echo -en "\033[2A\033[2K"
         cat dc.out | sed -E 's/(.{80})/\1\n/g'                          | ./boxes.sh ${LightGreen}
     windowBottom
+
+    if (( ! b_skipUnitTests )) ; then
+        title -d 1 "Running pfcon tests..."
+        echo "This might take a few minutes... please be patient."      | ./boxes.sh ${Yellow}
+        windowBottom
+        docker-compose -f docker-compose_dev.yml exec pfcon_service nosetests --exe tests
+        status=$?
+        title -d 1 "pfcon test results"
+        if (( $status == 0 )) ; then
+            printf "%40s${LightGreen}%40s${NC}\n"                       \
+                "pfcon tests" "[ success ]"                         | ./boxes.sh
+        else
+            printf "%40s${Red}%40s${NC}\n"                              \
+                "pfcon tests" "[ failure ]"                         | ./boxes.sh
+        fi
+        windowBottom
+    fi
+
+    if (( ! b_skipUnitTests && ! b_pause )) ; then
+        title -d 1 "Automatic restart of satellite services pfioh/pman" \
+                   "to clear any lingering traces of integration tests..."
+        echo ""                                                     | ./boxes.sh
+        windowBottom
+
+        docker-compose --no-ansi -f docker-compose_dev.yml          \
+            exec pman_service pman_do --op DBclean >& dc.out >/dev/null
+        echo -en "\033[2A\033[2K"
+        cat dc.out | ./boxes.sh
+
+        docker-compose --no-ansi -f docker-compose_dev.yml          \
+            restart pman_service >& dc.out > /dev/null
+        echo -en "\033[2A\033[2K"
+        cat dc.out | ./boxes.sh
+
+        windowBottom
+        docker-compose --no-ansi -f docker-compose_dev.yml          \
+            restart pfioh_service >& dc.out > /dev/null
+        echo -en "\033[2A\033[2K"
+        cat dc.out | ./boxes.sh
+    fi
 
     title -d 1 "Pause for manual restart of services?"
     if (( b_pause )) ; then

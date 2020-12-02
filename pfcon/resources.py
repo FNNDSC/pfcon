@@ -29,7 +29,6 @@ class JobList(Resource):
     Resource representing the list of jobs running on the compute.
     """
     def get(self):
-        logger.info('got GET request')
         return {
             'server_version': app.config.get('SERVER_VERSION'),
         }

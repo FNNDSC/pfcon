@@ -32,7 +32,7 @@ ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPROOT="/home/localuser/pfcon"
 
 RUN apt-get update \
   && apt-get install sudo                                                                         \
-  && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils vim net-tools inetutils-ping \
+  && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils net-tools inetutils-ping     \
   && apt-get install -y locales                                                                   \
   && export LANGUAGE=en_US.UTF-8                                                                  \
   && export LANG=en_US.UTF-8                                                                      \
@@ -41,12 +41,14 @@ RUN apt-get update \
   && dpkg-reconfigure locales  && pip install --upgrade pip                                       \
   && apt-get install -y apache2 apache2-dev                                                       \
   && pip install --upgrade pip                                                                    \
+  && pip install nose                                                                             \
   && useradd -u $UID -ms /bin/bash localuser                                                      \
   && echo "localuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Copy source code and make localuser the owner
 COPY --chown=localuser ./bin ${APPROOT}/bin
 COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
+COPY --chown=localuser ./tests ${APPROOT}/tests
 COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
 
 RUN pip3 install -e ${APPROOT}

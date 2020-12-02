@@ -4,9 +4,6 @@ sudo: required
 services:
   - docker
 
-language: python
-python: 
-  - "3.6"
 env:
   global:
     - DOCKER_COMPOSE_VERSION=1.22.0
@@ -16,21 +13,26 @@ env:
     - TO_TEST=cube
 
 before_install:
-  - if [ "$TO_TEST" = "cube" ]; then ./cube_before_install.sh; fi
+  - ./travis_before_install.sh
       
 # command to install dependencies
-install: 
-  - if [ "$TO_TEST" = "pfcon" ]; then sudo apt-get install -y libgnutls28-dev && pip install .; fi
+install:
+  - docker pull fnndsc/swarm
+  - travis_wait docker build -t fnndsc/pfcon:dev -f Dockerfile_dev .
 
 before_script:
-  - if [ "$TO_TEST" = "cube" ]; then ./cube_before_script.sh; fi
+  - if [ "$TO_TEST" = "pfcon" ]; then ./travis_before_script.sh; fi
+  - if [ "$TO_TEST" = "cube" ]; then ./travis_cube_before_script.sh; fi
+  - docker swarm init --advertise-addr 127.0.0.1
 
 # command to run tests
 script: 
-  - if [ "$TO_TEST" = "pfcon" ]; then nosetests; fi
+  - if [ "$TO_TEST" = "pfcon" ]; then docker-compose -f docker-compose_dev.yml exec pfcon_service nosetests --exe tests; fi
   - if [ "$TO_TEST" = "cube" ]; then cd ../ChRIS_ultron_backEnd/; docker-compose -f docker-compose_dev.yml exec chris_dev python manage.py test --tag integration; fi
 
 after_script:
-  - if [ "$TO_TEST" = "cube" ]; then cd ../ChRIS_ultron_backEnd/; docker-compose -f docker-compose_dev.yml down -v; sudo rm -fr ./FS; docker swarm leave --force; fi
+  - if [ "$TO_TEST" = "pfcon" ]; then docker-compose -f docker-compose_dev.yml down; sudo rm -fr ./FS; fi
+  - if [ "$TO_TEST" = "cube" ]; then cd ../ChRIS_ultron_backEnd/; docker-compose -f docker-compose_dev.yml down -v; sudo rm -fr ./FS; fi
+  - docker swarm leave --force;
 notifications:
-  slack: fnndsc:xcwPXeUGBBNRkwAlygS9gtCo
+  slack: fnndsc:gGPIVAOtMikWomA1EKrVYIjO

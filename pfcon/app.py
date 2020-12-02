@@ -22,8 +22,8 @@ def create_app(config_dict=None):
     api = Api(app, prefix='/api/v1/')
 
     # url mappings
-    api.add_resource(JobList, '/', endpoint="api.joblist")
-    api.add_resource(Job, '/<string:job_id>/', endpoint="api.job")
-    api.add_resource(JobFile, '/<string:job_id>/file/', endpoint="api.jobfile")
+    api.add_resource(JobList, '/', endpoint='api.joblist')
+    api.add_resource(Job, '/<string:job_id>/', endpoint='api.job')
+    api.add_resource(JobFile, '/<string:job_id>/file/', endpoint='api.jobfile')
 
     return app
