@@ -24,7 +24,7 @@
 #
 
 FROM python:3.8.6-buster AS build
-  MAINTAINER fnndsc "dev@babymri.org"
+  LABEL maintainer="FNNDSC <dev@babyMRI.org>"
 
   # Pass a UID on build command line (see above) to set internal UID
   ARG UID=1001
