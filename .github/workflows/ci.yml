@@ -28,36 +28,5 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-        with:
-          path: pfcon
-      - name: download CUBE
-        uses: actions/checkout@v2
-        with:
-          repository: FNNDSC/ChRIS_ultron_backEnd
-          path: ChRIS_ultron_backEnd
-      - name: build container image
-        run: |
-          docker build -t fnndsc/pfcon:latest pfcon
-      - name: local CUBE provisioning
-        run: |
-          cd ChRIS_ultron_backEnd
-          docker pull fnndsc/pfdcm
-          docker pull fnndsc/swarm
-          docker swarm init --advertise-addr 127.0.0.1
-          chmod -R 755 $PWD
-          docker build -t fnndsc/chris:dev -f Dockerfile_dev .
-          mkdir -p FS/remote
-          chmod -R 777 FS
-          export STOREBASE=$PWD/FS/remote COMPOSE_FILE=$PWD/docker-compose_dev.yml
-          docker-compose up -d
-          docker-compose exec -T chris_dev_db sh -c 'while ! mysqladmin -uroot -prootp status 2> /dev/null; do sleep 5; done;'
-          docker-compose exec -T chris_dev_db mysql -uroot -prootp -e 'GRANT ALL PRIVILEGES ON *.* TO "chris"@"%"'
-      - name: run CUBE integration tests
-        run: |
-          cd ChRIS_ultron_backEnd
-          docker-compose -f docker-compose_dev.yml exec -T chris_dev python manage.py test --tag integration
-      - name: teardown CUBE
-        run: |
-          docker-compose down -v
-          sudo rm -rf ./FS
-          docker swarm leave --force
+      - run: docker build -t fnndsc/pfcon .
+      - uses: FNNDSC/cube-integration-action@v1
