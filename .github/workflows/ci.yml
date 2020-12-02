@@ -1,0 +1,32 @@
+# run pfcon unit tests (nosetests) and cube integration tests
+
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  nose:
+    name: Nose tests
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: install deps for pycurl
+        run: sudo apt-get install -qq libssl-dev libcurl4-openssl-dev
+      - name: install pip dependencies
+        run: |
+          pip install .
+          pip install nose
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: nosetests
+        run: nosetests
+  cube:
+    name: CUBE tests
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker build -t fnndsc/pfcon .
+      - uses: FNNDSC/cube-integration-action@v1
