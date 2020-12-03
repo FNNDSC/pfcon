@@ -34,6 +34,7 @@ jobs:
     name: Slack Notification
     runs-on: ubuntu-latest
     needs: [nose, cube]
+    continue-on-error: true
     env:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       SLACK_USERNAME: Github Actions Bot
@@ -43,14 +44,14 @@ jobs:
       - name: Slack Notification (passing)
         uses: rtCamp/action-slack-notify@v2
         id: passing
-        if: ${{ needs.nose.result == 'success' && needs.cube.result == 'success' }}
+        if: needs.nose.result == 'success' && needs.cube.result == 'success'
         env:
           SLACK_COLOR: good
           SLACK_TITLE: Passing
           SLACK_MESSAGE: "Build successful :tada:"
       - name: Slack Notification (failing)
         uses: rtCamp/action-slack-notify@v2
-        if: ${{ steps.passing.conclusion == 'skipped' }}
+        if: steps.passing.conclusion == 'skipped'
         env:
           SLACK_COLOR: bad
           SLACK_TITLE: Failing
