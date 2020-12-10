@@ -57,7 +57,7 @@ ENTRYPOINT ["mod_wsgi-express"]
 EXPOSE 5005
 
 # Start pfon production server
-CMD ["start-server", "pfcon/wsgi.py", "--host", "0.0.0.0", "--port", "5005", "--processes", "8", "--server-root", "/home/localuser/mod_wsgi-0.0.0.0:5005"]
+CMD ["start-server", "pfcon/wsgi.py", "--host", "0.0.0.0", "--port", "5005", "--processes", "8", "--limit-request-body", "10632560640", "--server-root", "/home/localuser/mod_wsgi-0.0.0.0:5005"]
 #mod_wsgi-express setup-server config/wsgi.py --host 0.0.0.0 --port 5005 --processes 8 --server-name localhost --server-root /home/localuser/mod_wsgi-0.0.0.0:5005
 #to start daemon:
 #/home/localuser/mod_wsgi-0.0.0.0:5005/apachectl start
