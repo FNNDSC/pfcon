@@ -104,7 +104,7 @@ class PmanService(Service):
         logger.info('payload sent: %s', json.dumps(payload, indent=4))
 
         c = pycurl.Curl()
-        c.setopt(pycurl.CONNECTTIMEOUT, 30)
+        c.setopt(pycurl.CONNECTTIMEOUT, 60)
         c.setopt(c.URL, self.base_url)
         buffer = io.BytesIO()
         c.setopt(pycurl.WRITEFUNCTION, buffer.write)
@@ -173,7 +173,7 @@ class PfiohService(Service):
                               files={'local': file_obj},
                               data={'d_msg': json.dumps(payload), 'filename': fname},
                               headers={'Mode': 'file'},
-                              timeout=30)
+                              timeout=300)
         except (Timeout, RequestException) as e:
             error_msg = 'error in talking to pfioh service, detail: %s' % str(e)
             logging.error(error_msg)
@@ -212,7 +212,7 @@ class PfiohService(Service):
         logger.info('sending PULL data request to pfioh at -->%s<--', self.base_url)
         logger.info('query sent: %s', query)
         try:
-            r = requests.get(self.base_url + '?' + query, timeout=30)
+            r = requests.get(self.base_url + '?' + query, timeout=720)
         except (Timeout, RequestException) as e:
             error_msg = 'error in talking to pfioh service, detail: %s' % str(e)
             logging.error(error_msg)
