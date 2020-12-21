@@ -10,8 +10,6 @@ import json
 import urllib.parse
 from abc import ABC
 import pycurl
-import requests
-from requests.exceptions import Timeout, RequestException
 
 from flask import g, current_app as app
 from werkzeug.utils import secure_filename
@@ -104,7 +102,7 @@ class PmanService(Service):
         logger.info('payload sent: %s', json.dumps(payload, indent=4))
 
         c = pycurl.Curl()
-        c.setopt(pycurl.CONNECTTIMEOUT, 60)
+        c.setopt(pycurl.CONNECTTIMEOUT, 1000)
         c.setopt(c.URL, self.base_url)
         buffer = io.BytesIO()
         c.setopt(pycurl.WRITEFUNCTION, buffer.write)
@@ -168,17 +166,34 @@ class PfiohService(Service):
         }
         logger.info('sending PUSH data request to pfioh at -->%s<--', self.base_url)
         logger.info('payload sent: %s', json.dumps(payload, indent=4))
+
+        c = pycurl.Curl()
+        c.setopt(pycurl.CONNECTTIMEOUT, 1000)
+        c.setopt(c.URL, self.base_url)
+        c.setopt(pycurl.HTTPHEADER, ['Mode: file'])
+        c.setopt(
+            pycurl.HTTPPOST,
+            [
+                ('d_msg',       json.dumps(payload)),
+                ('filename',    fname),
+                ('local',       (c.FORM_BUFFER, fname,
+                                 c.FORM_BUFFERPTR, file_obj.read(),)
+                 )
+            ]
+        )
+        buffer = io.BytesIO()
+        c.setopt(pycurl.WRITEFUNCTION, buffer.write)
         try:
-            r = requests.post(self.base_url,
-                              files={'local': file_obj},
-                              data={'d_msg': json.dumps(payload), 'filename': fname},
-                              headers={'Mode': 'file'},
-                              timeout=300)
-        except (Timeout, RequestException) as e:
+            c.perform()
+        except pycurl.error as e:
             error_msg = 'error in talking to pfioh service, detail: %s' % str(e)
             logging.error(error_msg)
             raise ServiceException(error_msg)
-        d_response = r.json()
+        finally:
+            c.close()
+        str_resp = buffer.getvalue().decode()
+        d_response = json.loads(str_resp)
+
         logger.info('response from pfioh: %s', json.dumps(d_response, indent=4))
         return d_response
 
@@ -211,13 +226,22 @@ class PfiohService(Service):
         query = urllib.parse.urlencode(d_query)
         logger.info('sending PULL data request to pfioh at -->%s<--', self.base_url)
         logger.info('query sent: %s', query)
+
+        c = pycurl.Curl()
+        c.setopt(pycurl.CONNECTTIMEOUT, 1000)
+        c.setopt(c.URL, self.base_url + '?' + query)
+        buffer = io.BytesIO()
+        c.setopt(c.WRITEDATA, buffer)  # write bytes that are utf-8 encoded
         try:
-            r = requests.get(self.base_url + '?' + query, timeout=720)
-        except (Timeout, RequestException) as e:
+            c.perform()  # perform a file transfer
+        except pycurl.error as e:
             error_msg = 'error in talking to pfioh service, detail: %s' % str(e)
             logging.error(error_msg)
             raise ServiceException(error_msg)
-        return r.content
+        finally:
+            c.close()
+        content = buffer.getvalue()
+        return content
 
     @classmethod
     def get_service_obj(cls):
