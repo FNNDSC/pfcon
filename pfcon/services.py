@@ -26,6 +26,7 @@ class Service(ABC):
     """
     Abstract base class for the coordinated services.
     """
+    NAME = 'abstract'
 
     def __init__(self, base_url):
         super().__init__()
@@ -33,11 +34,23 @@ class Service(ABC):
         # base url of the service
         self.base_url = base_url
 
+    def perform_request(self, curl_obj):
+        try:
+            curl_obj.perform()
+        except pycurl.error as e:
+            error_msg = 'Error in talking to %s service, detail: %s' % (self.NAME, str(e))
+            logger.error(error_msg)
+            raise ServiceException(error_msg)
+        finally:
+            curl_obj.close()
+
 
 class PmanService(Service):
     """
     Class for the pman service.
     """
+    NAME = 'pman'
+
     def run_job(self, job_id, compute_data, data_share_dir):
         """
         Run process job on the compute environment ('run' action on pman).
@@ -98,8 +111,8 @@ class PmanService(Service):
         pass
 
     def do_POST(self, payload):
-        logger.info('sending cmd to pman service at -->%s<--', self.base_url)
-        logger.info('payload sent: %s', json.dumps(payload, indent=4))
+        logger.info('Sending cmd to %s service at -->%s<--' % (self.NAME, self.base_url))
+        logger.info('Payload sent: %s', json.dumps(payload, indent=4))
 
         c = pycurl.Curl()
         c.setopt(pycurl.CONNECTTIMEOUT, 1000)
@@ -112,21 +125,13 @@ class PmanService(Service):
         # but pman (wrongly) does not comply with this.
         # the next sets request method to POST,
         # Content-Type header to application/x-www-form-urlencoded
-        # and data to send in request body.
+        # and data to send in request body
         c.setopt(c.POSTFIELDS, post_data)
-        try:
-            c.perform()
-        except pycurl.error as e:
-            error_msg = 'error in talking to pman service, detail: %s' % str(e)
-            logging.error(error_msg)
-            raise ServiceException(error_msg)
-        finally:
-            c.close()
+        self.perform_request(c)
         str_resp = buffer.getvalue().decode()
-
-        d_response = json.loads(str_resp)
-        logger.info('response from pman: %s', json.dumps(d_response, indent=4))
-        return d_response
+        d_resp = json.loads(str_resp)
+        logger.info('Response from %s: %s' % (self.NAME, json.dumps(d_resp, indent=4)))
+        return d_resp
 
     @classmethod
     def get_service_obj(cls):
@@ -139,6 +144,7 @@ class PfiohService(Service):
     """
     Class for the pfioh service.
     """
+    NAME = 'pfioh'
 
     def push_data(self, job_id, file_obj):
         """
@@ -164,8 +170,9 @@ class PfiohService(Service):
                 }
             }
         }
-        logger.info('sending PUSH data request to pfioh at -->%s<--', self.base_url)
-        logger.info('payload sent: %s', json.dumps(payload, indent=4))
+        logger.info('Sending PUSH data request to %s at -->%s<--' % (self.NAME,
+                                                                     self.base_url))
+        logger.info('Payload sent: %s', json.dumps(payload, indent=4))
 
         c = pycurl.Curl()
         c.setopt(pycurl.CONNECTTIMEOUT, 1000)
@@ -183,19 +190,11 @@ class PfiohService(Service):
         )
         buffer = io.BytesIO()
         c.setopt(pycurl.WRITEFUNCTION, buffer.write)
-        try:
-            c.perform()
-        except pycurl.error as e:
-            error_msg = 'error in talking to pfioh service, detail: %s' % str(e)
-            logging.error(error_msg)
-            raise ServiceException(error_msg)
-        finally:
-            c.close()
+        self.perform_request(c)
         str_resp = buffer.getvalue().decode()
-        d_response = json.loads(str_resp)
-
-        logger.info('response from pfioh: %s', json.dumps(d_response, indent=4))
-        return d_response
+        d_resp = json.loads(str_resp)
+        logger.info('Response from %s: %s' % (self.NAME, json.dumps(d_resp, indent=4)))
+        return d_resp
 
     def pull_data(self, job_id):
         """
@@ -224,22 +223,16 @@ class PfiohService(Service):
             }
         }
         query = urllib.parse.urlencode(d_query)
-        logger.info('sending PULL data request to pfioh at -->%s<--', self.base_url)
-        logger.info('query sent: %s', query)
+        logger.info('Sending PULL data request to %s at -->%s<--' % (self.NAME,
+                                                                     self.base_url))
+        logger.info('Query sent: %s', query)
 
         c = pycurl.Curl()
         c.setopt(pycurl.CONNECTTIMEOUT, 1000)
         c.setopt(c.URL, self.base_url + '?' + query)
         buffer = io.BytesIO()
         c.setopt(c.WRITEDATA, buffer)  # write bytes that are utf-8 encoded
-        try:
-            c.perform()  # perform a file transfer
-        except pycurl.error as e:
-            error_msg = 'error in talking to pfioh service, detail: %s' % str(e)
-            logging.error(error_msg)
-            raise ServiceException(error_msg)
-        finally:
-            c.close()
+        self.perform_request(c)  # perform a file transfer in this case
         content = buffer.getvalue()
         return content
 
