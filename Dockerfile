@@ -37,11 +37,12 @@ FROM python:3.8.6-buster AS build
     && export LANG=en_US.UTF-8                                                                    \
     && export LC_ALL=en_US.UTF-8                                                                  \
     && locale-gen en_US.UTF-8                                                                     \
-    && dpkg-reconfigure locales  && pip install --upgrade pip pytest                              \
-    && useradd -u $UID -ms /bin/bash localuser
+    && dpkg-reconfigure locales                                                                   \
+    && useradd -u $UID -ms /bin/bash localuser                                                    \
+    && pip3 install --upgrade pip pytest                
 
   # Copy source code
-  COPY --chown=localuser ./setup.cfg ./setup.py README.rst ./requirements.txt ${APPROOT}/
+  COPY --chown=localuser ./setup.py README.rst ./requirements.txt ${APPROOT}/
   RUN pip3 install -r ${APPROOT}/requirements.txt
 
   COPY --chown=localuser ./bin ${APPROOT}/bin
