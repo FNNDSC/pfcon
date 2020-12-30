@@ -24,39 +24,32 @@
 #
 
 FROM python:3.8.6-buster AS build
-  LABEL version="3.0.0.0" maintainer="FNNDSC <dev@babyMRI.org>"
+LABEL version="3.0.0.0" maintainer="FNNDSC <dev@babyMRI.org>"
 
-  # Pass a UID on build command line (see above) to set internal UID
-  ARG UID=1001
-  ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPROOT="/home/localuser/pfcon"
+# Pass a UID on build command line (see above) to set internal UID
+ARG UID=1001
+ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPROOT="/home/localuser/pfcon"
 
-  RUN apt-get update                                                                              \
-    && apt-get install -y --no-install-recommends libssl-dev libcurl4-openssl-dev bsdmainutils    \
-       net-tools inetutils-ping locales                                                           \
-    && export LANGUAGE=en_US.UTF-8                                                                \
-    && export LANG=en_US.UTF-8                                                                    \
-    && export LC_ALL=en_US.UTF-8                                                                  \
-    && locale-gen en_US.UTF-8                                                                     \
-    && dpkg-reconfigure locales                                                                   \
-    && useradd -u $UID -ms /bin/bash localuser                                                    \
-    && pip3 install --upgrade pip pytest                
+RUN apt-get update                                                                              \
+  && apt-get install -y --no-install-recommends libssl-dev libcurl4-openssl-dev bsdmainutils    \
+      net-tools inetutils-ping locales                                                          \
+  && export LANGUAGE=en_US.UTF-8                                                                \
+  && export LANG=en_US.UTF-8                                                                    \
+  && export LC_ALL=en_US.UTF-8                                                                  \
+  && locale-gen en_US.UTF-8                                                                     \
+  && dpkg-reconfigure locales                                                                   \
+  && useradd -u $UID -ms /bin/bash localuser                                                    \
+  && pip3 install --upgrade pip pytest                
 
-  # Copy source code
-  COPY --chown=localuser ./setup.py README.rst ./requirements.txt ${APPROOT}/
-  RUN pip3 install -r ${APPROOT}/requirements.txt
+# Copy source code
+COPY --chown=localuser ./setup.py README.rst ./requirements.txt ${APPROOT}/
+RUN pip3 install -r ${APPROOT}/requirements.txt
 
-  COPY --chown=localuser ./bin ${APPROOT}/bin
-  COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
+COPY --chown=localuser ./bin ${APPROOT}/bin
+COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
 
-  RUN pip3 install --no-dependencies ${APPROOT}  
+RUN pip3 install --no-dependencies ${APPROOT}
 
-FROM build as tests
-
-  RUN pytest ${APPROOT}/pfcon/tests/*.py
-  RUN rm -fr ${APPROOT}
-
-FROM build as runtime
-
-  WORKDIR "/home/localuser"
-  ENTRYPOINT ["pfcon"]
-  EXPOSE 5005
+WORKDIR "/home/localuser"
+ENTRYPOINT ["pfcon"]
+EXPOSE 5005
