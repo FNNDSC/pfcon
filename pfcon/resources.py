@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 parser = reqparse.RequestParser(bundle_errors=True)
 parser.add_argument('jid', dest='jid', required=True, location='form')
-parser.add_argument('cmd', dest='cmd', required=True, location='form')
+parser.add_argument('cmd_args', dest='cmd_args', required=True, location='form')
 parser.add_argument('auid', dest='auid', required=True, location='form')
 parser.add_argument('number_of_workers', dest='number_of_workers', required=True,
                     location='form')
@@ -22,7 +22,8 @@ parser.add_argument('image', dest='image', required=True, location='form')
 parser.add_argument('selfexec', dest='selfexec', required=True, location='form')
 parser.add_argument('selfpath', dest='selfpath', required=True, location='form')
 parser.add_argument('execshell', dest='execshell', required=True, location='form')
-
+parser.add_argument('type', dest='type', choices=('ds', 'fs'), required=True,
+                    location='form')
 
 class JobList(Resource):
     """
@@ -37,7 +38,7 @@ class JobList(Resource):
         args = parser.parse_args()
         job_id = args.jid
         compute_data = {
-            'cmd': args.cmd,
+            'cmd_args': args.cmd_args,
             'auid': args.auid,
             'number_of_workers': args.number_of_workers,
             'cpu_limit': args.cpu_limit,
@@ -47,6 +48,7 @@ class JobList(Resource):
             'selfexec': args.selfexec,
             'selfpath': args.selfpath,
             'execshell': args.execshell,
+            'type': args.type,
         }
         f = request.files['data_file']
         pfioh = PfiohService.get_service_obj()

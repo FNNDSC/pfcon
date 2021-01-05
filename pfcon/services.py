@@ -6,6 +6,7 @@ a pycurl-based hack here. Future pman's implementation should remove the need fo
 
 import logging
 import io
+import os
 import json
 import urllib.parse
 from abc import ABC
@@ -34,6 +35,10 @@ class Service(ABC):
         # base url of the service
         self.base_url = base_url
 
+        # hardcode mounting points for the input and outputdir in the app's container!
+        self.str_app_container_inputdir = '/share/incoming'
+        self.str_app_container_outputdir = '/share/outgoing'
+
     def perform_request(self, curl_obj):
         try:
             curl_obj.perform()
@@ -58,7 +63,7 @@ class PmanService(Service):
         payload = {
             'action': 'run',
             'meta': {
-                    'cmd': compute_data['cmd'],
+                    'cmd': self.build_app_cmd(compute_data),
                     'threaded': True,
                     'auid': compute_data['auid'],
                     'jid': job_id,
@@ -132,6 +137,35 @@ class PmanService(Service):
         d_resp = json.loads(str_resp)
         logger.info('Response from %s: %s' % (self.NAME, json.dumps(d_resp, indent=4)))
         return d_resp
+
+    def build_app_cmd(self, compute_data):
+        """
+        Build and return the app's cmd string.
+        """
+        cmd_args = compute_data['cmd_args']
+        args = cmd_args.split()
+        for i in range(len(args) - 1):
+            if args[i].startswith('path:-'):  # process any flag that starts with 'path:'
+                args[i] = args[i].replace('path:', '', 1)
+                # args[i+1] = args[i+1].lstrip('/')
+                # args[i+1] = os.path.join(self.str_app_container_inputdir, args[i+1])
+                # the next is tmp until CUBE's assumptions about inputdir and path
+                # parameters are removed
+                args[i+1] = self.str_app_container_inputdir
+        cmd_args = ' '.join(args)
+        selfpath = compute_data['selfpath']
+        selfexec = compute_data['selfexec']
+        execshell = compute_data['execshell']
+        type = compute_data['type']
+        outputdir = self.str_app_container_outputdir
+        exec = os.path.join(selfpath, selfexec)
+        cmd = ''
+        if type == 'fs':
+            cmd = '%s %s %s %s' % (execshell, exec, outputdir, cmd_args)
+        elif type == 'ds':
+            inputdir = self.str_app_container_inputdir
+            cmd = '%s %s %s %s %s' % (execshell, exec, inputdir, outputdir, cmd_args)
+        return cmd
 
     @classmethod
     def get_service_obj(cls):

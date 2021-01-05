@@ -54,7 +54,7 @@ class TestJobList(ResourceTests):
 
         data = {
             'jid': job_id,
-            'cmd': 'python3 /usr/src/simplefsapp/simplefsapp.py /share/outgoing --saveinputmeta --saveoutputmeta --dir /share/incoming',
+            'cmd_args': '--saveinputmeta --saveoutputmeta --dir /share/incoming',
             'auid': 'cube',
             'number_of_workers': '1',
             'cpu_limit': '1000',
@@ -64,6 +64,7 @@ class TestJobList(ResourceTests):
             'selfexec': 'simplefsapp.py',
             'selfpath': '/usr/src/simplefsapp',
             'execshell': 'python3',
+            'type': 'fs',
             'data_file': (memory_zip_file, 'data.txt.zip')
         }
         # make the POST request
@@ -105,7 +106,7 @@ class TestJob(ResourceTests):
         memory_zip_file.filename = 'data.txt.zip'
 
         compute_data = {
-            'cmd': 'python3 /usr/src/simplefsapp/simplefsapp.py /share/outgoing --saveinputmeta --saveoutputmeta --dir /share/incoming',
+            'cmd_args': '--saveinputmeta --saveoutputmeta path:--dir cube',
             'auid': 'cube',
             'number_of_workers': '1',
             'cpu_limit': '1000',
@@ -115,6 +116,7 @@ class TestJob(ResourceTests):
             'selfexec': 'simplefsapp.py',
             'selfpath': '/usr/src/simplefsapp',
             'execshell': 'python3',
+            'type': 'fs'
         }
 
         with self.app.test_request_context():
