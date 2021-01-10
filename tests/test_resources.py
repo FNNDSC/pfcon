@@ -106,7 +106,8 @@ class TestJob(ResourceTests):
         memory_zip_file.filename = 'data.txt.zip'
 
         compute_data = {
-            'cmd_args': '--saveinputmeta --saveoutputmeta path:--dir cube',
+            'cmd_args': '--saveinputmeta --saveoutputmeta --dir cube',
+            'cmd_path_flags': '--dir,',
             'auid': 'cube',
             'number_of_workers': '1',
             'cpu_limit': '1000',

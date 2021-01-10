@@ -143,16 +143,23 @@ class PmanService(Service):
         Build and return the app's cmd string.
         """
         cmd_args = compute_data['cmd_args']
-        args = cmd_args.split()
-        for i in range(len(args) - 1):
-            if args[i].startswith('path:-'):  # process any flag that starts with 'path:'
-                args[i] = args[i].replace('path:', '', 1)
-                # args[i+1] = args[i+1].lstrip('/')
-                # args[i+1] = os.path.join(self.str_app_container_inputdir, args[i+1])
-                # the next is tmp until CUBE's assumptions about inputdir and path
-                # parameters are removed
-                args[i+1] = self.str_app_container_inputdir
-        cmd_args = ' '.join(args)
+        cmd_path_flags = compute_data['cmd_path_flags']
+        if cmd_path_flags:
+            # process the argument of any cmd flag that is a 'path'
+            path_flags = cmd_path_flags.split(',')
+            args = cmd_args.split()
+            for i in range(len(args) - 1):
+                if args[i] in path_flags:
+                    # each flag value is a string of one or more paths separated by comma
+                    # paths = args[i+1].split(',')
+                    # base_inputdir = self.str_app_container_inputdir
+                    # paths = [os.path.join(base_inputdir, p.lstrip('/')) for p in paths]
+                    # args[i+1] = ','.join(paths)
+
+                    # the next is tmp until CUBE's assumptions about inputdir and path
+                    # parameters are removed
+                    args[i+1] = self.str_app_container_inputdir
+            cmd_args = ' '.join(args)
         selfpath = compute_data['selfpath']
         selfexec = compute_data['selfexec']
         execshell = compute_data['execshell']
