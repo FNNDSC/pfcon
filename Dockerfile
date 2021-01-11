@@ -23,7 +23,7 @@
 #   docker run -ti --rm -e HOST_IP=$(ip route | grep -v docker | awk '{if(NF==11) print $9}') --entrypoint /bin/bash local/pfcon
 #
 
-FROM python:3.8.6-buster AS build
+FROM python:3.8.6-buster
 LABEL version="3.0.0.0" maintainer="FNNDSC <dev@babyMRI.org>"
 
 # Pass a UID on build command line (see above) to set internal UID
