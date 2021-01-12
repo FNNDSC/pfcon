@@ -1,6 +1,6 @@
-################
-pfcon  v3.0.0.0
-################
+##############
+pfcon v3.0.0.0
+##############
 
 .. image:: https://github.com/fnndsc/pfcon/workflows/CI/badge.svg
     :target: https://github.com/fnndsc/pfcon/actions
@@ -23,6 +23,8 @@ It can be used to query and control the following (for example):
 - *state*: Is job <XYZ> still running?
 - *result*: What is the stdout (or stderr) from job <XYZ>?
 - *control*: Kill job <XYZ>
+
+A Python3 client for this server's web API is provided here: https://github.com/FNNDSC/python-pfconclient
 
 ************
 Installation
