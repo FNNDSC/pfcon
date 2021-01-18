@@ -139,6 +139,16 @@ Gd_internalvar  = {
 
 Gd_tree         = C_stree()
 
+HOST_IP_ENVIRONMENT_VARIABLE = 'HOST_IP'
+
+PFIOH_IP_ENVIRONMENT_VARIABLE = 'PFIOH_PORT_5055_TCP_ADDR'
+PFIOH_HOST_NAME_ENVIRONMENT_VARIABLE = 'PFIOH_HOST_NAME'
+PFIOH_HOST_NAME_DEFAULT = 'pfioh_service'
+
+PMAN_IP_ENVIRONMENT_VARIABLE = 'PMAN_PORT_5010_TCP_ADDR'
+PMAN_HOST_NAME_ENVIRONMENT_VARIABLE = 'PMAN_HOST_NAME'
+PMAN_HOST_NAME_DEFAULT = 'pman_service'
+
 
 class StoreHandler(BaseHTTPRequestHandler):
 
@@ -581,7 +591,7 @@ class StoreHandler(BaseHTTPRequestHandler):
                 d_ret['sysinfo']['loadavg']     = os.getloadavg()
                 d_ret['sysinfo']['cpu_percent'] = psutil.cpu_percent()
                 d_ret['sysinfo']['hostname']    = socket.gethostname()
-                d_ret['sysinfo']['inet']        = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
+                d_ret['sysinfo']['inet']        = pfmisc.local_ip_address()
                 b_status                        = True
             if str_askAbout == 'echoBack':
                 d_ret['echoBack']               = {}
@@ -1869,33 +1879,6 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     def setup(self, **kwargs):
         global G_b_httpResponse
         global Gd_internalvar
-        str_defIP       = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-        str_defIPpman   = str_defIP
-        str_defIPpfioh  = str_defIP
-
-        if 'HOST_IP' in os.environ:
-            str_defIPpman   = os.environ['HOST_IP']
-            str_defIPpfioh  = os.environ['HOST_IP']
-
-        # For old docker-compose
-        if 'PMAN_PORT_5010_TCP_ADDR' in os.environ:
-            str_defIPpman   = os.environ['PMAN_PORT_5010_TCP_ADDR']
-        if 'PFIOH_PORT_5055_TCP_ADDR' in os.environ:
-            str_defIPpfioh  = os.environ['PFIOH_PORT_5055_TCP_ADDR']
-
-        # For newer docker-compose
-        try:
-            pman_service    = socket.gethostbyname('pman_service')
-            if pman_service != "127.0.0.1":
-                str_defIPpman   = pman_service
-        except:
-            pass
-        try:
-            pfioh_service   = socket.gethostbyname('pfioh_service')
-            if pfioh_service != "127.0.0.1":
-                str_defIPpfioh  = pfioh_service
-        except:
-            pass
 
         for k,v in kwargs.items():
             if k == 'args': self.args           = v
@@ -1930,12 +1913,15 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         Gd_tree.initFromDict(Gd_internalvar)
 
+        pfioh_ip = self.get_pfioh_ip()
+        pman_ip = self.get_pman_ip()
+
         self.leaf_process(  where   = '/service/host/data/addr',
                             replace = '%PFIOH_IP',
-                            newVal  = str_defIPpfioh)
+                            newVal  = pfioh_ip)
         self.leaf_process(  where   = '/service/host/compute/addr',
                             replace = '%PMAN_IP',
-                            newVal  = str_defIPpman)
+                            newVal  = pman_ip)
 
         self.dp.qprint(
             Colors.YELLOW + "\n\t\tInternal data tree:",
@@ -1963,3 +1949,56 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             Colors.NO_COLOUR,
             level   = 1,
             syslog  = False)
+
+    def get_pfioh_ip(self):
+        pfioh_ip = (
+            self.read_ip_by_host_name_environment_variable(
+                PFIOH_HOST_NAME_ENVIRONMENT_VARIABLE,
+                default_host_name=PFIOH_HOST_NAME_DEFAULT)
+            or self.read_from_environment(PFIOH_IP_ENVIRONMENT_VARIABLE)
+            or self.read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
+            or pfmisc.local_ip_address()
+        )
+        self.dp.qprint(f'Found pfioh IP address: {pfioh_ip}.')
+        return pfioh_ip
+
+    def get_pman_ip(self):
+        pman_ip = (
+            self.read_ip_by_host_name_environment_variable(
+                PMAN_HOST_NAME_ENVIRONMENT_VARIABLE,
+                default_host_name=PMAN_HOST_NAME_DEFAULT)
+            or self.read_from_environment(PMAN_IP_ENVIRONMENT_VARIABLE)
+            or self.read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
+            or pfmisc.local_ip_address()
+        )
+        self.dp.qprint(f'Found pman IP address: {pman_ip}.')
+        return pman_ip
+
+    def read_ip_by_host_name_environment_variable(
+            self, host_name_environment_variable, default_host_name=''):
+        '''For newer docker-compose'''
+
+        host_name = os.environ.get(
+            host_name_environment_variable, default_host_name
+        )
+        self.dp.qprint(f'Reading IP address of {host_name}.')
+        try:
+            ip_address = socket.gethostbyname(host_name)
+        except Exception as exception:
+            self.dp.qprint(
+                f'Could not obtain IP address of host {host_name} ({exception}).'
+            )
+            return None
+
+        if ip_address == '127.0.0.1':
+            return None
+        return ip_address
+
+
+    def read_from_environment(self, environment_variable, default=None):
+        value = os.environ.get(environment_variable, default)
+        self.dp.qprint(
+            f'Obtained {value} from environment variable {environment_variable}'
+            f' (default: {default})'
+        )
+        return value

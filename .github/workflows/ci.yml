@@ -2,11 +2,7 @@
 
 name: CI
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 jobs:
   nose:
@@ -18,6 +14,7 @@ jobs:
         run: sudo apt-get install -qq libssl-dev libcurl4-openssl-dev
       - name: install pip dependencies
         run: |
+          pip install -r requirements.txt
           pip install .
           pip install nose
           echo "$HOME/.local/bin" >> $GITHUB_PATH
