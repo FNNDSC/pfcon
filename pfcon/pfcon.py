@@ -39,7 +39,23 @@ from .swiftmanager import SwiftManager
 # Horrible global var
 G_b_httpResponse            = False
 
+# host names configurable two ways
 Gstr_primaryService = os.getenv('PFCON_PRIMARY_SERVICE_NAME', 'host')
+Gstr_host_pman = os.getenv(
+    'PMAN_HOST_NAME',
+    os.getenv('PMAN_PORT_5010_TCP_ADDR', 'pman_service')
+)
+Gstr_host_pfioh = os.getenv(
+    'PFIOH_HOST_NAME',
+    os.getenv('PFIOH_PORT_5055_TCP_ADDR', 'pfioh_service')
+)
+
+# default ports
+if ':' not in Gstr_host_pman:
+    Gstr_host_pman += ':5010'
+if ':' not in Gstr_host_pfioh:
+    Gstr_host_pfioh += ':5055'
+
 
 Gd_internalvar  = {
     'self': {
@@ -86,13 +102,13 @@ Gd_internalvar  = {
     'service':  {
         Gstr_primaryService: {
             'data': {
-                'addr':             '%PFIOH_IP:5055',
+                'addr':             Gstr_host_pfioh,
                 'baseURLpath':      'api/v1/cmd/',
                 'status':           'undefined',
                 'authToken':        'password'
             },
             'compute': {
-                'addr':             '%PMAN_IP:5010',
+                'addr':             Gstr_host_pman,
                 'baseURLpath':      'api/v1/cmd/',
                 'status':           'undefined',
                 'authToken':        'password'
@@ -140,17 +156,6 @@ Gd_internalvar  = {
 }
 
 Gd_tree         = C_stree()
-
-HOST_IP_ENVIRONMENT_VARIABLE = 'HOST_IP'
-
-PFIOH_IP_ENVIRONMENT_VARIABLE = 'PFIOH_PORT_5055_TCP_ADDR'
-PFIOH_HOST_NAME_ENVIRONMENT_VARIABLE = 'PFIOH_HOST_NAME'
-PFIOH_HOST_NAME_DEFAULT = 'pfioh_service'
-
-PMAN_IP_ENVIRONMENT_VARIABLE = 'PMAN_PORT_5010_TCP_ADDR'
-PMAN_HOST_NAME_ENVIRONMENT_VARIABLE = 'PMAN_HOST_NAME'
-PMAN_HOST_NAME_DEFAULT = 'pman_service'
-
 
 class StoreHandler(BaseHTTPRequestHandler):
 
@@ -1915,16 +1920,6 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
         Gd_tree.initFromDict(Gd_internalvar)
 
-        pfioh_ip = self.get_pfioh_ip()
-        pman_ip = self.get_pman_ip()
-
-        self.leaf_process(  where   = f'/service/{Gstr_primaryService}/data/addr',
-                            replace = '%PFIOH_IP',
-                            newVal  = pfioh_ip)
-        self.leaf_process(  where   = f'/service/{Gstr_primaryService}/compute/addr',
-                            replace = '%PMAN_IP',
-                            newVal  = pman_ip)
-
         self.dp.qprint(
             Colors.YELLOW + "\n\t\tInternal data tree:",
             level   = 1,
@@ -1951,56 +1946,3 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             Colors.NO_COLOUR,
             level   = 1,
             syslog  = False)
-
-    def get_pfioh_ip(self):
-        pfioh_ip = (
-            self.read_ip_by_host_name_environment_variable(
-                PFIOH_HOST_NAME_ENVIRONMENT_VARIABLE,
-                default_host_name=PFIOH_HOST_NAME_DEFAULT)
-            or self.read_from_environment(PFIOH_IP_ENVIRONMENT_VARIABLE)
-            or self.read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
-            or pfmisc.local_ip_address()
-        )
-        self.dp.qprint(f'Found pfioh IP address: {pfioh_ip}.')
-        return pfioh_ip
-
-    def get_pman_ip(self):
-        pman_ip = (
-            self.read_ip_by_host_name_environment_variable(
-                PMAN_HOST_NAME_ENVIRONMENT_VARIABLE,
-                default_host_name=PMAN_HOST_NAME_DEFAULT)
-            or self.read_from_environment(PMAN_IP_ENVIRONMENT_VARIABLE)
-            or self.read_from_environment(HOST_IP_ENVIRONMENT_VARIABLE)
-            or pfmisc.local_ip_address()
-        )
-        self.dp.qprint(f'Found pman IP address: {pman_ip}.')
-        return pman_ip
-
-    def read_ip_by_host_name_environment_variable(
-            self, host_name_environment_variable, default_host_name=''):
-        '''For newer docker-compose'''
-
-        host_name = os.environ.get(
-            host_name_environment_variable, default_host_name
-        )
-        self.dp.qprint(f'Reading IP address of {host_name}.')
-        try:
-            ip_address = socket.gethostbyname(host_name)
-        except Exception as exception:
-            self.dp.qprint(
-                f'Could not obtain IP address of host {host_name} ({exception}).'
-            )
-            return None
-
-        if ip_address == '127.0.0.1':
-            return None
-        return ip_address
-
-
-    def read_from_environment(self, environment_variable, default=None):
-        value = os.environ.get(environment_variable, default)
-        self.dp.qprint(
-            f'Obtained {value} from environment variable {environment_variable}'
-            f' (default: {default})'
-        )
-        return value
