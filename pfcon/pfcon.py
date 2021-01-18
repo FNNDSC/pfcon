@@ -39,6 +39,8 @@ from .swiftmanager import SwiftManager
 # Horrible global var
 G_b_httpResponse            = False
 
+Gstr_primaryService = os.getenv('PFCON_PRIMARY_SERVICE_NAME', 'host')
+
 Gd_internalvar  = {
     'self': {
         'name':                 'pfcon',
@@ -82,7 +84,7 @@ Gd_internalvar  = {
         }
     },
     'service':  {
-        'host': {
+        Gstr_primaryService: {
             'data': {
                 'addr':             '%PFIOH_IP:5055',
                 'baseURLpath':      'api/v1/cmd/',
@@ -1916,10 +1918,10 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
         pfioh_ip = self.get_pfioh_ip()
         pman_ip = self.get_pman_ip()
 
-        self.leaf_process(  where   = '/service/host/data/addr',
+        self.leaf_process(  where   = f'/service/{Gstr_primaryService}/data/addr',
                             replace = '%PFIOH_IP',
                             newVal  = pfioh_ip)
-        self.leaf_process(  where   = '/service/host/compute/addr',
+        self.leaf_process(  where   = f'/service/{Gstr_primaryService}/compute/addr',
                             replace = '%PMAN_IP',
                             newVal  = pman_ip)
 

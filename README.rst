@@ -1,5 +1,5 @@
 #############
-pfcon  v2.3.0
+pfcon  v2.3.1
 #############
 
 .. image:: https://github.com/fnndsc/pfcon/workflows/CI/badge.svg
@@ -146,6 +146,15 @@ For ``pfcon`` detailed information, see the `pfcon wiki page <https://github.com
         Set the verbosity level. "0" typically means no/minimal output. Allows for
         more fine tuned output control as opposed to '--quiet' that effectively
         silences everything.
+
+Environment Variables
+=====================
+
+Remote compute environment is most easily configured using environment variables
+
+* ``PFCON_PRIMARY_SERVICE_NAME``
+* ``PMAN_HOST_NAME``
+* ``PFIOH_HOST_NAME``
 
 ********
 EXAMPLES
