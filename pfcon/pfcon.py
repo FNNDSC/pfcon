@@ -39,6 +39,10 @@ from .swiftmanager import SwiftManager
 # Horrible global var
 G_b_httpResponse            = False
 
+Gstr_remote_name = os.getenv('PFCON_REMOTE_NAME', 'remote');
+Gstr_remote_pman = os.getenv('PFCON_REMOTE_PMAN', 'remote-pman:5010');
+Gstr_remote_pfioh = os.getenv('PFCON_REMOTE_PFIOH', 'remote-pfioh:5055');
+
 Gd_internalvar  = {
     'self': {
         'name':                 'pfcon',
@@ -82,6 +86,20 @@ Gd_internalvar  = {
         }
     },
     'service':  {
+        Gstr_remote_name: {
+            'data': {
+                'addr':             Gstr_remote_pfioh,
+                'baseURLpath':      'api/v1/cmd/',
+                'status':           'undefined',
+                'authToken':        'password'
+            },
+            'compute': {
+                'addr':             Gstr_remote_pman,
+                'baseURLpath':      'api/v1/cmd/',
+                'status':           'undefined',
+                'authToken':        'password'
+            }
+        },
         'host': {
             'data': {
                 'addr':             '%PFIOH_IP:5055',
