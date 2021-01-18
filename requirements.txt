@@ -4,5 +4,5 @@ webob == 1.8.6
 pudb == 2019.2
 psutil == 5.7.3
 pfurl == 2.3.0.1
-pfmisc == 2.0.2
+pfmisc == 2.2.2
 python-swiftclient == 3.10.1
