@@ -43,7 +43,7 @@ class Service(ABC):
         try:
             curl_obj.perform()
         except pycurl.error as e:
-            error_msg = 'Error in talking to %s service, detail: %s' % (self.NAME, str(e))
+            error_msg = f'Error in talking to {self.NAME} service, detail: {str(e)}'
             logger.error(error_msg)
             raise ServiceException(error_msg)
         finally:
@@ -116,7 +116,7 @@ class PmanService(Service):
         pass
 
     def do_POST(self, payload):
-        logger.info('Sending cmd to %s service at -->%s<--' % (self.NAME, self.base_url))
+        logger.info(f'Sending cmd to {self.NAME} service at -->{self.base_url}<--')
         logger.info('Payload sent: %s', json.dumps(payload, indent=4))
 
         c = pycurl.Curl()
@@ -135,7 +135,7 @@ class PmanService(Service):
         self.perform_request(c)
         str_resp = buffer.getvalue().decode()
         d_resp = json.loads(str_resp)
-        logger.info('Response from %s: %s' % (self.NAME, json.dumps(d_resp, indent=4)))
+        logger.info(f'Response from {self.NAME}: {json.dumps(d_resp, indent=4)}')
         return d_resp
 
     def build_app_cmd(self, compute_data):
@@ -166,12 +166,14 @@ class PmanService(Service):
         type = compute_data['type']
         outputdir = self.str_app_container_outputdir
         exec = os.path.join(selfpath, selfexec)
-        cmd = ''
-        if type == 'fs':
-            cmd = '%s %s %s %s' % (execshell, exec, outputdir, cmd_args)
-        elif type == 'ds':
+        cmd = f'{execshell} {exec}'
+        if type == 'ds':
             inputdir = self.str_app_container_inputdir
-            cmd = '%s %s %s %s %s' % (execshell, exec, inputdir, outputdir, cmd_args)
+            cmd = cmd + f' {inputdir} {outputdir} {cmd_args}'
+        elif type in ('fs', 'ts'):
+            cmd = cmd + f' {outputdir} {cmd_args}'
+        else:
+            ServiceException(f'Unsupported plugin type: {type}')
         return cmd
 
     @classmethod
@@ -211,8 +213,7 @@ class PfiohService(Service):
                 }
             }
         }
-        logger.info('Sending PUSH data request to %s at -->%s<--' % (self.NAME,
-                                                                     self.base_url))
+        logger.info(f'Sending PUSH data request to {self.NAME} at -->{self.base_url}<--')
         logger.info('Payload sent: %s', json.dumps(payload, indent=4))
 
         c = pycurl.Curl()
@@ -234,7 +235,7 @@ class PfiohService(Service):
         self.perform_request(c)
         str_resp = buffer.getvalue().decode()
         d_resp = json.loads(str_resp)
-        logger.info('Response from %s: %s' % (self.NAME, json.dumps(d_resp, indent=4)))
+        logger.info(f'Response from {self.NAME}: {json.dumps(d_resp, indent=4)}')
         return d_resp
 
     def pull_data(self, job_id):
@@ -264,8 +265,7 @@ class PfiohService(Service):
             }
         }
         query = urllib.parse.urlencode(d_query)
-        logger.info('Sending PULL data request to %s at -->%s<--' % (self.NAME,
-                                                                     self.base_url))
+        logger.info(f'Sending PULL data request to {self.NAME} at -->{self.base_url}<--')
         logger.info('Query sent: %s', query)
 
         c = pycurl.Curl()

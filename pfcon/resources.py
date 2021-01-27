@@ -23,8 +23,9 @@ parser.add_argument('image', dest='image', required=True, location='form')
 parser.add_argument('selfexec', dest='selfexec', required=True, location='form')
 parser.add_argument('selfpath', dest='selfpath', required=True, location='form')
 parser.add_argument('execshell', dest='execshell', required=True, location='form')
-parser.add_argument('type', dest='type', choices=('ds', 'fs'), required=True,
+parser.add_argument('type', dest='type', choices=('ds', 'fs', 'ts'), required=True,
                     location='form')
+
 
 class JobList(Resource):
     """
