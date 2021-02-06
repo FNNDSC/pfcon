@@ -5,8 +5,9 @@
 # MAC-specific FS stuff
 *.DS_Store
 
-# PyCharm
+# IDEs
 .idea
+.vscode
 
 # Setuptools distribution folder.
 /dist/
