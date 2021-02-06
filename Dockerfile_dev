@@ -40,7 +40,7 @@ RUN apt-get update \
 # Copy source code and make localuser the owner
 COPY --chown=localuser ./bin ${APPROOT}/bin
 COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
-COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
+COPY --chown=localuser ./setup.py README.rst  ${APPROOT}/
 
 RUN pip3 install -e ${APPROOT}
 
