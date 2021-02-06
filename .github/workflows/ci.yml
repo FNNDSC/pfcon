@@ -4,7 +4,6 @@ name: CI
 
 on:
   push:
-    # we have to guess what the name of the default branch is
     branches: [ master ]
     tags: [ '**' ]
   pull_request:
