@@ -1,9 +1,16 @@
-#############
-pfcon  v2.3.0
-#############
+#####
+pfcon
+#####
 
-.. image:: https://github.com/fnndsc/pfcon/workflows/CI/badge.svg
-    :target: https://github.com/fnndsc/pfcon/actions
+.. image:: https://img.shields.io/docker/v/fnndsc/pfcon?sort=semver
+    :alt: Docker Image Version
+    :target: https://hub.docker.com/r/fnndsc/pfcon
+.. image:: https://img.shields.io/github/license/fnndsc/pfioh
+    :alt: MIT License
+    :target: https://github.com/FNNDSC/pfcon/blob/master/LICENSE
+.. image:: https://github.com/FNNDSC/pfcon/workflows/ci/badge.svg
+    :alt: Github Actions
+    :target: https://github.com/FNNDSC/pfcon/actions
 
 .. contents:: Table of Contents
 
@@ -12,9 +19,6 @@ Overview
 ********
 
 This repository provides ``pfcon`` -- a controlling service that speaks to remote ``pman`` and ``pfioh`` services.
-
-pfcon
-=====
 
 Most simply, ``pfcon`` pushes local data to a remote location (by talking to a remote ``pfioh`` service), runs some process on this data in the remote space using ``pman``, and then copies the resultant data back to a local target space.
 
