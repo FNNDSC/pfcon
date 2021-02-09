@@ -61,8 +61,8 @@ class TestJobList(ResourceTests):
             'memory_limit': '200',
             'gpu_limit': '0',
             'image': 'fnndsc/pl-simplefsapp',
-            'selfexec': 'simplefsapp.py',
-            'selfpath': '/usr/src/simplefsapp',
+            'selfexec': 'simplefsapp',
+            'selfpath': '/usr/local/bin',
             'execshell': 'python3',
             'type': 'fs',
             'data_file': (memory_zip_file, 'data.txt.zip')
@@ -114,8 +114,8 @@ class TestJob(ResourceTests):
             'memory_limit': '200',
             'gpu_limit': '0',
             'image': 'fnndsc/pl-simplefsapp',
-            'selfexec': 'simplefsapp.py',
-            'selfpath': '/usr/src/simplefsapp',
+            'selfexec': 'simplefsapp',
+            'selfpath': '/usr/local/bin',
             'execshell': 'python3',
             'type': 'fs'
         }

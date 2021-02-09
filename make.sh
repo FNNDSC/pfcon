@@ -15,9 +15,8 @@
 # DESC
 #
 #   'make.sh' sets up a pfcon development instance using docker-compose.
-#   It can also optionally populate a swift container with sample data, and
-#   creates a pattern of directories and symbolic links that reflect the
-#   declarative environment of the docker-compose contents.
+#   It can also optionally create a pattern of directories and symbolic links
+#   that reflect the declarative environment of the docker-compose contents.
 #
 # TYPICAL CASES:
 #
@@ -134,7 +133,7 @@ declare -a A_CONTAINER=(
     "fnndsc/pfioh${TAG}^PFIOHREPO"
     "fnndsc/pman${TAG}^PMANREPO"
     "fnndsc/swarm^SWARMREPO"
-    "fnndsc/pl-dircopy"
+    "fnndsc/pl-simplefsapp"
 )
 
 title -d 1 "Setting global exports..."
@@ -202,7 +201,7 @@ else
         title -d 1 "Will use containers with following version info:"
         for CORE in ${A_CONTAINER[@]} ; do
             cparse $CORE " " "REPO" "CONTAINER" "MMN" "ENV"
-            if [[   $CONTAINER != "docker-swift-onlyone" && \
+            if [[   $CONTAINER != "pl-simplefsapp" && \
                     $CONTAINER != "swarm" ]] ; then
                 windowBottom
                 CMD="docker run ${REPO}/$CONTAINER --version"
