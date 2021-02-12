@@ -71,6 +71,7 @@ class PmanService(Service):
                     'cpu_limit': compute_data['cpu_limit'],
                     'memory_limit': compute_data['memory_limit'],
                     'gpu_limit': compute_data['gpu_limit'],
+                    'type': compute_data['type'],
                     'container':
                         {
                             'target':
@@ -169,9 +170,9 @@ class PmanService(Service):
         cmd = f'{execshell} {exec}'
         if type == 'ds':
             inputdir = self.str_app_container_inputdir
-            cmd = cmd + f' {inputdir} {outputdir} {cmd_args}'
+            cmd = cmd + f' {cmd_args} {inputdir} {outputdir}'
         elif type in ('fs', 'ts'):
-            cmd = cmd + f' {outputdir} {cmd_args}'
+            cmd = cmd + f' {cmd_args} {outputdir}'
         else:
             ServiceException(f'Unsupported plugin type: {type}')
         return cmd
