@@ -47,6 +47,9 @@ class PmanService(Service):
         Run job on the compute environment.
         """
         compute_data['jid'] = job_id
+        logger.info(f'Sending RUN job request to {self.NAME} at -->{self.base_url}<-- '
+                    f'for job {job_id}')
+        logger.info('Payload sent: %s', json.dumps(compute_data, indent=4))
         try:
             r = requests.post(self.base_url, json=compute_data, timeout=1000)
         except (Timeout, RequestException) as e:
@@ -59,13 +62,17 @@ class PmanService(Service):
                   f'{job_id}, detail: {r.text}'
             logger.error(msg)
             raise ServiceException(msg, code=r.status_code)
-        return r.json()
+        d_resp = r.json()
+        logger.info(f'Response from {self.NAME}: {json.dumps(d_resp, indent=4)}')
+        return d_resp
 
     def get_job(self, job_id):
         """
         Get job info from the compute environment.
         """
         url = self.base_url + job_id + '/'
+        logger.info(f'Sending STATUS job request to {self.NAME} at -->{self.base_url}<-- '
+                    f'for job {job_id}')
         try:
             r = requests.get(url, timeout=1000)
         except (Timeout, RequestException) as e:
@@ -78,7 +85,9 @@ class PmanService(Service):
                   f'{job_id} status, detail: {r.text}'
             logger.error(msg)
             raise ServiceException(msg, code=r.status_code)
-        return r.json()
+        d_resp = r.json()
+        logger.info(f'Response from {self.NAME}: {json.dumps(d_resp, indent=4)}')
+        return d_resp
 
     def delete_job(self, job_id):
         pass
