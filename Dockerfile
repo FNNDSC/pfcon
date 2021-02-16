@@ -23,7 +23,7 @@
 #   docker run -ti --rm -e HOST_IP=$(ip route | grep -v docker | awk '{if(NF==11) print $9}') --entrypoint /bin/bash local/pfcon
 #
 
-FROM fnndsc/ubuntu-python3:latest
+FROM fnndsc/ubuntu-python3:ubuntu20.04-python3.8.5
 MAINTAINER fnndsc "dev@babymri.org"
 
 # Pass a UID on build command line (see above) to set internal UID
@@ -31,7 +31,6 @@ ARG UID=1001
 ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPLICATION_MODE="production" APPROOT="/home/localuser/pfcon"
 
 RUN apt-get update                                                                              \
-  && apt-get install -y libssl-dev libcurl4-openssl-dev bsdmainutils net-tools inetutils-ping   \
   && apt-get install -y locales                                                                 \
   && export LANGUAGE=en_US.UTF-8                                                                \
   && export LANG=en_US.UTF-8                                                                    \

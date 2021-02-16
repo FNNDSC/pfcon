@@ -72,7 +72,7 @@ class TestJobList(ResourceTests):
                                     data=data,
                                     content_type='multipart/form-data')
         self.assertIn('compute', response.json)
-        self.assertIn('pushData', response.json)
+        self.assertIn('data', response.json)
 
         time.sleep(3)
         with self.app.test_request_context():
@@ -126,8 +126,8 @@ class TestJob(ResourceTests):
             d_data_push_response = pfioh.push_data(job_id, memory_zip_file)
             self.assertTrue(d_data_push_response['status'])
             pman = PmanService.get_service_obj()
-            data_share_dir = d_data_push_response['postop']['shareDir']
-            d_compute_response = pman.run_job(job_id, compute_data, data_share_dir)
+            #data_share_dir = d_data_push_response['postop']['shareDir']
+            d_compute_response = pman.run_job(job_id, compute_data)
             self.assertTrue(d_compute_response['status'])
 
             time.sleep(3)

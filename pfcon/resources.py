@@ -25,6 +25,7 @@ parser.add_argument('selfpath', dest='selfpath', required=True, location='form')
 parser.add_argument('execshell', dest='execshell', required=True, location='form')
 parser.add_argument('type', dest='type', choices=('ds', 'fs', 'ts'), required=True,
                     location='form')
+parser.add_argument('data_file', dest='data_file', required=True, location='files')
 
 
 class JobList(Resource):
@@ -58,15 +59,14 @@ class JobList(Resource):
         try:
             d_data_push_response = pfioh.push_data(job_id, f)
         except ServiceException as e:
-            abort(503, message=str(e))  # 503 Service Unavailable (pfioh)
+            abort(e.code, message=str(e))
         pman = PmanService.get_service_obj()
-        data_share_dir = d_data_push_response['postop']['shareDir']
         try:
-            d_compute_response = pman.run_job(job_id, compute_data, data_share_dir)
+            d_compute_response = pman.run_job(job_id, compute_data)
         except ServiceException as e:
-            abort(503, message=str(e))  # 503 Service Unavailable (pman)
+            abort(e.code, message=str(e))
         return {
-            'pushData': d_data_push_response,
+            'data': d_data_push_response,
             'compute': d_compute_response
         }
 
@@ -80,9 +80,7 @@ class Job(Resource):
         try:
             d_compute_response = pman.get_job(job_id)
         except ServiceException as e:
-            abort(503, message=str(e))  # 503 Service Unavailable (pman)
-        if not d_compute_response['status']:
-            abort(404, message="Not found.")  # 404 Not Found (job not found)
+            abort(e.code, message=str(e))
         return {
             'compute': d_compute_response
         }

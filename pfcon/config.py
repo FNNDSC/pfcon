@@ -60,7 +60,7 @@ class DevConfig(Config):
         })
 
         # EXTERNAL SERVICES
-        self.COMPUTE_SERVICE_URL = 'http://pman.remote:5010/api/v1/cmd'
+        self.COMPUTE_SERVICE_URL = 'http://pman.remote:5010/api/v1/'
         self.DATA_SERVICE_URL = 'http://pfioh.remote:5055/api/v1/cmd'
 
 

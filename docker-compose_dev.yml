@@ -14,9 +14,9 @@ services:
   pfcon_service:
     image: ${PFCONREPO}/pfcon:dev
     volumes:
-      - ./pfcon:/home/localuser/pfcon/pfcon
-      - ./bin/pfcon:/home/localuser/pfcon/bin/pfcon
-      - ./tests:/home/localuser/pfcon/tests
+      - ./pfcon:/home/localuser/pfcon/pfcon:z
+      - ./bin/pfcon:/home/localuser/pfcon/bin/pfcon:z
+      - ./tests:/home/localuser/pfcon/tests:z
     ports:
       - "5006:5005"
     depends_on:
@@ -37,7 +37,7 @@ services:
     image: ${PFIOHREPO}/pfioh${TAG}
     command: ["--forever", "--ip", "0.0.0.0", "--port", "5055", "--httpResponse", "--createDirsAsNeeded", "--storeBase", "/hostFS/storeBase", "--verbosity", "1"]
     volumes:
-      - ./FS/remote:/hostFS/storeBase
+      - ./FS/remote:/hostFS/storeBase:z
     ports:
       - "5056:5055"
     networks:
@@ -49,23 +49,17 @@ services:
       role: "pfioh service"
 
   pman_service:
-    # pman also needs access to the pfioh storeBase folder (and hence the volume)
-    # mapping from the HOST file system space.
-    #
-    # There is however an extra twist. Since pman spins off containers of its
-    # own, it needs to mount this storeBase dir into the spawned container.
-    # However, it can't mount a dir inside itself to the spawned container,
-    # it has to mount an actual existing directory. This directory is
-    # passed in the STOREBASE env variable, and will override the base
-    # mapping of SHAREDIR inside pman to the swarm manager. Note that the
-    # full path to the spawned container should be ${STOREBASE} + keyStore!
+    # Since pman spins off containers of its own it needs to mount storeBase dir (where
+    # pfioh shares the data) into the spawned container. However, it can't mount a dir
+    # inside itself to the spawned container, it has to mount an actual existing
+    # directory in the host. This directory is passed in the STOREBASE env variable.
     environment:
       - STOREBASE
+      - SECRET_KEY="w1kxu^l=@pnsf!5piqz6!!5kdcdpo79y6jebbp+2244yjm*#+k"
+      - CONTAINER_ENV=swarm
     image: ${PMANREPO}/pman${TAG}
-    command: ["--rawmode", "1", "--ip", "0.0.0.0", "--port", "5010", "--listeners", "12", "--verbosity", "1"]
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./FS/remote:/hostFS/storeBase
+      - /var/run/docker.sock:/var/run/docker.sock:z
     ports:
       - "5011:5010"
     networks:

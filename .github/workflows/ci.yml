@@ -14,7 +14,6 @@ jobs:
         run: docker build -t fnndsc/pfcon:dev -f Dockerfile_dev .
       - name: provision local services
         run: |
-          docker pull fnndsc/swarm
           docker swarm init --advertise-addr 127.0.0.1
           chmod -R 755 $PWD
           mkdir -p FS/remote
