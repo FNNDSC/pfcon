@@ -308,20 +308,10 @@ else
     fi
 
     if (( ! b_skipUnitTests && ! b_pause )) ; then
-        title -d 1 "Automatic restart of satellite services pfioh/pman" \
+        title -d 1 "Automatic restart of pfioh" \
                    "to clear any lingering traces of integration tests..."
         echo ""                                                     | ./boxes.sh
         windowBottom
-
-        docker-compose --no-ansi -f docker-compose_dev.yml          \
-            exec pman_service pman_do --op DBclean >& dc.out >/dev/null
-        echo -en "\033[2A\033[2K"
-        cat dc.out | ./boxes.sh
-
-        docker-compose --no-ansi -f docker-compose_dev.yml          \
-            restart pman_service >& dc.out > /dev/null
-        echo -en "\033[2A\033[2K"
-        cat dc.out | ./boxes.sh
 
         windowBottom
         docker-compose --no-ansi -f docker-compose_dev.yml          \
