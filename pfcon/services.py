@@ -137,7 +137,7 @@ class PfiohService(Service):
                               files={'local': file_obj},
                               data={'d_msg': json.dumps(payload), 'filename': fname},
                               headers={'Mode': 'file'},
-                              timeout=300)
+                              timeout=1000)
         except (Timeout, RequestException) as e:
             msg = f'Error in talking to {self.NAME} service while sending PUSH data ' \
                   f'request for job {job_id}, detail: {str(e)} '
@@ -178,7 +178,7 @@ class PfiohService(Service):
                     f'for job {job_id}')
         logger.info('Query sent: %s', query)
         try:
-            r = requests.get(self.base_url + '?' + query, timeout=720)
+            r = requests.get(self.base_url + '?' + query, timeout=1000)
         except (Timeout, RequestException) as e:
             msg = f'Error in talking to {self.NAME} service while sending PULL data ' \
                   f'request for job {job_id}, detail: {str(e)} '
