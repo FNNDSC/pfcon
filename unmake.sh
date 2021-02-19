@@ -4,6 +4,8 @@ source ./decorate.sh
 
 declare -i STEP=0
 
+export STOREBASE=${STOREBASE}
+
 title -d 1 "Destroying pfcon containerized development environment" \
                     "from ./docker-compose_dev.yml..."
     docker-compose -f docker-compose_dev.yml --no-ansi down >& dc.out >/dev/null
