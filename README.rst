@@ -180,14 +180,8 @@ Open a terminal and run the following commands in any working directory:
 
     $> git clone https://github.com/FNNDSC/pfcon.git
     $> cd pfcon
-    $> git checkout flask
-    $> docker build -t local/pfcon:dev -f Dockerfile_dev .
-
-Modify ``docker-compose_dev.yml`` to use ``local/pfcon:dev`` as the image for the ``pfcon_service``, then type:
-
-.. code-block:: bash
-
     $> ./make.sh
+
 
 You can later remove all the backend containers with:
 
