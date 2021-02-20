@@ -203,6 +203,9 @@ else
             if [[   $CONTAINER != "pl-simplefsapp"  ]] ; then
                 windowBottom
                 CMD="docker run ${REPO}/$CONTAINER --version"
+                if [[   $CONTAINER == "pman"  ]] ; then
+                  CMD="docker run --entrypoint pman ${REPO}/$CONTAINER --version"
+                fi
                 Ver=$(echo $CMD | sh | grep Version)
                 echo -en "\033[2A\033[2K"
                 printf "${White}%40s${Green}%40s${Yellow}\n"            \
