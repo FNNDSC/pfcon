@@ -30,15 +30,15 @@ MAINTAINER fnndsc "dev@babymri.org"
 ARG UID=1001
 ENV UID=$UID DEBIAN_FRONTEND=noninteractive APPLICATION_MODE="production" APPROOT="/home/localuser/pfcon"
 
-RUN apt-get update                                                                              \
-  && apt-get install -y locales                                                                 \
-  && export LANGUAGE=en_US.UTF-8                                                                \
-  && export LANG=en_US.UTF-8                                                                    \
-  && export LC_ALL=en_US.UTF-8                                                                  \
-  && locale-gen en_US.UTF-8                                                                     \
-  && dpkg-reconfigure locales                                                                   \
-  && apt-get install -y apache2 apache2-dev                                                     \
-  && pip install --upgrade pip                                                                  \
+RUN apt-get update                                                                       \
+  && apt-get install -y locales                                                          \
+  && export LANGUAGE=en_US.UTF-8                                                         \
+  && export LANG=en_US.UTF-8                                                             \
+  && export LC_ALL=en_US.UTF-8                                                           \
+  && locale-gen en_US.UTF-8                                                              \
+  && dpkg-reconfigure locales                                                            \
+  && apt-get install -y gunicorn                                                         \
+  && pip install --upgrade pip                                                           \
   && useradd -u $UID -ms /bin/bash localuser
 
 # Copy source code and make localuser the owner
@@ -52,18 +52,8 @@ RUN pip3 install ${APPROOT}
 USER localuser
 
 WORKDIR ${APPROOT}
-ENTRYPOINT ["mod_wsgi-express"]
+ENTRYPOINT ["gunicorn"]
 EXPOSE 5005
 
-# Start pfon production server
-CMD ["start-server", "pfcon/wsgi.py", "--host", "0.0.0.0", "--port", "5005", "--processes", "8", \
-    "--limit-request-body", "10632560640", "--socket-timeout", "1200", "--request-timeout", "1200", \
-    "--startup-timeout", "1200", "--queue-timeout", "1200", "--inactivity-timeout", "1200",  \
-    "--connect-timeout", "1200", "--header-timeout", "1200", "--header-max-timeout", "1800", \
-    "--body-timeout", "1200", "--shutdown-timeout", "1200", "--graceful-timeout", "1200", \
-    "--response-socket-timeout", "1200", "--deadlock-timeout", "1200", "--server-root", "/home/localuser/mod_wsgi-0.0.0.0:5005"]
-#mod_wsgi-express setup-server config/wsgi.py --host 0.0.0.0 --port 5005 --processes 8 --server-name localhost --server-root /home/localuser/mod_wsgi-0.0.0.0:5005
-#to start daemon:
-#/home/localuser/mod_wsgi-0.0.0.0:5005/apachectl start
-#to stop deamon
-#/home/localuser/mod_wsgi-0.0.0.0:5005/apachectl stop
+# Start pfcon production server
+CMD ["-w", "12", "-b", "0.0.0.0:5005", "-t",  "1200", "pfcon.wsgi:application"]
