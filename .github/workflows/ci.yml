@@ -5,7 +5,7 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  pfcon:
+  test-pfcon:
     name: pfcon tests
     runs-on: ubuntu-20.04
     steps:
@@ -27,12 +27,10 @@ jobs:
           docker-compose -f docker-compose_dev.yml down -v
           sudo rm -fr ./FS
           docker swarm leave --force
-  cube:
+  test-cube:
     name: CUBE tests
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - run: docker build -t fnndsc/pfcon .
       - uses: FNNDSC/cube-integration-action@v1
-        with:
-          branch: pfcon_flask
