@@ -51,7 +51,7 @@ class PmanService(Service):
                     f'for job {job_id}')
         logger.info('Payload sent: %s', json.dumps(compute_data, indent=4))
         try:
-            r = requests.post(self.base_url, json=compute_data, timeout=1000)
+            r = requests.post(self.base_url, json=compute_data, timeout=100)
         except (Timeout, RequestException) as e:
             msg = f'Error in talking to {self.NAME} service while submitting job ' \
                   f'{job_id}, detail: {str(e)} '
@@ -74,7 +74,7 @@ class PmanService(Service):
         logger.info(f'Sending STATUS job request to {self.NAME} at -->{self.base_url}<-- '
                     f'for job {job_id}')
         try:
-            r = requests.get(url, timeout=1000)
+            r = requests.get(url, timeout=100)
         except (Timeout, RequestException) as e:
             msg = f'Error in talking to {self.NAME} service while getting job ' \
                   f'{job_id} status, detail: {str(e)} '
@@ -137,7 +137,7 @@ class PfiohService(Service):
                               files={'local': file_obj},
                               data={'d_msg': json.dumps(payload), 'filename': fname},
                               headers={'Mode': 'file'},
-                              timeout=1000)
+                              timeout=7200)
         except (Timeout, RequestException) as e:
             msg = f'Error in talking to {self.NAME} service while sending PUSH data ' \
                   f'request for job {job_id}, detail: {str(e)} '
@@ -178,7 +178,7 @@ class PfiohService(Service):
                     f'for job {job_id}')
         logger.info('Query sent: %s', query)
         try:
-            r = requests.get(self.base_url + '?' + query, timeout=1000)
+            r = requests.get(self.base_url + '?' + query, timeout=7200)
         except (Timeout, RequestException) as e:
             msg = f'Error in talking to {self.NAME} service while sending PULL data ' \
                   f'request for job {job_id}, detail: {str(e)} '
