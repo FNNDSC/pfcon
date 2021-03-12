@@ -45,7 +45,7 @@ if [[ "$1" == 'up' ]]; then
     export STOREBASE=$(pwd)/FS/remote
     windowBottom
 
-    title -d 1 "Starting containerized production environment using " " ./docker-compose.yml"
+    title -d 1 "Starting pfcon_stack production deployment on swarm using " " ./docker-compose.yml"
     declare -a A_CONTAINER=(
     "fnndsc/pfcon"
     "fnndsc/pfioh"
@@ -60,8 +60,8 @@ if [[ "$1" == 'up' ]]; then
         echo $CMD | sh
         echo $sep
     done
-    echo "docker-compose up -d"
-    docker-compose up -d
+    echo "docker stack deploy -c docker-compose.yml pfcon_stack"
+    docker stack deploy -c docker-compose.yml pfcon_stack
     windowBottom
 fi
 
@@ -69,8 +69,8 @@ if [[ "$1" == 'down' ]]; then
 
     export STOREBASE=${STOREBASE}
 
-    title -d 1 "Destroying containerized production environment" "from ./docker-compose.yml"
-    docker-compose --no-ansi down >& dc.out >/dev/null
+    title -d 1 "Destroying pfcon_stack production deployment on swarm" "from ./docker-compose.yml"
+    docker stack rm pfcon_stack >& dc.out >/dev/null
     cat dc.out                                                              | ./boxes.sh
     echo "Removing ./FS tree"                                               | ./boxes.sh
     rm -fr ./FS

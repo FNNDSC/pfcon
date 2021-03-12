@@ -310,19 +310,6 @@ else
         windowBottom
     fi
 
-    if (( ! b_skipUnitTests && ! b_pause )) ; then
-        title -d 1 "Automatic restart of pfioh" \
-                   "to clear any lingering traces of integration tests..."
-        echo ""                                                     | ./boxes.sh
-        windowBottom
-
-        windowBottom
-        docker-compose --no-ansi -f docker-compose_dev.yml          \
-            restart pfioh_service >& dc.out > /dev/null
-        echo -en "\033[2A\033[2K"
-        cat dc.out | ./boxes.sh
-    fi
-
     title -d 1 "Pause for manual restart of services?"
     if (( b_pause )) ; then
         echo "Pausing... hit *ANY* key to continue"                     | ./boxes.sh
