@@ -1,6 +1,6 @@
-##############
-pfcon v3.0.0.0
-##############
+############
+pfcon v3.0.0
+############
 
 .. image:: https://github.com/fnndsc/pfcon/workflows/CI/badge.svg
     :target: https://github.com/fnndsc/pfcon/actions
