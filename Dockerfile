@@ -49,7 +49,7 @@ COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
 RUN pip3 install ${APPROOT}
 
 # Start as user localuser
-USER localuser
+#USER localuser
 
 WORKDIR ${APPROOT}
 ENTRYPOINT ["gunicorn"]
