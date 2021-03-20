@@ -66,8 +66,6 @@ fi
 
 if [[ "$1" == 'down' ]]; then
 
-    export STOREBASE=${STOREBASE}
-
     title -d 1 "Destroying pfcon_stack production deployment on swarm" "from ./docker-compose.yml"
     docker stack rm pfcon_stack >& dc.out >/dev/null
     cat dc.out                                                              | ./boxes.sh

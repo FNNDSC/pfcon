@@ -15,7 +15,7 @@ services:
     image: ${PFCONREPO}/pfcon:dev
     # We need to mount a physical dir in the HOST onto the key store in pfcon. This dir
     # is given by the STOREBASE env variable. The keystore can be specified by the
-    # --storeBase flag.
+    # --storeBase flag during development.
     volumes:
       - ${STOREBASE}:/home/localuser/storeBase:z
       - ./pfcon:/home/localuser/pfcon/pfcon:z

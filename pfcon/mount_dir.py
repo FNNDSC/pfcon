@@ -48,7 +48,7 @@ class MountDir:
                 for filename in files:
                     local_file_path = os.path.join(root, filename)
                     arc_file_path = os.path.relpath(local_file_path, job_outgoing_dir)
-                    with open(local_file_path, 'r') as f:
+                    with open(local_file_path, 'rb') as f:
                         job_zip.writestr(arc_file_path, f.read())
                 nfiles += len(files)
         memory_zip_file.seek(0)

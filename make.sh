@@ -153,7 +153,7 @@ if (( b_restart )) ; then
                 "Stopping" "${JOB}_service"                             | ./boxes.sh
     windowBottom
 
-    docker-compose -f docker-compose_dev.yml --no-ansi                  \
+    docker-compose -f docker-compose_dev.yml                \
         stop ${JOB}_service >& dc.out > /dev/null
     echo -en "\033[2A\033[2K"
     cat dc.out | ./boxes.sh
@@ -162,13 +162,13 @@ if (( b_restart )) ; then
                 "rm -f" "${JOB}_service"                                | ./boxes.sh
     windowBottom
 
-    docker-compose -f docker-compose_dev.yml --no-ansi                  \
+    docker-compose -f docker-compose_dev.yml                 \
         rm -f ${JOB}_service >& dc.out > /dev/null
     echo -en "\033[2A\033[2K"
     cat dc.out | ./boxes.sh
     windowBottom
 
-    docker-compose -f docker-compose_dev.yml --no-ansi                  \
+    docker-compose -f docker-compose_dev.yml                   \
         run --service-ports ${JOB}_service
 else
     title -d 1 "Pulling non-'local/' core containers where needed..."   \
@@ -227,11 +227,11 @@ else
     title -d 1 "Shutting down any running pfcon and related containers... "
         echo "This might take a few minutes... please be patient."              | ./boxes.sh ${Yellow}
         windowBottom
-        docker-compose -f docker-compose_dev.yml --no-ansi                      \
+        docker-compose -f docker-compose_dev.yml                       \
             stop >& dc.out > /dev/null
         echo -en "\033[2A\033[2K"
         cat dc.out | sed -E 's/(.{80})/\1\n/g'                                  | ./boxes.sh ${LightBlue}
-        docker-compose -f docker-compose_dev.yml --no-ansi                      \
+        docker-compose -f docker-compose_dev.yml                       \
             rm -vf >& dc.out > /dev/null
         cat dc.out | sed -E 's/(.{80})/\1\n/g'                                  | ./boxes.sh ${LightCyan}
         for CORE in ${A_CONTAINER[@]} ; do
@@ -284,7 +284,7 @@ else
         echo "This might take a few minutes... please be patient."      | ./boxes.sh ${Yellow}
         echo "docker-compose -f docker-compose_dev.yml  up -d"          | ./boxes.sh ${LightCyan}
         windowBottom
-        docker-compose -f docker-compose_dev.yml --no-ansi              \
+        docker-compose -f docker-compose_dev.yml              \
             up -d >& dc.out > /dev/null
         echo -en "\033[2A\033[2K"
         cat dc.out | sed -E 's/(.{80})/\1\n/g'                          | ./boxes.sh ${LightGreen}
@@ -325,7 +325,7 @@ else
             printf "${LightCyan}%40s${LightGreen}%40s\n"                \
                         "Stopping" "pfcon_service"                      | ./boxes.sh
             windowBottom
-            docker-compose -f docker-compose_dev.yml --no-ansi          \
+            docker-compose -f docker-compose_dev.yml           \
                 stop pfcon_service >& dc.out > /dev/null
             echo -en "\033[2A\033[2K"
             cat dc.out | ./boxes.sh
@@ -333,7 +333,7 @@ else
             printf "${LightCyan}%40s${LightGreen}%40s\n"                \
                         "rm -f" "pfcon_service"                         | ./boxes.sh
             windowBottom
-            docker-compose -f docker-compose_dev.yml --no-ansi          \
+            docker-compose -f docker-compose_dev.yml           \
                 rm -f pfcon_service >& dc.out > /dev/null
             echo -en "\033[2A\033[2K"
             cat dc.out | ./boxes.sh
