@@ -1,0 +1,153 @@
+{
+  "kind": "Template",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "pfcon-openshift",
+    "annotations": {
+      "description": "Creates pfcon on OpenShift",
+      "tags": ""
+    }
+  },
+  "objects": [{
+      "apiVersion": "v1",
+      "kind": "DeploymentConfig",
+      "metadata": {
+        "labels": {
+          "app": "pfcon"
+        },
+        "name": "pfcon"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "app": "pfcon",
+          "deploymentconfig": "pfcon"
+        },
+        "strategy": {
+          "activeDeadlineSeconds": 21600,
+          "resources": {},
+          "rollingParams": {
+            "maxSurge": "25%",
+            "maxUnavailable": "25%",
+            "timeoutSeconds": 600
+          },
+          "type": "Rolling"
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "pfcon",
+              "deploymentconfig": "pfcon"
+            }
+          },
+          "spec": {
+            "containers": [{
+              "command": [
+                "/usr/local/bin/pfcon",
+                "--forever",
+                "--httpResponse",
+                "--swift-storage",
+                "--createDirsAsNeeded",
+                "--enableTokenAuth",
+                "--tokenPath=/etc/pfcon/auth/pfcon_config.cfg"
+              ],
+              "image": "fnndsc/pfcon",
+              "imagePullPolicy": "Always",
+              "name": "pfcon",
+              "ports": [{
+                "containerPort": 5005,
+                "protocol": "TCP"
+              }],
+              "resources": {
+                "limits": {
+                  "memory": "1024Mi",
+                  "cpu": "2000m"
+                },
+                "requests": {
+                  "memory": "150Mi",
+                  "cpu": "250m"
+                }
+              },
+              "terminationMessagePath": "/dev/termination-log",
+              "volumeMounts": [
+                {
+                  "mountPath": "/etc/swift",
+                  "name": "swift-credentials",
+                  "readOnly": true
+                },
+                {
+                  "name": "pfcon-config",
+                  "mountPath": "/etc/pfcon/auth",
+                  "readOnly": true
+                }
+              ]
+            }],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "terminationGracePeriodSeconds": 30,
+            "volumes": [
+              {
+                "name": "swift-credentials",
+                "secret": {
+                  "defaultMode": 420,
+                  "secretName": "swift-credentials"
+                }
+              },
+              {
+                "name": "pfcon-config",
+                "secret": {
+                  "secretName": "pfcon-config"
+                }
+            }]
+          }
+        },
+        "test": false,
+        "triggers": [{
+          "type": "ConfigChange"
+        }]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "labels": {
+          "app": "pfcon"
+        },
+        "name": "pfcon"
+      },
+      "spec": {
+        "ports": [{
+          "name": "5005-tcp",
+          "port": 5005,
+          "protocol": "TCP",
+          "targetPort": 5005
+        }],
+        "selector": {
+          "app": "pfcon",
+          "deploymentconfig": "pfcon"
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Route",
+      "metadata": {
+        "name": "pfcon"
+      },
+      "spec": {
+        "port": {
+          "targetPort": "5005-tcp"
+        },
+        "to": {
+          "kind": "Service",
+          "name": "pfcon",
+          "weight": 100
+        }
+      }
+    }
+  ],
+  "labels": {
+    "template": "application-template-pfcon-openshift"
+  }
+}

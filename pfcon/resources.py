@@ -1,10 +1,13 @@
 
+import os
 import logging
+import zipfile
 
 from flask import request, Response, current_app as app
 from flask_restful import reqparse, abort, Resource
 
-from .services import PmanService, PfiohService, ServiceException
+from .services import PmanService, ServiceException
+from .mount_dir import MountDir
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +35,12 @@ class JobList(Resource):
     """
     Resource representing the list of jobs running on the compute.
     """
+
+    def __init__(self):
+        super(JobList, self).__init__()
+
+        self.store_env = app.config.get('STORE_ENV')
+
     def get(self):
         return {
             'server_version': app.config.get('SERVER_VERSION'),
@@ -39,7 +48,28 @@ class JobList(Resource):
 
     def post(self):
         args = parser.parse_args()
-        job_id = args.jid
+        job_id = args.jid.lstrip('/')
+
+        # process data
+        if self.store_env == 'mount':
+            storebase = app.config.get('STORE_BASE')
+            job_dir = os.path.join(storebase, 'key-' + job_id)
+            incoming_dir = os.path.join(job_dir, 'incoming')
+            outgoing_dir = os.path.join(job_dir, 'outgoing')
+            os.makedirs(incoming_dir, exist_ok=True)
+            os.makedirs(outgoing_dir, exist_ok=True)
+            mdir = MountDir(app.config)
+
+            logger.info(f'Received job {job_id}')
+            try:
+                d_info = mdir.store_data(job_id, incoming_dir, request.files['data_file'])
+            except zipfile.BadZipFile as e:
+                logger.error(f'Error while decompressing and storing job {job_id} data, '
+                             f'detail: {str(e)}')
+                abort(400, message='data_file: Bad zip file')
+            logger.info(f'Successfully stored job {job_id} input data')
+
+        # process compute
         compute_data = {
             'cmd_args': args.cmd_args,
             'cmd_path_flags': args.cmd_path_flags,
@@ -54,19 +84,14 @@ class JobList(Resource):
             'execshell': args.execshell,
             'type': args.type,
         }
-        f = request.files['data_file']
-        pfioh = PfiohService.get_service_obj()
-        try:
-            d_data_push_response = pfioh.push_data(job_id, f)
-        except ServiceException as e:
-            abort(e.code, message=str(e))
         pman = PmanService.get_service_obj()
         try:
             d_compute_response = pman.run_job(job_id, compute_data)
         except ServiceException as e:
             abort(e.code, message=str(e))
+
         return {
-            'data': d_data_push_response,
+            'data': d_info,
             'compute': d_compute_response
         }
 
@@ -88,15 +113,35 @@ class Job(Resource):
 
 class JobFile(Resource):
     """
-    Resource representing a job's data file.
+    Resource representing a single job data for a job running on the compute.
     """
+    def __init__(self):
+        super(JobFile, self).__init__()
+
+        self.store_env = app.config.get('STORE_ENV')
+
     def get(self, job_id):
-        pfioh = PfiohService.get_service_obj()
-        try:
-            data_pull_content = pfioh.pull_data(job_id)
-        except ServiceException as e:
-            abort(404, message=str(e))  # 404 Not Found (job file not found)
-        return Response(
-            data_pull_content,
-            mimetype='application/zip'
-        )
+        if self.store_env == 'mount':
+            storebase = app.config.get('STORE_BASE')
+            job_dir = os.path.join(storebase, 'key-' + job_id)
+            if not os.path.isdir(job_dir):
+                abort(404)
+            outgoing_dir = os.path.join(job_dir, 'outgoing')
+            if not os.path.exists(outgoing_dir):
+                os.mkdir(outgoing_dir)
+            mdir = MountDir(app.config)
+            logger.info(f'Retrieving job {job_id} output data')
+            content = mdir.get_data(job_id, outgoing_dir)
+            logger.info(f'Successfully retrieved job {job_id} output data')
+        return Response(content, mimetype='application/zip')
+
+    def delete(self, job_id):
+        if self.store_env == 'mount':
+            storebase = app.config.get('STORE_BASE')
+            job_dir = os.path.join(storebase, 'key-' + job_id)
+            if not os.path.isdir(job_dir):
+                abort(404)
+            mdir = MountDir()
+            logger.info(f'Deleting job {job_id} data from store')
+            mdir.delete_data(job_dir)
+            logger.info(f'Successfully removed job {job_id} data from store')

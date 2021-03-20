@@ -12,19 +12,17 @@ pfcon v3.0.0
 Overview
 ********
 
-This repository provides ``pfcon`` -- a controlling service that acts as the interface to remote ``pman`` and ``pfioh`` services.
+This repository provides ``pfcon`` -- a controlling service that acts as the interface to a remote ``pman`` service.
 
 
 pfcon
 =====
 
-Most simply, local data can be pushed to ``pfcon`` (which is in turn forwarded to the controlled ``pfioh`` service), then some process is run on this data in the remote space using the controlled ``pman`` service. The resultant data can then be downloaded back to a local target space.
+Most simply, a local zip file can be pushed to ``pfcon``, then after unpacking the data some process is run on it in the remote space using the controlled ``pman`` service. The resultant data can then be downloaded back as a zip file to the local space.
 
 It can be used to query and control the following (for example):
 
 - *state*: Is job <XYZ> still running?
-- *result*: What is the stdout (or stderr) from job <XYZ>?
-- *control*: Kill job <XYZ>
 
 Visit the `pfcon http API call examples`_ wiki page to see examples of http calls accepted by ``pfcon`` server.
 
@@ -120,6 +118,19 @@ For ``pfcon`` detailed information, see the `pfcon wiki page <https://github.com
         [--port <port>]
         The port on which to listen. Defaults to '5055'.
 
+        [--storeBase <storagePath>]
+        A file system location in the network space accessible to ``pfcon``
+        that is used to unpack received files and also store results of
+        processing.
+
+        [--enableTokenAuth]
+        Enables token based authorization and can be configured to look for a .ini
+        file or an openshift secret.
+
+        [--tokenPath <tokenPath>]
+        Specify the absolute path to the token in the file system.
+        By default, this looks for the pfconConfig.ini file in the current working directory.
+
         [--man <manpage>]
         Internal man page with more detail on specific calls.
 
@@ -145,8 +156,9 @@ Start ``pfcon`` server:
 
 .. code-block:: bash
 
-            $> pfcon                                                   \\
+            $> pfcon                                                \\
                 --port 5005                                         \\
+                --storeBase /home/localuser/storeBase               \\
                 --verbosity 1                                       \\
                 --ip 127.0.0.1
 

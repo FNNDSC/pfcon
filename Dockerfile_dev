@@ -46,6 +46,7 @@ RUN apt-get update \
 # Copy source code and make localuser the owner
 COPY --chown=localuser ./bin ${APPROOT}/bin
 COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
+COPY --chown=localuser ./openshift ${APPROOT}/openshift
 COPY --chown=localuser ./tests ${APPROOT}/tests
 COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
 

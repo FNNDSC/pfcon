@@ -56,4 +56,4 @@ ENTRYPOINT ["gunicorn"]
 EXPOSE 5005
 
 # Start pfcon production server
-CMD ["-w", "5", "-b", "0.0.0.0:5005", "-t",  "7400", "pfcon.wsgi:application"]
+CMD ["-w", "5", "-b", "0.0.0.0:5005", "-t",  "200", "pfcon.wsgi:application"]

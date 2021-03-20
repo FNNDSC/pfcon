@@ -48,7 +48,6 @@ if [[ "$1" == 'up' ]]; then
     title -d 1 "Starting pfcon_stack production deployment on swarm using " " ./docker-compose.yml"
     declare -a A_CONTAINER=(
     "fnndsc/pfcon"
-    "fnndsc/pfioh"
     "fnndsc/pman"
     )
     echo "Pulling latest version of all service containers..."

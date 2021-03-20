@@ -34,8 +34,7 @@
 #   -r <service>
 #
 #       Restart <service> in interactive mode. This is mainly for debugging
-#       and is typically used to restart the 'pfcon', 'pfioh', and 'pman'
-#       services.
+#       and is typically used to restart 'pman' service.
 #
 #   -S <storeBaseOverride>
 #
@@ -82,8 +81,7 @@
 #
 #       The 'local' family are containers that are assumed built on the local
 #       machine and assumed to exist. The 'local' containers are used when
-#       the 'pfcon/pman/pfioh/pfurl' services are being locally
-#       developed/debugged.
+#       the 'pfcon/pman' services are being locally developed/debugged.
 #
 #
 
@@ -130,7 +128,6 @@ fi
 
 declare -a A_CONTAINER=(
     "fnndsc/pfcon:dev^PFCONREPO"
-    "fnndsc/pfioh${TAG}^PFIOHREPO"
     "fnndsc/pman${TAG}^PMANREPO"
     "fnndsc/pl-simplefsapp"
 )

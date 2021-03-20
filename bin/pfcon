@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# (c) 2017-2020 Fetal-Neonatal Neuroimaging & Developmental Science Center
+# (c) 2017-2021 Fetal-Neonatal Neuroimaging & Developmental Science Center
 #                   Boston Children's Hospital
 #
 #                       http://fnndsc.org
@@ -10,17 +10,17 @@
 import sys, os
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '..'))
 
-import  socket
 from    argparse            import RawTextHelpFormatter
 from    argparse            import ArgumentParser
 import pudb
 
 from    pfmisc._colors             import Colors
+from    pfmisc                     import local_ip_address
 
 from pfcon.app import create_app
 from pfcon.config import Config
 
-str_defIP = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
+str_defIP = local_ip_address()
 str_version = Config.SERVER_VERSION
 str_desc = Colors.CYAN + """
 
@@ -43,7 +43,7 @@ str_desc = Colors.CYAN + """
 
     'pfcon' is a module class and stand-alone app that provides a simple API (both
     programmatically and CLI-driven) to coordinate data transfers and process control
-    to remote pfioh (for data transfer) and pman (for process management).
+    to pman (for process management).
 
             (c) 2017-2020 Fetal-Neonatal Neuroimaging & Developmental Science Center
                             Boston Children's Hospital
@@ -74,9 +74,10 @@ def synopsis(ab_shortOnly = False):
             pfcon                                                   \\
                 [--ip <IPofServer>]                                 \\
                 [--port <port>]                                     \\
-                [--httpProxy <proxyHost>[:<port>]]                  \\
+                [--storeBase <storagePath>]                         \\
+                [--enableTokenAuth]                                 \\
+                [--tokenPath <tokenPath>]                           \\
                 [--man <manpage>]                                   \\
-                [--verbosity <level>]                               \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--version]                                         \\
@@ -98,10 +99,9 @@ def synopsis(ab_shortOnly = False):
         suite of applications, and used mostly in the context of ChRIS.
 
         Typically ``pfcon`` is launched on the remote compute together with a 
-        data service (pfioh) and a compute service (pman). It listens for directives 
-        directing data and compute. Target zipped data is received and forwarded to 
-        the data service, and once available, a containerized computation is started 
-        by the compute service.
+        a compute service (pman). It listens for directives directing data and compute. 
+        Target zipped data is received and unpacked, and once available, a containerized 
+        computation is started by the compute service.
 
     ARGS
 
@@ -111,16 +111,21 @@ def synopsis(ab_shortOnly = False):
         [--port <port>]
         The port on which to listen. Defaults to '5055'.
 
-        [--httpproxy <proxyHost>[:<port>]]
-        If specified, use the passed proxy for http communication.
+        [--storeBase <storagePath>]
+        A file system location in the network space accessible to ``pfcon``
+        that is used to unpack received files and also store results of
+        processing.
+
+        [--enableTokenAuth]
+        Enables token based authorization and can be configured to look for a .ini 
+        file or an openshift secret.
+
+        [--tokenPath <tokenPath>]
+        Specify the absolute path to the token in the file system.
+        By default, this looks for the pfconConfig.ini file in the current working directory.
 
         [--man <manpage>]
         Internal man page with more detail on specific calls.
-
-        [--cordBlockSeconds <blockSeconds>]
-        The number of seconds to block/wait internally in the coordination loop.
-        This is the time between ``pfioh`` has indicated successful unpack of file
-        data and the call to ``pman`` to start processing.
 
         [-x|--desc]
         Provide an overview help page.
@@ -142,6 +147,7 @@ def synopsis(ab_shortOnly = False):
 
             pfcon                                                   \\
                 --port 5005                                         \\
+                --storeBase /home/localuser/storeBase               \\
                 --verbosity 1                                       \\
                 --ip %s
 
@@ -168,11 +174,27 @@ parser.add_argument(
     help    = 'Port to use.'
 )
 parser.add_argument(
-    '--httpProxy',
+    '--storeBase',
     action  = 'store',
-    dest    = 'httpProxy',
-    default = '',
-    help    = 'Optional proxy to use.'
+    dest    = 'STORE_BASE',
+    default = '/tmp',
+    help    = 'Set the base path for internal storage.'
+)
+parser.add_argument(
+    '--enableTokenAuth',
+    action  = 'store_true',
+    help    = """Enables token based authorization and can be configured to look for a .ini file
+    or an openshift secret.""",
+    dest    = 'b_tokenAuth',
+    default = False
+)
+parser.add_argument(
+    '--tokenPath',
+    action = 'store',
+    help   = """Specify the absolute path to the token in the file system.
+    By default, this looks for the pfconConfig.ini file in the current working directory.""",
+    dest   = 'str_tokenPath',
+    default= ''
 )
 parser.add_argument(
     '--version',
