@@ -113,6 +113,7 @@ class PfiohService(Service):
         payload = {
             'action': 'pushPath',
             'meta': {
+                'serviceMan' : 'openshift',
                 'remote': {'key': job_id},
                 'local': {'path': fname},  # deprecated field
                 'specialHandling': {
@@ -126,18 +127,20 @@ class PfiohService(Service):
                         'unpack': True,
                         'cleanup':  True
                     }
+                    
                 }
             }
         }
         logger.info(f'Sending PUSH data request to {self.NAME} at -->{self.base_url}<-- '
                     f'for job {job_id}')
         logger.info('Payload sent: %s', json.dumps(payload, indent=4))
+        
         try:
             r = requests.post(self.base_url,
                               files={'local': file_obj},
                               data={'d_msg': json.dumps(payload), 'filename': fname},
-                              headers={'Mode': 'file'},
-                              timeout=300)
+                              headers={'Mode': 'file','Expect': '100-continue','Authorization':'bearer password'},
+                              timeout=7200)
         except (Timeout, RequestException) as e:
             msg = f'Error in talking to {self.NAME} service while sending PUSH data ' \
                   f'request for job {job_id}, detail: {str(e)} '
@@ -154,6 +157,7 @@ class PfiohService(Service):
         d_query = {
             'action': 'pullPath',
             'meta': {
+                'serviceMan' : 'openshift',
                 'remote': {'key': job_id},
                 'local': {
                     'path': job_id,  # deprecated field

@@ -1,7 +1,7 @@
 
 from logging.config import dictConfig
 from environs import Env
-
+import os
 
 class Config:
     """
@@ -60,8 +60,10 @@ class DevConfig(Config):
         })
 
         # EXTERNAL SERVICES
-        self.COMPUTE_SERVICE_URL = 'http://pman.remote:5010/api/v1/'
-        self.DATA_SERVICE_URL = 'http://pfioh.remote:5055/api/v1/cmd'
+        self.COMPUTE_SERVICE_URL = os.environ.get('COMPUTE_SERVICE_URL') if os.environ.get('COMPUTE_SERVICE_URL') is not None \
+                                   else 'http://pman-test-moc.k-apps.osh.massopen.cloud/api/v1/'
+        self.DATA_SERVICE_URL = os.environ.get('DATA_SERVICE_URL') if os.environ.get('DATA_SERVICE_URL') is not None \
+                                else 'http://pfioh-test-moc.k-apps.osh.massopen.cloud/api/v1/cmd'
 
 
 class ProdConfig(Config):
