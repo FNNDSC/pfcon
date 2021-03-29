@@ -44,14 +44,10 @@
             "containers": [{
               "command": [
                 "/usr/local/bin/pfcon",
-                "--forever",
-                "--httpResponse",
-                "--swift-storage",
-                "--createDirsAsNeeded",
-                "--enableTokenAuth",
-                "--tokenPath=/etc/pfcon/auth/pfcon_config.cfg"
+                "--verbosity=5",
+                "--port=5005"
               ],
-              "image": "fnndsc/pfcon",
+              "image": "fnndsc/pfcon:pfiohless",
               "imagePullPolicy": "Always",
               "name": "pfcon",
               "ports": [{
@@ -74,13 +70,18 @@
                   "mountPath": "/etc/swift",
                   "name": "swift-credentials",
                   "readOnly": true
+                }
+              ],
+              "env": [{
+                  "name": "COMPUTE_SERVICE_URL",
+                  "value": "http://pman-test-moc.k-apps.osh.massopen.cloud/api/v1/"
                 },
                 {
-                  "name": "pfcon-config",
-                  "mountPath": "/etc/pfcon/auth",
-                  "readOnly": true
+                  "name": "STORE_ENV",
+                  "value": "swift"
                 }
               ]
+              
             }],
             "dnsPolicy": "ClusterFirst",
             "restartPolicy": "Always",
@@ -92,13 +93,9 @@
                   "defaultMode": 420,
                   "secretName": "swift-credentials"
                 }
-              },
-              {
-                "name": "pfcon-config",
-                "secret": {
-                  "secretName": "pfcon-config"
-                }
-            }]
+              }
+            ]
+            
           }
         },
         "test": false,

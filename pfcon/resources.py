@@ -8,7 +8,7 @@ from flask_restful import reqparse, abort, Resource
 
 from .services import PmanService, ServiceException
 from .mount_dir import MountDir
-
+from .swift_store import SwiftStore
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,12 @@ class JobList(Resource):
                 logger.error(f'Error while decompressing and storing job {job_id} data, '
                              f'detail: {str(e)}')
                 abort(400, message='data_file: Bad zip file')
-            logger.info(f'Successfully stored job {job_id} input data')
+                
+        if self.store_env == 'swift':
+            swift = SwiftStore(app.config)
+            d_info = swift.storeData(job_id, 'incoming', request.files['data_file'])
+            
+        logger.info(f'Successfully stored job {job_id} input data')
 
         # process compute
         compute_data = {

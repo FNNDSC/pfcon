@@ -10,6 +10,9 @@ from   keystoneauth1               import session
 from   swiftclient                 import service as swift_service
 from   shutil                      import copyfileobj
 
+import base64
+import datetime
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -42,39 +45,18 @@ class SwiftStore:
         service = swift_service.Connection(session=session_client)
         return service
 
-    def storeData(self, **kwargs):
+    def storeData(self, key, file_path, input_stream):
         """
         Creates an object of the file and stores it into the container as key-value object 
         """
 
         configPath = "/etc/swift/swift-credentials.cfg"
 
-        for k,v in kwargs.items():
-            if k == 'input_stream': inputStream         = v
-            if k == 'path':         str_containerName   = v
-            if k == 'is_zip':       b_zip               = v
-            if k == 'd_ret':        d_ret               = v
-            if k == 'client_path':  str_clientPath      = v
-            if k == 'configPath':   configPath          = v
-            if k == 'key':          key                 = v
 
         swiftService = self._createSwiftService(configPath)
-
-        if not b_zip:
-            with zipfile.ZipFile('/tmp/{}.zip'.format(key), 'w', compression=zipfile.ZIP_DEFLATED) as zipfileObj:
-                with zipfileObj.open(str_clientPath.split('/')[-1], 'wb') as entry:
-                    copyfileobj(inputStream, entry)
-        else:
-            f = open('/tmp/{}.zip'.format(key), 'wb')
-            buf = 16*1024
-            while 1:
-                chunk = inputStream.read(buf)
-                if not chunk:
-                    break
-                f.write(chunk)
-            f.close()
-
-        zip_file_contents = open('/tmp/{}.zip'.format(key), mode='rb')
+        
+       
+        
 
         try:
             success = True
@@ -83,39 +65,41 @@ class SwiftStore:
             resp_headers, containers = swiftService.get_account()
             listContainers = [d['name'] for d in containers if 'name' in d]
 
-            if str_containerName not in listContainers:
-                swiftService.put_container(str_containerName)
+            if key not in listContainers:
+                swiftService.put_container(key)
                 resp_headers, containers = swiftService.get_account()
                 listContainers = [d['name'] for d in containers if 'name' in d]
                 if str_containerName in listContainers:
                     logger.info('The container was created successfully')
                 else:
                     raise Exception('The container was not created successfully')
+                    
+            with zipfile.ZipFile(input_stream, 'w', zipfile.ZIP_DEFLATED) as job_zip:
+                
 
-            swiftService.put_object(
-                str_containerName,
-                filePath,
-                contents=zip_file_contents,
-                content_type='application/zip'
-            )
-            zip_file_contents.close()
+
+                swiftService.put_object(
+                    key,
+                    filePath,
+                    contents=job_zip,
+                    content_type='application/zip'
+                )
+
 
             # Confirm presence of the object in swift
-            response_headers = swiftService.head_object(str_containerName, filePath)
+            response_headers = swiftService.head_object(key, file_path)
             logger.info('The upload was successful')
         except Exception as err:
             logger.error(f'Error, detail: {str(err)}')
             success = False
 
         #Headers
-        if success:
-            d_ret['status'] = True
-            d_ret['msg'] = 'File/Directory stored in Swift'
-        else:
-            d_ret['status'] = False
-            d_ret['msg'] = 'File/Directory not stored in Swift'
-
-        return d_ret
+        return {
+            'jid': key,
+            'nfiles': input_stream,
+            'timestamp': f'{datetime.datetime.now()}',
+            'path': file_path
+        }
 
 
     def getData(self, **kwargs):

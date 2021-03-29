@@ -1,6 +1,7 @@
 
 from logging.config import dictConfig
 from environs import Env
+import os
 
 
 class Config:
@@ -17,7 +18,7 @@ class Config:
         env = Env()
         env.read_env()  # also read .env file, if it exists
 
-        self.STORE_ENV = env('STORE_ENV', 'mount')
+        self.STORE_ENV = env('STORE_ENV', 'mount') or os.environ.get('STORE_ENV')
         if self.STORE_ENV == 'mount':
             self.STORE_BASE = '/home/localuser/storeBase'
 
@@ -73,7 +74,9 @@ class DevConfig(Config):
         })
 
         # EXTERNAL SERVICES
-        self.COMPUTE_SERVICE_URL = 'http://pman.remote:5010/api/v1/'
+        self.COMPUTE_SERVICE_URL = os.environ.get('COMPUTE_SERVICE_URL') if os.environ.get('COMPUTE_SERVICE_URL') is not None \
+                                   else 'http://pman-test-moc.k-apps.osh.massopen.cloud/api/v1/'
+        
 
 
 class ProdConfig(Config):
