@@ -199,9 +199,9 @@ else
             cparse $CORE " " "REPO" "CONTAINER" "MMN" "ENV"
             if [[   $CONTAINER != "pl-simplefsapp"  ]] ; then
                 windowBottom
-                CMD="docker run ${REPO}/$CONTAINER --version"
-                if [[   $CONTAINER == "pman"  ]] ; then
-                  CMD="docker run --entrypoint pman ${REPO}/$CONTAINER --version"
+                CMD="docker run --entrypoint $CONTAINER ${REPO}/$CONTAINER --version"
+                if [[   $CONTAINER == "pfcon:dev"  ]] ; then
+                  CMD="docker run --entrypoint pfcon ${REPO}/$CONTAINER --version"
                 fi
                 Ver=$(echo $CMD | sh | grep Version)
                 echo -en "\033[2A\033[2K"
