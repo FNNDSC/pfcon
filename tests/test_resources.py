@@ -81,12 +81,14 @@ class TestJobList(ResourceTests):
         self.assertIn('data', response.json)
         self.assertEqual(response.json['data']['nfiles'], 1)
 
-        time.sleep(3)
         with self.app.test_request_context():
             # cleanup swarm job
             pman = PmanService.get_service_obj()
-            d_compute_response = pman.get_job(self.job_id)
-            self.assertTrue(d_compute_response['status'])
+            for _ in range(10):
+                time.sleep(3)
+                d_compute_response = pman.get_job(self.job_id)
+                if d_compute_response['status'] == 'finishedSuccessfully': break
+            self.assertEqual(d_compute_response['status'], 'finishedSuccessfully')
 
 
 class TestJob(ResourceTests):
@@ -133,11 +135,13 @@ class TestJob(ResourceTests):
             pman = PmanService.get_service_obj()
             pman.run_job(self.job_id, compute_data)
 
-            time.sleep(3)
-            # make the GET request
-            response = self.client.get(self.url)
+            # make the GET requests
+            for _ in range(10):
+                time.sleep(3)
+                response = self.client.get(self.url)
+                if response.json['compute']['status'] == 'finishedSuccessfully': break
             self.assertEqual(response.status_code, 200)
-            self.assertTrue(response.json['compute']['status'])
+            self.assertEqual(response.json['compute']['status'], 'finishedSuccessfully')
 
 
 class TestJobFile(ResourceTests):
