@@ -40,8 +40,6 @@ ARG ENVIRONMENT=production
 ENV UID=$UID DEBIAN_FRONTEND=noninteractive VERSION="0.1"
 ENV APPROOT="/home/localuser/pfcon" REQPATH="/usr/src/requirements"
 
-COPY ["./requirements", "${REQPATH}"]
-
 RUN apt-get update                                                                       \
   && apt-get install -y locales                                                          \
   && export LANGUAGE=en_US.UTF-8                                                         \
@@ -51,6 +49,8 @@ RUN apt-get update                                                              
   && dpkg-reconfigure locales                                                            \
   && apt-get install -y gunicorn                                                         \
   && useradd -u $UID -ms /bin/bash localuser
+
+COPY ["./requirements", "${REQPATH}"]
 
 # Copy source code and make localuser the owner
 COPY --chown=localuser ./bin ${APPROOT}/bin

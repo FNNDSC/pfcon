@@ -12,11 +12,7 @@ pfcon v3.2.0
 Overview
 ********
 
-This repository provides ``pfcon`` -- a controlling service that acts as the interface to a remote ``pman`` service.
-
-
-pfcon
-=====
+This repository implements ``pfcon`` -- a controlling service that acts as the interface to a remote ``pman`` service.
 
 Most simply, a local zip file can be pushed to ``pfcon``, then after unpacking the data some process is run on it in the remote space using the controlled ``pman`` service. The resultant data can then be downloaded back as a zip file to the local space.
 
@@ -29,6 +25,44 @@ Visit the `pfcon http API call examples`_ wiki page to see examples of http call
 .. _`pfcon http API call examples`: https://github.com/FNNDSC/pfcon/wiki/pfcon-(flask-based)-http-API-call-examples
 
 Additionally a Python3 client for this server's web API is provided here: https://github.com/FNNDSC/python-pfconclient
+
+
+***********************
+Development and testing
+***********************
+
+Preconditions
+=============
+
+Install latest Docker and Docker Compose
+----------------------------------------
+
+Currently tested platforms:
+
+* ``Ubuntu 18.04+ and MAC OS X 10.14+ and Fedora 31+`` ([Additional instructions for Fedora](https://github.com/mairin/ChRIS_store/wiki/Getting-the-ChRIS-Store-to-work-on-Fedora))
+* ``Docker 18.06.0+``
+* ``Docker Compose 1.27.0+``
+
+Note: On a Linux machine make sure to add your computer user to the ``docker`` group
+Consult this page https://docs.docker.com/engine/install/linux-postinstall/
+
+Fire up the full set of pfcon services
+--------------------------------------
+
+Open a terminal and run the following commands in any working directory:
+
+.. code-block:: bash
+
+    $> git clone https://github.com/FNNDSC/pfcon.git
+    $> cd pfcon
+    $> ./make.sh
+
+You can later remove all the backend containers with:
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./unmake.sh
 
 
 ************
@@ -50,7 +84,7 @@ The easiest option however, is to just use the ``fnndsc/pfcon`` dock.
 
 
 Using a virtual environment
-======================================
+===========================
 
 On Ubuntu, install the Python virtual environment creator
 
@@ -161,43 +195,3 @@ Start ``pfcon`` server:
                 --storeBase /home/localuser/storeBase               \\
                 --verbosity 1                                       \\
                 --ip 127.0.0.1
-
-
-***********************
-Development and testing
-***********************
-
-
-Preconditions
-=============
-
-
-Install latest Docker and Docker Compose
-----------------------------------------
-
-Currently tested platforms:
-
-- Ubuntu 18.04+
-- MAC OS X 11.1+
-
-Note: On a Linux machine make sure to add your computer user to the ``docker`` group
-
-
-Fire up the full set of pfcon services
---------------------------------------
-
-Open a terminal and run the following commands in any working directory:
-
-.. code-block:: bash
-
-    $> git clone https://github.com/FNNDSC/pfcon.git
-    $> cd pfcon
-    $> ./make.sh
-
-
-You can later remove all the backend containers with:
-
-.. code-block:: bash
-
-    $> cd pfcon
-    $> ./unmake.sh
