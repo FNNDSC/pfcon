@@ -46,6 +46,9 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - "node.role==manager"
     networks:
       remote:
         aliases:
