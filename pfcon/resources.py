@@ -138,6 +138,11 @@ class JobFile(Resource):
             logger.info(f'Retrieving job {job_id} output data')
             content = mdir.get_data(job_id, outgoing_dir)
             logger.info(f'Successfully retrieved job {job_id} output data')
+            
+        if self.store_env == 'swift':
+            swift = SwiftStore(app.config)
+            content = swift.getData(job_id)
+            
         return Response(content, mimetype='application/zip')
 
     def delete(self, job_id):

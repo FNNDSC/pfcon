@@ -55,6 +55,17 @@ class SwiftStore:
 
         swiftService = self._createSwiftService(configPath)
         
+        f = open('/tmp/{}.zip'.format(key), 'wb')
+        buf = 16*1024
+        while 1:
+            chunk = input_stream.read(buf)
+            if not chunk:
+                break
+            f.write(chunk)
+        f.close()
+
+        zip_file_contents = open('/tmp/{}.zip'.format(key), mode='rb')
+        
        
         
 
@@ -69,21 +80,21 @@ class SwiftStore:
                 swiftService.put_container(key)
                 resp_headers, containers = swiftService.get_account()
                 listContainers = [d['name'] for d in containers if 'name' in d]
-                if str_containerName in listContainers:
+                if key in listContainers:
                     logger.info('The container was created successfully')
+                    
                 else:
                     raise Exception('The container was not created successfully')
-                    
-            with zipfile.ZipFile(input_stream, 'w', zipfile.ZIP_DEFLATED) as job_zip:
                 
-
-
-                swiftService.put_object(
+            swiftService.put_object(
                     key,
                     filePath,
-                    contents=job_zip,
+                    contents=zip_file_contents,
                     content_type='application/zip'
-                )
+                    )
+            zip_file_contents.close()    
+            
+            
 
 
             # Confirm presence of the object in swift
@@ -96,13 +107,13 @@ class SwiftStore:
         #Headers
         return {
             'jid': key,
-            'nfiles': input_stream,
+            'nfiles': 'application/zip',
             'timestamp': f'{datetime.datetime.now()}',
             'path': file_path
         }
 
 
-    def getData(self, **kwargs):
+    def getData(self, container_name):
         """
         Gets the data from the Swift Storage, zips and/or encodes it and sends it to the client
         """
@@ -110,56 +121,16 @@ class SwiftStore:
         b_delete = False
         configPath = "/etc/swift/swift-credentials.cfg"
 
-        for k,v in kwargs.items():
-            if k== 'path': containerName = v
-            if k== 'is_zip': b_zip = v
-            if k== 'cleanup': b_cleanup = v
-            if k== 'd_ret': d_ret = v
-            if k == 'configPath': configPath = v
-            if k == 'delete': b_delete = v
+        
 
         swiftService = self._createSwiftService(configPath)
 
         key = "output/data"
         success = True
 
-        response_headers, object_contents = swiftService.get_object(containerName, key)
-
-        # Download the object
-        try:
-            downloaded_file = open('/tmp/incomingData.zip', mode='wb')
-            downloaded_file.write(object_contents)
-            downloaded_file.close()
-            logger.info('Download results generated')
-        except Exception as e:
-            success = False
-            logger.error(f'Error, detail: {str(e)}')
-
-        if success:
-            logger.info('Download successful')
-            if b_delete:
-                try:
-                    swiftService.delete_object(containerName, key)
-                except Exception as e:
-                    success = False
-                    logger.error(f'Error, detail: {str(e)}')
-                if success:
-                    logger.info(f'Deleted object with key {key}')
-                else:
-                    logger.info('Deletion unsuccessful')
-        else:
-            logger.info('Download unsuccessful')
-
-        if success:
-            d_ret['status'] = True
-            d_ret['msg'] = 'File/Directory downloaded'
-            self.buffered_response('/tmp/incomingData.zip')
-        else:
-            d_ret['status'] = False
-            d_ret['msg'] = 'File/Directory downloaded'
-
-        #Unzipping
-        if not b_zip:
-            raise NotImplementedError('Please use the zip option')
-
-        return d_ret
+        response_headers, object_contents = swiftService.get_object(container_name, key)
+        
+        
+        
+        return object_contents
+      
