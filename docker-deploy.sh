@@ -34,11 +34,6 @@ declare -i STEP=0
 
 if [[ "$1" == 'up' ]]; then
 
-    title -d 1 "Stopping and restarting docker swarm cluster... "
-    docker swarm leave --force
-    docker swarm init --advertise-addr 127.0.0.1
-    windowBottom
-
     title -d 1 "Checking required FS directory tree for remote services in host filesystem..."
     mkdir -p FS/remote
     chmod -R 777 FS
@@ -71,9 +66,5 @@ if [[ "$1" == 'down' ]]; then
     cat dc.out                                                              | ./boxes.sh
     echo "Removing ./FS tree"                                               | ./boxes.sh
     rm -fr ./FS
-    windowBottom
-
-    title -d 1 "Stopping swarm cluster..."
-    docker swarm leave --force
     windowBottom
 fi
