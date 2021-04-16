@@ -34,17 +34,25 @@ Development and testing
 Preconditions
 =============
 
-Install latest Docker and Docker Compose
-----------------------------------------
+Install latest docker
+---------------------
 
 Currently tested platforms:
 
-* ``Ubuntu 18.04+ and MAC OS X 10.14+ and Fedora 31+`` ([Additional instructions for Fedora](https://github.com/mairin/ChRIS_store/wiki/Getting-the-ChRIS-Store-to-work-on-Fedora))
+* ``Ubuntu 18.04+ and MAC OS X 10.14+ and Fedora 31+`` `Additional instructions for Fedora <https://github.com/mairin/ChRIS_store/wiki/Getting-the-ChRIS-Store-to-work-on-Fedora>`_
 * ``Docker 18.06.0+``
-* ``Docker Compose 1.27.0+``
 
 Note: On a Linux machine make sure to add your computer user to the ``docker`` group
 Consult this page https://docs.docker.com/engine/install/linux-postinstall/
+
+
+Start a local Docker Swarm cluster if not already started
+=========================================================
+
+.. code-block:: bash
+
+    $> docker swarm init --advertise-addr 127.0.0.1
+
 
 Fire up the full set of pfcon services
 --------------------------------------
@@ -65,71 +73,12 @@ You can later remove all the backend containers with:
     $> ./unmake.sh
 
 
-************
-Installation
-************
-
-Installation is relatively straightforward, and we recommend using either docker or a python virtual environment.
-
-
-Using the ``fnndsc/pfcon`` dock
-===============================
-
-The easiest option however, is to just use the ``fnndsc/pfcon`` dock.
+Remove the local Docker Swarm cluster if desired
+================================================
 
 .. code-block:: bash
 
-    $> docker pull fnndsc/pfcon:dev
-    $> docker run --name pfcon -p 5005:5005 --rm -ti fnndsc/pfcon:dev
-
-
-Using a virtual environment
-===========================
-
-On Ubuntu, install the Python virtual environment creator
-
-.. code-block:: bash
-
-    $> sudo apt install virtualenv
-
-Then, create a directory for your virtual environments e.g.:
-
-.. code-block:: bash
-
-    $> mkdir ~/python-envs
-
-You might want to add to your ``.bashrc`` file these two lines:
-
-.. code-block:: bash
-
-    export WORKON_HOME=~/python-envs
-    source /usr/local/bin/virtualenvwrapper.sh
-
-Then you can source your ``.bashrc`` and create a new Python3 virtual environment:
-
-.. code-block:: bash
-
-    $> source .bashrc
-    $> mkvirtualenv --python=python3 python_env
-
-To activate or "enter" the virtual env:
-
-.. code-block:: bash
-
-    $> workon python_env
-
-To deactivate virtual env:
-
-.. code-block:: bash
-
-    $> deactivate
-
-Install ``pfcon`` package in your virtual env:
-
-.. code-block:: bash
-
-    $> workon python_env
-    $> pip install -U pfcon
+    $> docker swarm leave --force
 
 
 *****
@@ -181,17 +130,3 @@ For ``pfcon`` detailed information, see the `pfcon wiki page <https://github.com
         Set the verbosity level. "0" typically means no/minimal output. Allows for
         more fine tuned output control as opposed to '--quiet' that effectively
         silences everything.
-
-********
-Examples
-********
-
-Start ``pfcon`` server:
-
-.. code-block:: bash
-
-            $> pfcon                                                \\
-                --port 5005                                         \\
-                --storeBase /home/localuser/storeBase               \\
-                --verbosity 1                                       \\
-                --ip 127.0.0.1
