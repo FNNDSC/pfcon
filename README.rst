@@ -13,6 +13,9 @@ pfcon |ChRIS logo|
 .. image:: https://github.com/fnndsc/pfcon/workflows/CI/badge.svg
     :alt: Github Actions
     :target: https://github.com/fnndsc/pfcon/actions
+.. image:: https://img.shields.io/github/last-commit/fnndsc/pfcon.svg
+    :alt: Last Commit  
+    
 
 .. contents:: Table of Contents
     :depth: 2
