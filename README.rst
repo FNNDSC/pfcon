@@ -6,6 +6,7 @@ pfcon v3.2.0
     :target: https://github.com/fnndsc/pfcon/actions
 
 .. contents:: Table of Contents
+    :depth: 2
 
 
 ********
