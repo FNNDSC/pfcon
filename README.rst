@@ -1,8 +1,17 @@
-############
-pfcon v3.2.0
-############
+##################
+pfcon |ChRIS logo|
+##################
 
+.. |ChRIS logo| image:: https://github.com/FNNDSC/ChRIS_ultron_backEnd/blob/master/docs/assets/logo_chris.png
+
+.. image:: https://img.shields.io/docker/v/fnndsc/pfcon?sort=semver
+    :alt: Docker Image Version
+    :target: https://hub.docker.com/r/fnndsc/pfcon
+.. image:: https://img.shields.io/github/license/fnndsc/pfcon
+    :alt: MIT License
+    :target: https://github.com/FNNDSC/pfcon/blob/master/LICENSE
 .. image:: https://github.com/fnndsc/pfcon/workflows/CI/badge.svg
+    :alt: Github Actions
     :target: https://github.com/fnndsc/pfcon/actions
 
 .. contents:: Table of Contents
