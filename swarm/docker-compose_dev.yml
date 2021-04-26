@@ -11,32 +11,32 @@
 version: '3.7'
 
 services:
-  pfcon_service:
+  pfcon:
     image: ${PFCONREPO:?}/pfcon:dev
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     # We need to mount a physical dir in the HOST onto the key store in pfcon. This dir
-    # is given by the STOREBASE env variable. The keystore can be specified by the
-    # --storeBase flag during development.
-    command: ["pfcon", "--ip", "0.0.0.0", "--storeBase", "/home/localuser/storeBase", "--verbosity", "1"]
+    # is given by the STOREBASE env variable substitution. The keystore can be specified
+    # by the --storeBase flag during development.
+    command: ["pfcon", "--ip", "0.0.0.0", "--port", "30006", "--storeBase", "/home/localuser/storeBase", "--verbosity", "1"]
     environment:
       - APPLICATION_MODE=development
     volumes:
       - ${STOREBASE:?}:/home/localuser/storeBase:z
-      - ./pfcon:/home/localuser/pfcon/pfcon:z
-      - ./bin:/home/localuser/pfcon/bin:z
-      - ./tests:/home/localuser/pfcon/tests:z
+      - ../pfcon:/home/localuser/pfcon/pfcon:z
+      - ../bin:/home/localuser/pfcon/bin:z
+      - ../tests:/home/localuser/pfcon/tests:z
     ports:
-      - "5006:5005"
+      - "30006:30006"
     depends_on:
-      - pman_service
+      - pman
     networks:
       - remote
     labels:
       name: "pfcon"
-      role: "PF controller, part of the CHRIS backend."
+      role: "pfcon service"
 
-  pman_service:
+  pman:
     image: ${PMANREPO:?}/pman
     stdin_open: true
     tty: true
@@ -49,12 +49,8 @@ services:
       - CONTAINER_ENV=swarm
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:z
-    ports:
-      - "5011:5010"
     networks:
-      remote:
-        aliases:
-          - pman.remote
+      - remote
     labels:
       name: "pman"
       role: "pman service"

@@ -6,15 +6,16 @@
 #
 # SYNPOSIS
 #
-#   make.sh                     [-i] [-s] [-U]                  \
-#                               [-S <storeBaseOverride>]        \
+#   make.sh                     [-i] [-s] [-U]          \
+#                               [-O <swarm|kubernetes>] \
+#                               [-S <storeBase>]        \
 #                               [local|fnndsc[:dev]]
 #
 # DESC
 #
-#   'make.sh' sets up a pfcon development instance using docker stack deploy.
+#   'make.sh' sets up a pfcon development instance running either on Swarm or Kubernetes.
 #   It can also optionally create a pattern of directories and symbolic links
-#   that reflect the declarative environment of the docker-compose_dev.yml contents.
+#   that reflect the declarative environment on the orchestrator's manifest file.
 #
 # TYPICAL CASES:
 #
@@ -29,9 +30,13 @@
 # ARGS
 #
 #
-#   -S <storeBaseOverride>
+#   -O <swarm|kubernetes>
 #
-#       Explicitly set the STOREBASE dir to <storeBaseOverride>. This is useful
+#       Explicitly set the orchestrator. Default is swarm.
+#
+#   -S <storeBase>
+#
+#       Explicitly set the STOREBASE dir to <storeBase>. This is useful
 #       mostly in non-Linux hosts (like macOS) where there might be a mismatch
 #       between the actual STOREBASE path and the text of the path shared between
 #       the macOS host and the docker VM.
@@ -70,24 +75,45 @@ source ./decorate.sh
 source ./cparse.sh
 
 declare -i STEP=0
+ORCHESTRATOR=swarm
 HERE=$(pwd)
 echo "Starting script in dir $HERE"
+
+print_usage () {
+    echo "Usage: ./make.sh [-i] [-s] [-U] [-S <storeBase>] [-O <swarm|kubernetes>] [local|fnndsc[:dev]]"
+    exit 1
+}
+
+while getopts ":siUS:O:" opt; do
+    case $opt in
+        s) b_skipIntro=1
+          ;;
+        i) b_norestartinteractive_pfcon_dev=1
+          ;;
+        U) b_skipUnitTests=1
+          ;;
+        S) b_storeBase=1
+           STOREBASE=$OPTARG
+           ;;
+        O) ORCHESTRATOR=$OPTARG
+           if ! [[ "$ORCHESTRATOR" =~ ^(swarm|kubernetes)$ ]]; then
+              echo "Invalid value for option -- O"
+              print_usage
+           fi
+           ;;
+        \?) echo "Invalid option -- $OPTARG"
+            print_usage
+            ;;
+        :) echo "Option requires an argument -- $OPTARG"
+           print_usage
+           ;;
+    esac
+done
+shift $(($OPTIND - 1))
 
 export PFCONREPO=fnndsc
 export PMANREPO=fnndsc
 export TAG=
-
-while getopts "siUa:S:" opt; do
-    case $opt in
-        s) b_skipIntro=1                        ;;
-        i) b_norestartinteractive_pfcon_dev=1   ;;
-        U) b_skipUnitTests=1                    ;;
-        S) b_storeBaseOverride=1
-           STOREBASE=$OPTARG                    ;;
-    esac
-done
-
-shift $(($OPTIND - 1))
 if (( $# == 1 )) ; then
     REPO=$1
     export PFCONREPO=$(echo $REPO | awk -F \: '{print $1}')
@@ -104,7 +130,7 @@ declare -a A_CONTAINER=(
 )
 
 title -d 1 "Setting global exports..."
-    if (( ! b_storeBaseOverride )) ; then
+    if (( ! b_storeBase )) ; then
         if [[ ! -d FS/remote ]] ; then
             mkdir -p FS/remote
         fi
@@ -112,9 +138,10 @@ title -d 1 "Setting global exports..."
         STOREBASE=$(pwd)
         cd $HERE
     fi
-    echo -e "${STEP}.1 For pman override to swarm containers,"          | ./boxes.sh
-    echo -e "exporting STOREBASE=$STOREBASE "                           | ./boxes.sh
+    echo -e "exporting STOREBASE=$STOREBASE "                      | ./boxes.sh
     export STOREBASE=$STOREBASE
+    export SOURCEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+    echo -e "exporting SOURCEDIR=$SOURCEDIR "                           | ./boxes.sh
 windowBottom
 
 if (( ! b_skipIntro )) ; then
@@ -140,9 +167,9 @@ if (( ! b_skipIntro )) ; then
         cparse $CORE " " "REPO" "CONTAINER" "MMN" "ENV"
         if [[   $CONTAINER != "pl-simplefsapp"  ]] ; then
             windowBottom
-            CMD="docker run --entrypoint $CONTAINER ${REPO}/$CONTAINER --version"
+            CMD="docker run --rm --entrypoint $CONTAINER ${REPO}/$CONTAINER --version"
             if [[   $CONTAINER == "pfcon:dev"  ]] ; then
-              CMD="docker run --entrypoint pfcon ${REPO}/$CONTAINER --version"
+              CMD="docker run --rm --entrypoint pfcon ${REPO}/$CONTAINER --version"
             fi
             Ver=$(echo $CMD | sh | grep Version)
             echo -en "\033[2A\033[2K"
@@ -151,23 +178,6 @@ if (( ! b_skipIntro )) ; then
         fi
     done
 fi
-
-title -d 1 "Shutting down any running pfcon and related containers... "
-    echo "This might take a few minutes... please be patient."              | ./boxes.sh ${Yellow}
-    windowBottom
-    docker stack rm pfcon_dev_stack >& dc.out > /dev/null
-    echo -en "\033[2A\033[2K"
-    cat dc.out | sed -E 's/(.{80})/\1\n/g'                                  | ./boxes.sh ${LightBlue}
-    for CORE in ${A_CONTAINER[@]} ; do
-        cparse $CORE " " "REPO" "CONTAINER" "MMN" "ENV"
-        docker ps -a                                                        |\
-            grep $CONTAINER                                                 |\
-            awk '{printf("docker stop %s && docker rm -vf %s\n", $1, $1);}' |\
-            sh >/dev/null                                                   | ./boxes.sh
-        printf "${White}%40s${Green}%40s${NC}\n"                            \
-                    "$CONTAINER" "stopped"                                  | ./boxes.sh
-    done
-windowBottom
 
 title -d 1 "Changing permissions to 755 on" "$(pwd)"
     cd $HERE
@@ -204,35 +214,46 @@ title -d 1 "Checking that FS directory tree is empty..."
                 "Tree state" "[ OK ]"                               | ./boxes.sh
 windowBottom
 
-title -d 1 "Starting pfcon_dev_stack containerized dev environment on Swarm"
-    echo "docker stack deploy -c docker-compose_dev.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
-    windowBottom
-    docker stack deploy -c docker-compose_dev.yml pfcon_dev_stack >& dc.out > /dev/null
-    echo -en "\033[2A\033[2K"
-    cat dc.out | sed -E 's/(.{80})/\1\n/g'                          | ./boxes.sh ${LightGreen}
+title -d 1 "Starting pfcon containerized dev environment on $ORCHESTRATOR"
+    if [[ $ORCHESTRATOR == swarm ]]; then
+        echo "docker stack deploy -c swarm/docker-compose_dev.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
+        docker stack deploy -c swarm/docker-compose_dev.yml pfcon_dev_stack
+    elif [[ $ORCHESTRATOR == kubernetes ]]; then
+        echo "envsubst < kubernetes/pfcon_dev.yaml | kubectl apply -f -"           | ./boxes.sh ${LightCyan}
+        envsubst < kubernetes/pfcon_dev.yaml | kubectl apply -f -
+    fi
 windowBottom
 
-title -d 1 "Waiting until containers for pfcon_dev_stack are running on Swarm"
+title -d 1 "Waiting until pfcon stack containers are running on $ORCHESTRATOR"
     echo "This might take a few minutes... please be patient."      | ./boxes.sh ${Yellow}
     windowBottom
-    for i in {1..20}; do
-      sleep 5
-      pfcon_dev=$(docker ps -f name=pfcon_dev_stack_pfcon_service.1 -q)
-      if [ -n "$pfcon_dev" ]; then
-        echo "Success: pfcon_dev_stack's containers are up"      | ./boxes.sh ${Green}
-        break
-      fi
+    for i in {1..30}; do
+        sleep 5
+        if [[ $ORCHESTRATOR == swarm ]]; then
+            pfcon_dev=$(docker ps -f name=pfcon_dev_stack_pfcon.1 -q)
+        elif [[ $ORCHESTRATOR == kubernetes ]]; then
+            pfcon_dev=$(kubectl get pods --selector="app=pfcon,env=development" --field-selector=status.phase=Running --output=jsonpath='{.items[*].metadata.name}')
+        fi
+        if [ -n "$pfcon_dev" ]; then
+          echo "Success: pfcon container is up"           | ./boxes.sh ${Green}
+          break
+        fi
     done
     if [ -z "$pfcon_dev" ]; then
-        echo "Error: couldn't start pfcon_dev_stack's containers"      | ./boxes.sh ${Red}
+        echo "Error: couldn't start pfcon container"      | ./boxes.sh ${Red}
+        exit 1
     fi
 windowBottom
 
 if (( ! b_skipUnitTests )) ; then
     title -d 1 "Running pfcon tests..."
-    echo "This might take a few minutes... please be patient."      | ./boxes.sh ${Yellow}
     windowBottom
-    docker exec $pfcon_dev nosetests --exe tests
+    sleep 5
+    if [[ $ORCHESTRATOR == swarm ]]; then
+        docker exec $pfcon_dev nosetests --exe tests
+    elif [[ $ORCHESTRATOR == kubernetes ]]; then
+        kubectl exec $pfcon_dev -- nosetests --exe tests
+    fi
     status=$?
     title -d 1 "pfcon test results"
     if (( $status == 0 )) ; then
@@ -246,8 +267,13 @@ if (( ! b_skipUnitTests )) ; then
 fi
 
 if (( !  b_norestartinteractive_pfcon_dev )) ; then
-    title -d 1 "Attaching interactive terminal"                \
-                        "(ctrl-a to detach)"
-    docker logs $pfcon_dev
-    docker attach --detach-keys ctrl-a $pfcon_dev
+    title -d 1 "Attaching interactive terminal (ctrl-c to detach)"
+    windowBottom
+    if [[ $ORCHESTRATOR == swarm ]]; then
+        docker logs $pfcon_dev
+        docker attach --detach-keys ctrl-c $pfcon_dev
+    elif [[ $ORCHESTRATOR == kubernetes ]]; then
+        kubectl logs $pfcon_dev
+        kubectl attach $pfcon_dev -i -t
+    fi
 fi
