@@ -12,9 +12,9 @@ pfcon v3.2.0
 Overview
 ********
 
-This repository implements ``pfcon`` -- a controlling service that acts as the interface to a remote ``pman`` service.
+This repository implements ``pfcon`` -- a controlling service that acts as the interface to a process manager ``pman`` service.
 
-Most simply, a local zip file can be pushed to ``pfcon``, then after unpacking the data some process is run on it in the remote space using the controlled ``pman`` service. The resultant data can then be downloaded back as a zip file to the local space.
+Most simply, a local zip file can be pushed to a remote ``pfcon``, then after unpacking the data some process is run on it in the remote space using the controlled ``pman`` service. The resultant data can then be downloaded back as a zip file to the local space.
 
 It can be used to query and control the following (for example):
 
@@ -22,7 +22,7 @@ It can be used to query and control the following (for example):
 
 Visit the `pfcon http API call examples`_ wiki page to see examples of http calls accepted by ``pfcon`` server.
 
-.. _`pfcon http API call examples`: https://github.com/FNNDSC/pfcon/wiki/pfcon-(flask-based)-http-API-call-examples
+.. _`pfcon http API call examples`: https://github.com/FNNDSC/pfcon/wiki/pfcon-http-API-call-examples
 
 Additionally a Python3 client for this server's web API is provided here: https://github.com/FNNDSC/python-pfconclient
 
@@ -46,18 +46,18 @@ Note: On a Linux machine make sure to add your computer user to the ``docker`` g
 Consult this page https://docs.docker.com/engine/install/linux-postinstall/
 
 
+Docker Swarm-based development environment
+==========================================
+
 Start a local Docker Swarm cluster if not already started
-=========================================================
+---------------------------------------------------------
 
 .. code-block:: bash
 
     $> docker swarm init --advertise-addr 127.0.0.1
 
-
-Fire up the full set of pfcon services
---------------------------------------
-
-Open a terminal and run the following commands in any working directory:
+Start pfcon's development server and backend containers
+-------------------------------------------------------
 
 .. code-block:: bash
 
@@ -65,32 +65,58 @@ Open a terminal and run the following commands in any working directory:
     $> cd pfcon
     $> ./make.sh
 
-You can later remove all the backend containers with:
+Remove pfcon's containers
+-------------------------
 
 .. code-block:: bash
 
     $> cd pfcon
     $> ./unmake.sh
 
-
 Remove the local Docker Swarm cluster if desired
-================================================
+------------------------------------------------
 
 .. code-block:: bash
 
     $> docker swarm leave --force
 
 
-*****
-Usage
-*****
+Kubernetes-based development environment
+========================================
 
-For usage of  ``pfcon``, consult the relevant wiki pages.
+Install single-node Kubernetes cluster
+--------------------------------------
+
+On MAC OS Docker Desktop includes a standalone Kubernetes server and client. Consult this page https://docs.docker.com/desktop/kubernetes/
+
+On Linux there is a simple MicroK8s installation. Consult this page https://microk8s.io
+Then create the required alias:
+
+.. code-block:: bash
+
+    $> snap alias microk8s.kubectl kubectl
+    $> microk8s.kubectl config view --raw > $HOME/.kube/config
+
+
+Start pfcon's development server and backend containers
+-------------------------------------------------------
+
+.. code-block:: bash
+
+    $> git clone https://github.com/FNNDSC/pfcon.git
+    $> cd pfcon
+    $> ./make.sh -O kubernetes
+
+Remove pfcon's containers
+-------------------------
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./unmake.sh -O kubernetes
 
 ``pfcon`` usage
 ===============
-
-For ``pfcon`` detailed information, see the `pfcon wiki page <https://github.com/FNNDSC/pfcon/wiki/pfcon-overview>`_.
 
 .. code-block:: html
 
