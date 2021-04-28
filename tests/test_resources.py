@@ -82,13 +82,15 @@ class TestJobList(ResourceTests):
         self.assertEqual(response.json['data']['nfiles'], 1)
 
         with self.app.test_request_context():
-            # cleanup swarm job
             pman = PmanService.get_service_obj()
             for _ in range(10):
                 time.sleep(3)
                 d_compute_response = pman.get_job(self.job_id)
                 if d_compute_response['status'] == 'finishedSuccessfully': break
             self.assertEqual(d_compute_response['status'], 'finishedSuccessfully')
+
+            # cleanup swarm job
+            pman.delete_job(self.job_id)
 
 
 class TestJob(ResourceTests):
@@ -98,6 +100,7 @@ class TestJob(ResourceTests):
     def setUp(self):
         super().setUp()
         self.job_id = 'chris-jid-2'
+        self.job_dir = os.path.join('/home/localuser/storeBase', 'key-' + self.job_id)
         with self.app.test_request_context():
             self.url = url_for('api.job', job_id=self.job_id)
 
@@ -143,6 +146,16 @@ class TestJob(ResourceTests):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json['compute']['status'], 'finishedSuccessfully')
 
+            # cleanup swarm job
+            pman.delete_job(self.job_id)
+
+    def test_delete(self):
+        # make the DELETE request
+        #response = self.client.delete(self.url)
+        #self.assertEqual(response.status_code, 204)
+        pass
+
+
 
 class TestJobFile(ResourceTests):
     """
@@ -173,8 +186,3 @@ class TestJobFile(ResourceTests):
             filenames = job_zip.namelist()
         self.assertEqual(len(filenames), 1)
         self.assertEqual(filenames[0], 'test.txt')
-
-    def test_delete(self):
-        # make the DELETE request
-        response = self.client.delete(self.url)
-        self.assertEqual(response.status_code, 200)

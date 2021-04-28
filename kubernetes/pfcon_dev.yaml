@@ -121,8 +121,6 @@ spec:
       containers:
         - image: fnndsc/pman:dev
           name: pman
-          stdin: true
-          tty: true
           ports:
             - containerPort: 5010
           # Since pman spins off containers of its own it needs to mount storeBase dir
