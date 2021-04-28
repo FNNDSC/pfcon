@@ -145,3 +145,8 @@ class JobFile(Resource):
             logger.info(f'Deleting job {job_id} data from store')
             mdir.delete_data(job_dir)
             logger.info(f'Successfully removed job {job_id} data from store')
+        pman = PmanService.get_service_obj()
+        try:
+            pman.delete_job(job_id)
+        except ServiceException as e:
+            abort(e.code, message=str(e))
