@@ -226,7 +226,6 @@ windowBottom
 
 title -d 1 "Waiting until pfcon stack containers are running on $ORCHESTRATOR"
     echo "This might take a few minutes... please be patient."      | ./boxes.sh ${Yellow}
-    windowBottom
     for i in {1..30}; do
         sleep 5
         if [[ $ORCHESTRATOR == swarm ]]; then
@@ -247,7 +246,6 @@ windowBottom
 
 if (( ! b_skipUnitTests )) ; then
     title -d 1 "Running pfcon tests..."
-    windowBottom
     sleep 5
     if [[ $ORCHESTRATOR == swarm ]]; then
         docker exec $pfcon_dev nosetests --exe tests
@@ -268,7 +266,6 @@ fi
 
 if (( !  b_norestartinteractive_pfcon_dev )) ; then
     title -d 1 "Attaching interactive terminal (ctrl-c to detach)"
-    windowBottom
     if [[ $ORCHESTRATOR == swarm ]]; then
         docker logs $pfcon_dev
         docker attach --detach-keys ctrl-c $pfcon_dev

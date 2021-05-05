@@ -17,11 +17,14 @@ parser.add_argument('jid', dest='jid', required=True, location='form')
 parser.add_argument('cmd_args', dest='cmd_args', required=True, location='form')
 parser.add_argument('cmd_path_flags', dest='cmd_path_flags', location='form')
 parser.add_argument('auid', dest='auid', required=True, location='form')
-parser.add_argument('number_of_workers', dest='number_of_workers', required=True,
+parser.add_argument('number_of_workers', dest='number_of_workers', type=int,
+                    required=True, location='form')
+parser.add_argument('cpu_limit', dest='cpu_limit', type=int, required=True,
                     location='form')
-parser.add_argument('cpu_limit', dest='cpu_limit', required=True, location='form')
-parser.add_argument('memory_limit', dest='memory_limit', required=True, location='form')
-parser.add_argument('gpu_limit', dest='gpu_limit', required=True, location='form')
+parser.add_argument('memory_limit', dest='memory_limit', type=int, required=True,
+                    location='form')
+parser.add_argument('gpu_limit', dest='gpu_limit', type=int, required=True,
+                    location='form')
 parser.add_argument('image', dest='image', required=True, location='form')
 parser.add_argument('selfexec', dest='selfexec', required=True, location='form')
 parser.add_argument('selfpath', dest='selfpath', required=True, location='form')
