@@ -119,7 +119,7 @@ spec:
         env: production
     spec:
       containers:
-        - image: fnndsc/pman:dev
+        - image: fnndsc/pman
           name: pman
           ports:
             - containerPort: 5010
