@@ -11,7 +11,7 @@ class Config:
     STATIC_FOLDER = 'static'
     DEBUG = False
     TESTING = False
-    SERVER_VERSION = "3.2.0"
+    SERVER_VERSION = "3.3.0"
 
     def __init__(self):
         # Environment variables
@@ -75,7 +75,7 @@ class DevConfig(Config):
 
         # EXTERNAL SERVICES
         self.COMPUTE_SERVICE_URL = os.environ.get('COMPUTE_SERVICE_URL') if os.environ.get('COMPUTE_SERVICE_URL') is not None \
-                                   else 'http://pman-test-moc.k-apps.osh.massopen.cloud/api/v1/'
+                                   else 'http://pman:5010/api/v1/'
         
 
 
