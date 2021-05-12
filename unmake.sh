@@ -6,7 +6,7 @@
 #
 # SYNPOSIS
 #
-#   make.sh                     [-O <swarm|kubernetes>]
+#   unmake.sh                     [-O <swarm|kubernetes>]
 #
 #
 # DESC
