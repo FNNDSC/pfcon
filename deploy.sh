@@ -6,7 +6,8 @@
 #
 # SYNPOSIS
 #
-#   deploy.sh                   [-O <swarm|kubernetes>] \
+#   deploy.sh                   [-h]
+#                               [-O <swarm|kubernetes>] \
 #                               [-S <storeBase>]        \
 #                               [up|down]
 #
@@ -17,12 +18,21 @@
 #
 # TYPICAL CASES:
 #
-#   Run full pman instantiation:
+#   Deploy pfcon services into a Swarm cluster:
 #
 #       deploy.sh up
 #
+#
+#   Deploy pfcon services into a Kubernetes cluster:
+#
+#       deploy.sh -O kubernetes up
+#
 # ARGS
 #
+#
+#   -h
+#
+#       Optional print usage help.
 #
 #   -O <swarm|kubernetes>
 #
@@ -30,10 +40,8 @@
 #
 #   -S <storeBase>
 #
-#       Explicitly set the STOREBASE dir to <storeBase>. This is useful
-#       mostly in non-Linux hosts (like macOS) where there might be a mismatch
-#       between the actual STOREBASE path and the text of the path shared between
-#       the macOS host and the docker VM.
+#       Explicitly set the STOREBASE dir to <storeBase>. This is the remote ChRIS
+#       filesystem where pfcon and plugins share data (usually externally mounted NFS).
 #
 #   [up|down] (optional, default = 'up')
 #
@@ -48,23 +56,23 @@ source ./cparse.sh
 declare -i STEP=0
 ORCHESTRATOR=swarm
 HERE=$(pwd)
-echo "Starting script in dir $HERE"
 
 print_usage () {
-    echo "Usage: ./deploy.sh [-S <storeBase>] [-O <swarm|kubernetes>] [up|down]"
+    echo "Usage: ./deploy.sh [-h] [-O <swarm|kubernetes>] [-S <storeBase>] [up|down]"
     exit 1
 }
 
-while getopts ":S:O:" opt; do
+while getopts ":hO:S:" opt; do
     case $opt in
-        S) b_storeBase=1
-           STOREBASE=$OPTARG
+        h) print_usage
            ;;
         O) ORCHESTRATOR=$OPTARG
            if ! [[ "$ORCHESTRATOR" =~ ^(swarm|kubernetes)$ ]]; then
               echo "Invalid value for option -- O"
               print_usage
            fi
+           ;;
+        S) STOREBASE=$OPTARG
            ;;
         \?) echo "Invalid option -- $OPTARG"
             print_usage
@@ -86,13 +94,15 @@ if (( $# == 1 )) ; then
 fi
 
 title -d 1 "Setting global exports..."
-    if (( ! b_storeBase )) ; then
-        if [[ ! -d FS/remote ]] ; then
-            mkdir -p FS/remote
+    if [ -z ${STOREBASE+x} ]; then
+        if [[ ! -d CHRIS_REMOTE_FS ]] ; then
+            mkdir CHRIS_REMOTE_FS
         fi
-        cd FS/remote
-        STOREBASE=$(pwd)
-        cd $HERE
+        STOREBASE=$HERE/CHRIS_REMOTE_FS
+    else
+        if [[ ! -d $STOREBASE ]] ; then
+            mkdir -p $STOREBASE
+        fi
     fi
     echo -e "exporting STOREBASE=$STOREBASE "                      | ./boxes.sh
     export STOREBASE=$STOREBASE
@@ -102,14 +112,16 @@ if [[ "$COMMAND" == 'up' ]]; then
 
     title -d 1 "Starting pfcon containerized prod environment on $ORCHESTRATOR"
     if [[ $ORCHESTRATOR == swarm ]]; then
-        echo "docker stack deploy -c swarm/docker-compose_prod.yml pfcon_stack"         | ./boxes.sh ${LightCyan}
+        echo "docker stack deploy -c swarm/docker-compose_prod.yml pfcon_stack"           | ./boxes.sh ${LightCyan}
         docker stack deploy -c swarm/docker-compose_prod.yml pfcon_stack
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
-        echo "kubectl create configmap pman-config --from-env-file secrets/.pman.env"   | ./boxes.sh ${LightCyan}
-        kubectl create configmap pman-config --from-env-file secrets/.pman.env
-        echo "kubectl create configmap pfcon-config --from-env-file secrets/.pfcon.env" | ./boxes.sh ${LightCyan}
-        kubectl create configmap pfcon-config --from-env-file secrets/.pfcon.env
-        echo "envsubst < kubernetes/pfcon_prod.yaml | kubectl apply -f -"               | ./boxes.sh ${LightCyan}
+        echo "kubectl create namespace chris"   | ./boxes.sh ${LightCyan}
+        kubectl create namespace chris
+        echo "kubectl create configmap pman-config" "--from-env-file secrets/.pman.env"   | ./boxes.sh ${LightCyan}
+        kubectl create configmap pman-config --from-env-file secrets/.pman.env --namespace chris
+        echo "kubectl create configmap pfcon-config" "--from-env-file secrets/.pfcon.env" | ./boxes.sh ${LightCyan}
+        kubectl create configmap pfcon-config --from-env-file secrets/.pfcon.env --namespace chris
+        echo "envsubst < kubernetes/pfcon_prod.yaml | kubectl apply -f -"                 | ./boxes.sh ${LightCyan}
         envsubst < kubernetes/pfcon_prod.yaml | kubectl apply -f -
     fi
     windowBottom
@@ -122,12 +134,14 @@ if [[ "$COMMAND" == 'down' ]]; then
         echo "docker stack rm pfcon_stack"                               | ./boxes.sh ${LightCyan}
         docker stack rm pfcon_stack
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
-        echo " kubectl delete configmaps pfcon-config pman-config"       | ./boxes.sh ${LightCyan}
-        kubectl delete configmaps pfcon-config pman-config
+        echo " kubectl delete configmaps pfcon-config pman-config --namespace chris"  | ./boxes.sh ${LightCyan}
+        kubectl delete configmaps pfcon-config pman-config --namespace chris
         echo "kubectl delete -f kubernetes/pfcon_prod.yaml"              | ./boxes.sh ${LightCyan}
         kubectl delete -f kubernetes/pfcon_prod.yaml
+        echo "kubectl delete namespace chris"   | ./boxes.sh ${LightCyan}
+        kubectl delete namespace chris
     fi
-    echo "Removing ./FS tree"                                            | ./boxes.sh
-    rm -fr ./FS
+    echo "Removing STOREBASE tree $STOREBASE"                            | ./boxes.sh
+    rm -fr $STOREBASE
     windowBottom
 fi
