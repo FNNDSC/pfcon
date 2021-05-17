@@ -78,7 +78,6 @@ class DevConfig(Config):
                                    else 'http://pman:5010/api/v1/'
         
 
-
 class ProdConfig(Config):
     """
     Production configuration
