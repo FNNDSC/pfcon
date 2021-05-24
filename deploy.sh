@@ -9,6 +9,7 @@
 #   deploy.sh                   [-h]
 #                               [-O <swarm|kubernetes>] \
 #                               [-S <storeBase>]        \
+#                               [-N <namespace>]        \
 #                               [up|down]
 #
 # DESC
@@ -38,6 +39,11 @@
 #
 #       Explicitly set the orchestrator. Default is swarm.
 #
+#   -N <namespace>
+#
+#       Explicitly set the kubernetes namespace to <namespace>. Default is chris.
+#       Not used for swarm.
+#
 #   -S <storeBase>
 #
 #       Explicitly set the STOREBASE dir to <storeBase>. This is the remote ChRIS
@@ -55,14 +61,15 @@ source ./cparse.sh
 
 declare -i STEP=0
 ORCHESTRATOR=swarm
+NAMESPACE=chris
 HERE=$(pwd)
 
 print_usage () {
-    echo "Usage: ./deploy.sh [-h] [-O <swarm|kubernetes>] [-S <storeBase>] [up|down]"
+    echo "Usage: ./deploy.sh [-h] [-O <swarm|kubernetes>] [-N <namespace>] [-S <storeBase>] [up|down]"
     exit 1
 }
 
-while getopts ":hO:S:" opt; do
+while getopts ":hO:N:S:" opt; do
     case $opt in
         h) print_usage
            ;;
@@ -71,6 +78,8 @@ while getopts ":hO:S:" opt; do
               echo "Invalid value for option -- O"
               print_usage
            fi
+           ;;
+        N) NAMESPACE=$OPTARG
            ;;
         S) STOREBASE=$OPTARG
            ;;
@@ -104,25 +113,30 @@ title -d 1 "Setting global exports..."
             mkdir -p $STOREBASE
         fi
     fi
-    echo -e "exporting STOREBASE=$STOREBASE "                      | ./boxes.sh
+    echo -e "exporting STOREBASE=$STOREBASE"                      | ./boxes.sh
     export STOREBASE=$STOREBASE
+    if [[ $ORCHESTRATOR == kubernetes ]]; then
+        echo -e "exporting NAMESPACE=$NAMESPACE"                  | ./boxes.sh
+        export NAMESPACE=$NAMESPACE
+    fi
 windowBottom
 
 if [[ "$COMMAND" == 'up' ]]; then
 
     title -d 1 "Starting pfcon containerized prod environment on $ORCHESTRATOR"
     if [[ $ORCHESTRATOR == swarm ]]; then
-        echo "docker stack deploy -c swarm/docker-compose_prod.yml pfcon_stack"           | ./boxes.sh ${LightCyan}
-        docker stack deploy -c swarm/docker-compose_prod.yml pfcon_stack
+        echo "docker stack deploy -c swarm/prod_deployments/docker-compose.yml pfcon_stack"   | ./boxes.sh ${LightCyan}
+        docker stack deploy -c swarm/prod_deployments/docker-compose.yml pfcon_stack
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
-        echo "kubectl create namespace chris"   | ./boxes.sh ${LightCyan}
-        kubectl create namespace chris
-        echo "kubectl create configmap pman-config" "--from-env-file secrets/.pman.env"   | ./boxes.sh ${LightCyan}
-        kubectl create configmap pman-config --from-env-file secrets/.pman.env --namespace chris
-        echo "kubectl create configmap pfcon-config" "--from-env-file secrets/.pfcon.env" | ./boxes.sh ${LightCyan}
-        kubectl create configmap pfcon-config --from-env-file secrets/.pfcon.env --namespace chris
-        echo "envsubst < kubernetes/pfcon_prod.yaml | kubectl apply -f -"                 | ./boxes.sh ${LightCyan}
-        envsubst < kubernetes/pfcon_prod.yaml | kubectl apply -f -
+        echo "kubectl create namespace $NAMESPACE"   | ./boxes.sh ${LightCyan}
+        namespace=$(kubectl get namespaces $NAMESPACE --no-headers -o custom-columns=:metadata.name 2> /dev/null)
+        if [ -z "$namespace" ]; then
+            kubectl create namespace $NAMESPACE
+        else
+            echo "$NAMESPACE namespace already exists, skipping creation"
+        fi
+        echo "kubectl kustomize kubernetes/prod_deployments | envsubst | kubectl apply -f -"  | ./boxes.sh ${LightCyan}
+        kubectl kustomize kubernetes/prod_deployments | envsubst | kubectl apply -f -
     fi
     windowBottom
 fi
@@ -134,12 +148,8 @@ if [[ "$COMMAND" == 'down' ]]; then
         echo "docker stack rm pfcon_stack"                               | ./boxes.sh ${LightCyan}
         docker stack rm pfcon_stack
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
-        echo " kubectl delete configmaps pfcon-config pman-config --namespace chris"  | ./boxes.sh ${LightCyan}
-        kubectl delete configmaps pfcon-config pman-config --namespace chris
-        echo "kubectl delete -f kubernetes/pfcon_prod.yaml"              | ./boxes.sh ${LightCyan}
-        kubectl delete -f kubernetes/pfcon_prod.yaml
-        echo "kubectl delete namespace chris"   | ./boxes.sh ${LightCyan}
-        kubectl delete namespace chris
+        echo "kubectl kustomize kubernetes/prod_deployments | envsubst | kubectl delete -f -"  | ./boxes.sh ${LightCyan}
+        kubectl kustomize kubernetes/prod_deployments | envsubst | kubectl delete -f -
     fi
     echo "Removing STOREBASE tree $STOREBASE"                            | ./boxes.sh
     rm -fr $STOREBASE

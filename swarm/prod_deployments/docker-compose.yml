@@ -13,8 +13,10 @@ version: '3.7'
 services:
   pfcon:
     image: fnndsc/pfcon
+    environment:
+      - COMPUTE_SERVICE_URL=http://pman:5010/api/v1/
     env_file:
-      - ../secrets/.pfcon.env
+      - secrets/.pfcon.env
     # We need to mount a physical dir in the HOST onto the key store in pfcon. This dir
     # is given by the STOREBASE env variable substitution.
     volumes:
@@ -42,7 +44,7 @@ services:
       - STOREBASE
       - CONTAINER_ENV=swarm
     env_file:
-      - ../secrets/.pman.env
+      - secrets/.pman.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
