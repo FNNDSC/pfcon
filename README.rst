@@ -143,7 +143,7 @@ A single-machine deployment is provided.
 Configure pfcon services
 ------------------------
 
-Modify the ``.env`` files in the ``swarm/prod/base/secrets`` directory appropriately.
+Modify the ``.env`` files in the ``swarm/prod/secrets`` directory appropriately.
 
 Single-machine deployment
 -------------------------
