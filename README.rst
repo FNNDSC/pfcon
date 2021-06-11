@@ -138,20 +138,23 @@ Production deployments
 Docker Swarm-based deployment
 =============================
 
+A single-machine deployment is provided.
+
 Configure pfcon services
 ------------------------
 
-Modify the ``.env`` files in the ``swarm/prod_deployments/secrets`` directory appropriately.
+Modify the ``.env`` files in the ``swarm/prod/base/secrets`` directory appropriately.
 
-Start production pfcon
-----------------------
+Single-machine deployment
+-------------------------
+
+Start production pfcon:
 
 .. code-block:: bash
 
     $> ./deploy.sh up
 
-Tear down production pfcon
---------------------------
+Tear down production pfcon:
 
 .. code-block:: bash
 
@@ -160,21 +163,41 @@ Tear down production pfcon
 Kubernetes-based deployment
 ===========================
 
+A single-machine deployment using Kubernetes' "hostPath" storage is provided. In addition
+a multi-machine deployment for an external NFS drive is provided using NFS persistent volume.
+
 Configure pfcon services
 ------------------------
 
-Modify the ``.env`` files in the ``kubernetes/prod_deployments/secrets`` directory appropriately.
+Modify the ``.env`` files in the ``kubernetes/prod/base/secrets`` directory appropriately.
 
-Start production pfcon
-----------------------
+Single-machine deployment
+-------------------------
+
+Start production pfcon:
 
 .. code-block:: bash
 
     $> ./deploy.sh -O kubernetes up
 
 Tear down production pfcon
---------------------------
 
 .. code-block:: bash
 
     $> ./deploy.sh -O kubernetes down
+
+Multi-machine deployment
+-------------------------
+
+Start production pfcon:
+
+.. code-block:: bash
+
+    $> ./deploy.sh -O kubernetes -T nfs -S <NFS export dir> -P <NFS server IP addr> up
+
+Tear down production pfcon
+
+.. code-block:: bash
+
+    $> ./deploy.sh -O kubernetes -T nfs -S <NFS export dir> -P <NFS server IP addr> down
+

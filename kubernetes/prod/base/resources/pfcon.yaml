@@ -42,8 +42,8 @@ spec:
           image: busybox:1.32
           command: [ "sh", "-c", "until wget --spider -S -T 2 http://$(PMAN_SERVICE_NAME):5010/api/v1/ 2>&1 | grep '200 OK'; do echo waiting for pman; done" ]
       containers:
-        - image: fnndsc/pfcon
-          name: pfcon
+        - name: pfcon
+          image: fnndsc/pfcon
           ports:
             - containerPort: 30005
           env:
@@ -55,11 +55,10 @@ spec:
           command: ["gunicorn"]
           args: ["-w", "5", "-b", "0.0.0.0:30005", "-t",  "200", "pfcon.wsgi:application"]
           volumeMounts:
-            - mountPath: "/home/localuser/storeBase"
-              name: "store-base"
-      # We need to mount a physical dir in the HOST onto the key store in pfcon. This dir
-      # is given by the STOREBASE env variable substitution.
+            - name: storebase
+              mountPath: "/home/localuser/storeBase"
+      # Mount a persistent volume onto pfcon's key store (shared data volume with plugins)
       volumes:
-        - name: "store-base"
-          hostPath:
-            path: ${STOREBASE}
+        - name: storebase
+          persistentVolumeClaim:
+            claimName: storebase
