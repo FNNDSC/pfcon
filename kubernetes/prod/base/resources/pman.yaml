@@ -36,8 +36,8 @@ spec:
         env: production
     spec:
       containers:
-        - image: fnndsc/pman
-          name: pman
+        - name: pman
+          image: fnndsc/pman
           ports:
             - containerPort: 5010
           # Since pman spins off containers of its own it needs to mount storeBase dir
@@ -49,7 +49,7 @@ spec:
             - name: CONTAINER_ENV
               value: kubernetes
             - name: JOB_NAMESPACE
-              value: chris
+              value: ${NAMESPACE}
           envFrom:
             - configMapRef:
                 name: pman-config

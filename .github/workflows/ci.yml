@@ -26,7 +26,7 @@ jobs:
       - name: teardown
         run: |
           ./unmake.sh
-          sudo rm -fr ./FS
+          sudo rm -fr ./CHRIS_REMOTE_FS
           docker swarm leave --force
   test-cube:
     name: CUBE tests
