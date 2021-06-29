@@ -11,7 +11,7 @@ class Config:
     STATIC_FOLDER = 'static'
     DEBUG = False
     TESTING = False
-    SERVER_VERSION = "3.3.0"
+    SERVER_VERSION = "3.4.0"
 
     def __init__(self):
         # Environment variables

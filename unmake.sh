@@ -79,7 +79,8 @@ title -d 1 "Setting global exports..."
     if [ -z ${STOREBASE+x} ]; then
         STOREBASE=$(pwd)/CHRIS_REMOTE_FS
     fi
-    echo -e "exporting STOREBASE=$STOREBASE "                      | ./boxes.sh
+    echo -e "ORCHESTRATOR=$ORCHESTRATOR"                | ./boxes.sh
+    echo -e "exporting STOREBASE=$STOREBASE "           | ./boxes.sh
     export STOREBASE=$STOREBASE
 windowBottom
 

@@ -147,6 +147,7 @@ title -d 1 "Setting global exports..."
             mkdir -p $STOREBASE
         fi
     fi
+    echo -e "ORCHESTRATOR=$ORCHESTRATOR"                           | ./boxes.sh
     echo -e "exporting STOREBASE=$STOREBASE "                      | ./boxes.sh
     export STOREBASE=$STOREBASE
     export SOURCEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"

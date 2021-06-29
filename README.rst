@@ -55,8 +55,8 @@ Currently tested platforms:
 * ``Ubuntu 18.04+ and MAC OS X 10.14+ and Fedora 31+`` `Additional instructions for Fedora <https://github.com/mairin/ChRIS_store/wiki/Getting-the-ChRIS-Store-to-work-on-Fedora>`_
 * ``Docker 18.06.0+``
 
-Note: On a Linux machine make sure to add your computer user to the ``docker`` group
-Consult this page https://docs.docker.com/engine/install/linux-postinstall/
+Note: On a Linux machine make sure to add your computer user to the ``docker`` group.
+Consult this page: https://docs.docker.com/engine/install/linux-postinstall/
 
 
 Docker Swarm-based development environment
@@ -100,9 +100,11 @@ Kubernetes-based development environment
 Install single-node Kubernetes cluster
 --------------------------------------
 
-On MAC OS Docker Desktop includes a standalone Kubernetes server and client. Consult this page https://docs.docker.com/desktop/kubernetes/
+On MAC OS Docker Desktop includes a standalone Kubernetes server and client.
+Consult this page: https://docs.docker.com/desktop/kubernetes/
 
-On Linux there is a simple MicroK8s installation. Consult this page https://microk8s.io
+On Linux there is a simple MicroK8s installation. Consult this page: https://microk8s.io
+
 Then create the required alias:
 
 .. code-block:: bash
@@ -128,44 +130,74 @@ Remove pfcon's containers
     $> cd pfcon
     $> ./unmake.sh -O kubernetes
 
-``pfcon`` usage
-===============
 
-.. code-block:: html
+**********************
+Production deployments
+**********************
 
-        [--ip <IP>]                            
+Docker Swarm-based deployment
+=============================
 
-        The IP interface on which to listen. Default %s.
+A single-machine deployment is provided.
 
-        [--port <port>]
-        The port on which to listen. Defaults to '5055'.
+Configure pfcon services
+------------------------
 
-        [--storeBase <storagePath>]
-        A file system location in the network space accessible to ``pfcon``
-        that is used to unpack received files and also store results of
-        processing.
+Modify the ``.env`` files in the ``swarm/prod/secrets`` directory appropriately.
 
-        [--enableTokenAuth]
-        Enables token based authorization and can be configured to look for a .ini
-        file or an openshift secret.
+Single-machine deployment
+-------------------------
 
-        [--tokenPath <tokenPath>]
-        Specify the absolute path to the token in the file system.
-        By default, this looks for the pfconConfig.ini file in the current working directory.
+Start production pfcon:
 
-        [--man <manpage>]
-        Internal man page with more detail on specific calls.
+.. code-block:: bash
 
-        [-x|--desc]                                     
-        Provide an overview help page.
+    $> ./deploy.sh up
 
-        [-y|--synopsis]
-        Provide a synopsis help summary.
+Tear down production pfcon:
 
-        [--version]
-        Print internal version number and exit.
+.. code-block:: bash
 
-        [-v|--verbosity <level>]
-        Set the verbosity level. "0" typically means no/minimal output. Allows for
-        more fine tuned output control as opposed to '--quiet' that effectively
-        silences everything.
+    $> ./deploy.sh down
+
+Kubernetes-based deployment
+===========================
+
+A single-machine deployment using Kubernetes' "hostPath" storage is provided. In addition
+a multi-machine deployment for an external NFS drive is provided using NFS persistent volume.
+
+Configure pfcon services
+------------------------
+
+Modify the ``.env`` files in the ``kubernetes/prod/base/secrets`` directory appropriately.
+
+Single-machine deployment
+-------------------------
+
+Start production pfcon:
+
+.. code-block:: bash
+
+    $> ./deploy.sh -O kubernetes up
+
+Tear down production pfcon
+
+.. code-block:: bash
+
+    $> ./deploy.sh -O kubernetes down
+
+Multi-machine deployment
+-------------------------
+
+Start production pfcon:
+
+.. code-block:: bash
+
+    $> ./deploy.sh -O kubernetes -T nfs -S <NFS export dir> -P <NFS server IP addr> up
+
+Tear down production pfcon
+
+.. code-block:: bash
+
+    $> ./deploy.sh -O kubernetes -T nfs -S <NFS export dir> -P <NFS server IP addr> down
+
