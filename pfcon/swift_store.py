@@ -46,55 +46,6 @@ class SwiftStore:
         self.kube_client = k_client.CoreV1Api()
         self.kube_v1_batch_client = k_client.BatchV1Api()
 
-    def _createSwiftService(self, configPath):
-        config = configparser.ConfigParser()
-        f = open(configPath, 'r')
-        config.readfp(f)
-        f.close()
-
-        options = {
-            'os_auth_url':          config['AUTHORIZATION']['osAuthUrl'],
-            'application_id':       config['SECRET']['applicationId'],
-            'application_secret':   config['SECRET']['applicationSecret'],
-        }
-
-        auth_swift = v3.application_credential.ApplicationCredential(
-            options['os_auth_url'],
-            application_credential_id=options['application_id'],
-            application_credential_secret=options['application_secret']
-        )
-
-        session_client = session.Session(auth=auth_swift)
-        service = swift_service.Connection(session=session_client)
-        return service
-        
-    def create_pvc(self, job_id):
-        """
-        Create a Persistent Volume Claim (PVC) with the name 'jid'-storage-claim
-        :param str job_id: job-id of the Openshift job
-        :return:
-        """
-        d_pvc = {
-            "apiVersion": "v1",
-            "kind": "PersistentVolumeClaim",
-            "metadata": {
-                "name": job_id+"-storage-claim"
-            },
-            "spec": {
-                "accessModes": [
-                    "ReadWriteMany"
-                ],
-                "resources": {
-                    "requests": {
-                        "storage": "2Gi"
-                    },
-                "host":{
-                "path":"/share"
-                }
-                }
-            }
-        }
-        return self.kube_client.create_namespaced_persistent_volume_claim(self.project, body=d_pvc)
 
     def storeData(self, job_id, job_incoming_dir, input_stream):
         """
