@@ -72,8 +72,9 @@ class JobList(Resource):
                 abort(400, message='data_file: Bad zip file')
                 
         if self.store_env == 'swift':
+            os.makedirs(f'/tmp/key-{job_id}/outgoing',exist_ok=True)
             swift = SwiftStore(app.config)
-            d_info = swift.storeData(job_id, 'incoming', request.files['data_file'])
+            d_info = swift.storeData(job_id, "", request.files['data_file'])
             
         logger.info(f'Successfully stored job {job_id} input data')
 
@@ -124,6 +125,10 @@ class Job(Resource):
         }
 
     def delete(self, job_id):
+        if self.store_env == 'swift':
+            job_dir = "/tmp/key-"+job_id
+            swift = SwiftStore(app.config)
+            swift.deleteData(job_dir)
         if self.store_env == 'mount':
             storebase = app.config.get('STORE_BASE')
             job_dir = os.path.join(storebase, 'key-' + job_id)
@@ -166,7 +171,10 @@ class JobFile(Resource):
             logger.info(f'Successfully retrieved job {job_id} output data')
             
         if self.store_env == 'swift':
-            swift = SwiftStore(app.config)
-            content = swift.getData(job_id)
             
+            swift = SwiftStore(app.config)
+            logger.info(f'Retrieving job {job_id} output data')
+            
+            content = swift.getData(job_id, "")
+            logger.info(f'Successfully retrieved job {job_id} output data')
         return Response(content, mimetype='application/zip')
