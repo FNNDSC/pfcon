@@ -47,10 +47,16 @@ class MountDir:
             for root, dirs, files in os.walk(job_outgoing_dir):
                 for filename in files:
                     local_file_path = os.path.join(root, filename)
-                    arc_file_path = os.path.relpath(local_file_path, job_outgoing_dir)
-                    with open(local_file_path, 'rb') as f:
-                        job_zip.writestr(arc_file_path, f.read())
-                nfiles += len(files)
+                    if not os.path.islink(local_file_path):
+                        arc_file_path = os.path.relpath(local_file_path, job_outgoing_dir)
+                        try:
+                            with open(local_file_path, 'rb') as f:
+                                job_zip.writestr(arc_file_path, f.read())
+                        except Exception as e:
+                            logger.error(f'Failed to read file {local_file_path} for '
+                                         f'job {job_id}, detail: {str(e)}')
+                        else:
+                            nfiles += 1
         memory_zip_file.seek(0)
         logger.info(f'{nfiles} files compressed for job {job_id}')
         return memory_zip_file

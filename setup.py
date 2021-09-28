@@ -8,14 +8,14 @@ with open(path.join(path.dirname(path.abspath(__file__)), 'README.rst')) as f:
 
 setup(
       name             =   'pfcon',
-      version          =   '3.2.0',
+      version          =   '3.4.0',
       description      =   '(Python) Process and File Controller',
       long_description =   readme,
       author           =   'FNNDSC Developers',
       author_email     =   'dev@babymri.org',
       url              =   'https://github.com/FNNDSC/pfcon',
       packages         =   find_packages(),
-      install_requires =   ['pudb', 'pfmisc', 'Flask', 'Flask_RESTful', 'environs',
+      install_requires =   ['pfmisc', 'Flask', 'Flask_RESTful', 'environs',
                             'requests', 'keystoneauth1', 'python-keystoneclient',
                             'python-swiftclient'],
       test_suite       =   'nose.collector',

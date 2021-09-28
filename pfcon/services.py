@@ -54,7 +54,7 @@ class PmanService(Service):
                   f'{job_id}, detail: {str(e)} '
             logger.error(msg)
             raise ServiceException(msg, code=503)
-        if r.status_code != 200:
+        if r.status_code != 201:
             msg = f'Error response from {self.NAME} service while submitting job ' \
                   f'{job_id}, detail: {r.text}'
             logger.error(msg)
@@ -87,7 +87,24 @@ class PmanService(Service):
         return d_resp
 
     def delete_job(self, job_id):
-        pass
+        """
+        Delete job from the compute environment.
+        """
+        url = self.base_url + job_id + '/'
+        logger.info(f'Sending DELETE job request to {self.NAME} at -->{self.base_url}<-- '
+                    f'for job {job_id}')
+        try:
+            r = requests.delete(url, timeout=100)
+        except (Timeout, RequestException) as e:
+            msg = f'Error in talking to {self.NAME} service while deleting job ' \
+                  f'{job_id}, detail: {str(e)} '
+            logger.error(msg)
+            raise ServiceException(msg, code=503)
+        if r.status_code != 204:
+            msg = f'Error response from {self.NAME} service while deleting job ' \
+                  f'{job_id}, detail: {r.text}'
+            logger.error(msg)
+            raise ServiceException(msg, code=r.status_code)
 
     @classmethod
     def get_service_obj(cls):

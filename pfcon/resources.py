@@ -98,13 +98,18 @@ class JobList(Resource):
         return {
             'data': d_info,
             'compute': d_compute_response
-        }
+        }, 201
 
 
 class Job(Resource):
     """
     Resource representing a single job running on the compute.
     """
+    def __init__(self):
+        super(Job, self).__init__()
+
+        self.store_env = app.config.get('STORE_ENV')
+        
     def get(self, job_id):
         pman = PmanService.get_service_obj()
         try:
@@ -114,6 +119,24 @@ class Job(Resource):
         return {
             'compute': d_compute_response
         }
+        
+    def delete(self, job_id):
+        if self.store_env == 'mount':
+            storebase = app.config.get('STORE_BASE')
+            job_dir = os.path.join(storebase, 'key-' + job_id)
+            if not os.path.isdir(job_dir):
+                abort(404)
+            mdir = MountDir()
+            logger.info(f'Deleting job {job_id} data from store')
+            mdir.delete_data(job_dir)
+            logger.info(f'Successfully removed job {job_id} data from store')
+        pman = PmanService.get_service_obj()
+        try:
+            pman.delete_job(job_id)
+        except ServiceException as e:
+            abort(e.code, message=str(e))
+        logger.info(f'Successfully removed job {job_id} from remote compute')
+        return '', 204
 
 
 class JobFile(Resource):
@@ -145,13 +168,4 @@ class JobFile(Resource):
             
         return Response(content, mimetype='application/zip')
 
-    def delete(self, job_id):
-        if self.store_env == 'mount':
-            storebase = app.config.get('STORE_BASE')
-            job_dir = os.path.join(storebase, 'key-' + job_id)
-            if not os.path.isdir(job_dir):
-                abort(404)
-            mdir = MountDir()
-            logger.info(f'Deleting job {job_id} data from store')
-            mdir.delete_data(job_dir)
-            logger.info(f'Successfully removed job {job_id} data from store')
+    
