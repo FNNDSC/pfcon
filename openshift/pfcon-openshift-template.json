@@ -44,14 +44,10 @@
             "containers": [{
               "command": [
                 "/usr/local/bin/pfcon",
-                "--forever",
-                "--httpResponse",
-                "--swift-storage",
-                "--createDirsAsNeeded",
-                "--enableTokenAuth",
-                "--tokenPath=/etc/pfcon/auth/pfcon_config.cfg"
+                "--verbosity=5",
+                "--port=5005"
               ],
-              "image": "fnndsc/pfcon",
+              "image": "ghcr.io/sandip117/pfcon:flask",
               "imagePullPolicy": "Always",
               "name": "pfcon",
               "ports": [{
@@ -69,23 +65,63 @@
                 }
               },
               "terminationMessagePath": "/dev/termination-log",
-              "volumeMounts": [
+              "volumeMounts": [{
+                  "name": "kubecfg-volume",
+                  "mountPath": "/tmp/.kube/",
+                  "readOnly": true
+                },
+                {
+                "name": "gluster-vol1",
+                "mountPath": "/tmp"
+              },
                 {
                   "mountPath": "/etc/swift",
                   "name": "swift-credentials",
                   "readOnly": true
                 },
                 {
-                  "name": "pfcon-config",
-                  "mountPath": "/etc/pfcon/auth",
-                  "readOnly": true
+                            "mountPath": "/local",
+                            "name": "local-volume"
+                }
+              ],
+              "env": [{
+                  "name": "KUBECFG_PATH",
+                  "value": "/tmp/.kube/config"
+                },
+                {
+                  "name": "OPENSHIFTMGR_PROJECT",
+                  "value": "test-moc"
+                },
+                {
+                  "name": "COMPUTE_SERVICE_URL",
+                  "value": "http://pman-test-moc.k-apps.osh.massopen.cloud/api/v1/"
+                },
+                {
+                  "name": "STORE_ENV",
+                  "value": "swift"
+                },
+                {
+                  "name":"APPLICATION_MODE",
+                  "value":"local"
                 }
               ]
+              
             }],
             "dnsPolicy": "ClusterFirst",
             "restartPolicy": "Always",
             "terminationGracePeriodSeconds": 30,
-            "volumes": [
+            "volumes": [{
+                "name": "kubecfg-volume",
+                "secret": {
+                  "secretName": "kubecfg"
+                }
+              },
+              {
+              "name": "gluster-vol1",
+              "persistentVolumeClaim": {
+                "claimName": "gluster1"
+              }
+            },
               {
                 "name": "swift-credentials",
                 "secret": {
@@ -93,12 +129,12 @@
                   "secretName": "swift-credentials"
                 }
               },
-              {
-                "name": "pfcon-config",
-                "secret": {
-                  "secretName": "pfcon-config"
+                {
+                    "name": "local-volume",
+                    "emptyDir": {}
                 }
-            }]
+            ]
+            
           }
         },
         "test": false,
