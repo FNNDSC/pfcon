@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: docker build -t fnndsc/pfcon .
-      - uses: FNNDSC/cube-integration-action@v5
+      - uses: FNNDSC/cube-integration-action@v6
 
   build:
     needs: [test-pfcon, test-cube]
