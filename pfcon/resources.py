@@ -8,7 +8,7 @@ from flask_restful import reqparse, abort, Resource
 
 from .services import PmanService, ServiceException
 from .mount_dir import MountDir
-
+from .swift_store import SwiftStore
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,12 @@ class JobList(Resource):
                 logger.error(f'Error while decompressing and storing job {job_id} data, '
                              f'detail: {str(e)}')
                 abort(400, message='data_file: Bad zip file')
-            logger.info(f'Successfully stored job {job_id} input data')
+                
+        if self.store_env == 'swift':
+            swift = SwiftStore(app.config)
+            d_info = swift.storeData(job_id, 'incoming', request.files['data_file'])
+            
+        logger.info(f'Successfully stored job {job_id} input data')
 
         # process compute
         compute_data = {
@@ -102,7 +107,6 @@ class Job(Resource):
     """
     Resource representing a single job running on the compute.
     """
-
     def __init__(self):
         super(Job, self).__init__()
 
@@ -117,6 +121,24 @@ class Job(Resource):
         return {
             'compute': d_compute_response
         }
+        
+    def delete(self, job_id):
+        if self.store_env == 'mount':
+            storebase = app.config.get('STORE_BASE')
+            job_dir = os.path.join(storebase, 'key-' + job_id)
+            if not os.path.isdir(job_dir):
+                abort(404)
+            mdir = MountDir()
+            logger.info(f'Deleting job {job_id} data from store')
+            mdir.delete_data(job_dir)
+            logger.info(f'Successfully removed job {job_id} data from store')
+        pman = PmanService.get_service_obj()
+        try:
+            pman.delete_job(job_id)
+        except ServiceException as e:
+            abort(e.code, message=str(e))
+        logger.info(f'Successfully removed job {job_id} from remote compute')
+        return '', 204
 
     def delete(self, job_id):
         if self.store_env == 'mount':
@@ -159,4 +181,9 @@ class JobFile(Resource):
             logger.info(f'Retrieving job {job_id} output data')
             content = mdir.get_data(job_id, outgoing_dir)
             logger.info(f'Successfully retrieved job {job_id} output data')
+            
+        if self.store_env == 'swift':
+            swift = SwiftStore(app.config)
+            content = swift.getData(job_id)
+            
         return Response(content, mimetype='application/zip')
