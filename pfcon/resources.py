@@ -2,6 +2,8 @@
 import os
 import logging
 import zipfile
+from datetime import datetime, timedelta
+import jwt
 
 from flask import request, Response, current_app as app
 from flask_restful import reqparse, abort, Resource
@@ -32,6 +34,10 @@ parser.add_argument('execshell', dest='execshell', required=True, location='form
 parser.add_argument('type', dest='type', choices=('ds', 'fs', 'ts'), required=True,
                     location='form')
 parser.add_argument('data_file', dest='data_file', required=True, location='files')
+
+parser_auth = reqparse.RequestParser(bundle_errors=True)
+parser_auth.add_argument('pfcon_user', dest='pfcon_user', required=True)
+parser_auth.add_argument('pfcon_password', dest='pfcon_password', required=True)
 
 
 class JobList(Resource):
@@ -70,11 +76,11 @@ class JobList(Resource):
                 logger.error(f'Error while decompressing and storing job {job_id} data, '
                              f'detail: {str(e)}')
                 abort(400, message='data_file: Bad zip file')
-                
+
         if self.store_env == 'swift':
             swift = SwiftStore(app.config)
             d_info = swift.storeData(job_id, 'incoming', request.files['data_file'])
-            
+
         logger.info(f'Successfully stored job {job_id} input data')
 
         # process compute
@@ -98,15 +104,16 @@ class JobList(Resource):
         except ServiceException as e:
             abort(e.code, message=str(e))
         return {
-            'data': d_info,
-            'compute': d_compute_response
-        }, 201
+                   'data': d_info,
+                   'compute': d_compute_response
+               }, 201
 
 
 class Job(Resource):
     """
     Resource representing a single job running on the compute.
     """
+
     def __init__(self):
         super(Job, self).__init__()
 
@@ -121,24 +128,6 @@ class Job(Resource):
         return {
             'compute': d_compute_response
         }
-        
-    def delete(self, job_id):
-        if self.store_env == 'mount':
-            storebase = app.config.get('STORE_BASE')
-            job_dir = os.path.join(storebase, 'key-' + job_id)
-            if not os.path.isdir(job_dir):
-                abort(404)
-            mdir = MountDir()
-            logger.info(f'Deleting job {job_id} data from store')
-            mdir.delete_data(job_dir)
-            logger.info(f'Successfully removed job {job_id} data from store')
-        pman = PmanService.get_service_obj()
-        try:
-            pman.delete_job(job_id)
-        except ServiceException as e:
-            abort(e.code, message=str(e))
-        logger.info(f'Successfully removed job {job_id} from remote compute')
-        return '', 204
 
     def delete(self, job_id):
         if self.store_env == 'mount':
@@ -181,9 +170,67 @@ class JobFile(Resource):
             logger.info(f'Retrieving job {job_id} output data')
             content = mdir.get_data(job_id, outgoing_dir)
             logger.info(f'Successfully retrieved job {job_id} output data')
-            
+
         if self.store_env == 'swift':
             swift = SwiftStore(app.config)
             content = swift.getData(job_id)
-            
+
         return Response(content, mimetype='application/zip')
+
+
+class Auth(Resource):
+    """
+    Authorization resource.
+    """
+
+    def __init__(self):
+        super(Auth, self).__init__()
+
+        self.pfcon_user = app.config.get('PFCON_USER')
+        self.pfcon_password = app.config.get('PFCON_PASSWORD')
+        self.secret_key = app.config.get('SECRET_KEY')
+
+    def post(self):
+        args = parser_auth.parse_args()
+        if not self.check_credentials(args.pfcon_user, args.pfcon_password):
+            abort(400, message='Unable to log in with provided credentials.')
+        return {
+            'token': self.create_token()
+        }
+
+    def check_credentials(self, user, password):
+        return user == self.pfcon_user and password == self.pfcon_password
+
+    def create_token(self):
+        dt = datetime.now() + timedelta(days=2)
+        return jwt.encode({'pfcon_user': self.pfcon_user, 'exp': dt},
+                          self.secret_key,
+                          algorithm='HS256')
+
+    @staticmethod
+    def check_token():
+        bearer_token = request.headers.get('Authorization')
+        if not bearer_token:
+            abort(401, message='Missing authorization header.')
+        if not bearer_token.startswith('Bearer '):
+            abort(401, message='Invalid authorization header.')
+        token = bearer_token.split(' ')[1]
+        try:
+            jwt.decode(token, app.config.get('SECRET_KEY'), algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            logger.info(f'Authorization Token {token} expired')
+            abort(401, message='Expired authorization token.')
+        except jwt.InvalidTokenError:
+            logger.info(f'Invalid authorization token {token}')
+            abort(401, message='Invalid authorization token.')
+
+
+class HealthCheck(Resource):
+    """
+    Health check resource.
+    """
+
+    def get(self):
+        return {
+            'health': 'OK'
+        }

@@ -8,7 +8,7 @@ with open(path.join(path.dirname(path.abspath(__file__)), 'README.rst')) as f:
 
 setup(
       name             =   'pfcon',
-      version          =   '3.4.1',
+      version          =   '4.0.0',
       description      =   '(Python) Process and File Controller',
       long_description =   readme,
       author           =   'FNNDSC Developers',

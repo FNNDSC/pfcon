@@ -10,7 +10,7 @@ class Config:
     STATIC_FOLDER = 'static'
     DEBUG = False
     TESTING = False
-    SERVER_VERSION = "3.4.0"
+    SERVER_VERSION = "4.0.0"
 
     def __init__(self):
         # Environment variables
@@ -72,6 +72,10 @@ class DevConfig(Config):
             }
         })
 
+        self.SECRET_KEY = 'a2oxu^l=@pnsf!5piqz6!!5kdcdpo79y6jebbp+5712yjm*#+q'
+        self.PFCON_USER = 'pfcon'
+        self.PFCON_PASSWORD = 'pfcon1234'
+
         # EXTERNAL SERVICES
         self.COMPUTE_SERVICE_URL = 'http://pman:5010/api/v1/'
 
@@ -125,6 +129,8 @@ class ProdConfig(Config):
         # SECURITY WARNING: keep the secret key used in production secret!
         env = self.env
         self.SECRET_KEY = env('SECRET_KEY')
+        self.PFCON_USER = env('PFCON_USER')
+        self.PFCON_PASSWORD = env('PFCON_PASSWORD')
 
         # EXTERNAL SERVICES
         self.COMPUTE_SERVICE_URL = env('COMPUTE_SERVICE_URL')
