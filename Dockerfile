@@ -48,7 +48,8 @@ RUN apt-get update                                                              
   && locale-gen en_US.UTF-8                                                              \
   && dpkg-reconfigure locales                                                            \
   && apt-get install -y gunicorn                                                         \
-  && useradd -u $UID -ms /bin/bash localuser
+  && useradd -u $UID -ms /bin/bash localuser                                             \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY ["./requirements", "${REQPATH}"]
 
@@ -58,7 +59,7 @@ COPY --chown=localuser ./pfcon ${APPROOT}/pfcon
 COPY --chown=localuser ./setup.cfg ./setup.py README.rst  ${APPROOT}/
 
 RUN pip install --upgrade pip                                                            \
-  && pip install -r ${REQPATH}/${ENVIRONMENT}.txt
+  && pip install --no-cache-dir -r ${REQPATH}/${ENVIRONMENT}.txt
 
 # Start as user localuser
 #USER localuser
