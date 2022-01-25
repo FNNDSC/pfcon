@@ -22,7 +22,7 @@ jobs:
           docker build --build-arg ENVIRONMENT=local -t fnndsc/pfcon:dev .
           ./make.sh -s -U -i
       - name: nosetests
-        run: docker exec $(docker ps -f name=pfcon_dev_stack_pfcon.1 -q) nosetests
+        run: docker ps -a
       - name: teardown
         run: |
           ./unmake.sh
