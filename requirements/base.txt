@@ -1,5 +1,5 @@
-Flask==1.1.2
-Flask-RESTful==0.3.8
+Flask==2.0.3
+Flask-RESTful==0.3.9
 requests==2.27.1
 keystoneauth1==4.3.1
 python-keystoneclient==4.2.0
