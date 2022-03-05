@@ -5,7 +5,7 @@ import zipfile
 from datetime import datetime, timedelta
 import jwt
 
-from flask import request, Response, current_app as app
+from flask import request, send_file, current_app as app
 from flask_restful import reqparse, abort, Resource
 
 from .services import PmanService, ServiceException
@@ -175,7 +175,8 @@ class JobFile(Resource):
             swift = SwiftStore(app.config)
             content = swift.getData(job_id)
 
-        return Response(content, mimetype='application/zip')
+        return send_file(content, attachment_filename=f'{job_id}.zip',
+                         as_attachment=True, mimetype='application/zip')
 
 
 class Auth(Resource):
