@@ -81,7 +81,7 @@ class DevConfig(Config):
         self.PFCON_PASSWORD = 'pfcon1234'
 
         # EXTERNAL SERVICES
-        self.COMPUTE_SERVICE_URL = 'http://pman:5010/api/v1/'
+        self.COMPUTE_SERVICE_URL = self.env('COMPUTE_SERVICE_URL', 'http://pman:5010/api/v1/')
 
 
 class ProdConfig(Config):
