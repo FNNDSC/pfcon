@@ -62,7 +62,7 @@ class TestJobList(ResourceTests):
 
     def test_post(self):
         job_id = 'chris-jid-1'
-        self.job_dir = os.path.join('/home/localuser/storeBase', 'key-' + job_id)
+        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
         # create zip data file
         memory_zip_file = io.BytesIO()
         with zipfile.ZipFile(memory_zip_file, 'w', zipfile.ZIP_DEFLATED) as job_data_zip:
@@ -134,7 +134,7 @@ class TestJob(ResourceTests):
 
     def test_get(self):
         job_id = 'chris-jid-2'
-        self.job_dir = os.path.join('/home/localuser/storeBase', 'key-' + job_id)
+        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
         incoming = os.path.join(self.job_dir, 'incoming')
         Path(incoming).mkdir(parents=True, exist_ok=True)
         outgoing = os.path.join(self.job_dir, 'outgoing')
@@ -161,7 +161,7 @@ class TestJob(ResourceTests):
 
     def test_delete(self):
         job_id = 'chris-jid-3'
-        self.job_dir = os.path.join('/home/localuser/storeBase', 'key-' + job_id)
+        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
         incoming = os.path.join(self.job_dir, 'incoming')
         Path(incoming).mkdir(parents=True, exist_ok=True)
         outgoing = os.path.join(self.job_dir, 'outgoing')
@@ -197,7 +197,7 @@ class TestJobFile(ResourceTests):
 
     def test_get(self):
         job_id = 'chris-jid-4'
-        self.job_dir = os.path.join('/home/localuser/storeBase', 'key-' + job_id)
+        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
         with self.app.test_request_context():
             url = url_for('api.jobfile', job_id=job_id)
         outgoing = os.path.join(self.job_dir, 'outgoing')

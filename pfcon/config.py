@@ -1,6 +1,10 @@
-
 from logging.config import dictConfig
 from environs import Env
+
+
+from importlib.metadata import Distribution
+
+pkg = Distribution.from_name(__package__)
 
 
 class Config:
@@ -10,7 +14,7 @@ class Config:
     STATIC_FOLDER = 'static'
     DEBUG = False
     TESTING = False
-    SERVER_VERSION = "4.0.1"
+    SERVER_VERSION = pkg.version
 
     def __init__(self):
         # Environment variables
@@ -19,7 +23,7 @@ class Config:
 
         self.STORE_ENV = env('STORE_ENV', 'mount')
         if self.STORE_ENV == 'mount':
-            self.STORE_BASE = '/home/localuser/storeBase'
+            self.STORE_BASE = env('STOREBASE', '/var/local/storeBase')
 
         self.env = env
 
@@ -72,12 +76,12 @@ class DevConfig(Config):
             }
         })
 
-        self.SECRET_KEY = 'a2oxu^l=@pnsf!5piqz6!!5kdcdpo79y6jebbp+5712yjm*#+q'
+        self.SECRET_KEY = 'DevConfig.SECRET_KEY'
         self.PFCON_USER = 'pfcon'
         self.PFCON_PASSWORD = 'pfcon1234'
 
         # EXTERNAL SERVICES
-        self.COMPUTE_SERVICE_URL = 'http://pman:5010/api/v1/'
+        self.COMPUTE_SERVICE_URL = self.env('COMPUTE_SERVICE_URL', 'http://pman:5010/api/v1/')
 
 
 class ProdConfig(Config):

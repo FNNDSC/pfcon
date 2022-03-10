@@ -8,10 +8,10 @@ with open(path.join(path.dirname(path.abspath(__file__)), 'README.rst')) as f:
 
 setup(
       name             =   'pfcon',
-      version          =   '4.0.1',
-      description      =   '(Python) Process and File Controller',
+      version          =   '4.0.2',
+      description      =   'ChRIS compute resource Process and File CONtroller',
       long_description =   readme,
-      author           =   'FNNDSC Developers',
+      author           =   'FNNDSC',
       author_email     =   'dev@babymri.org',
       url              =   'https://github.com/FNNDSC/pfcon',
       packages         =   find_packages(),
@@ -23,5 +23,5 @@ setup(
       scripts          =   ['bin/pfcon'],
       license          =   'MIT',
       zip_safe         =   False,
-      python_requires  =   '>=3.6'
+      python_requires  =   '>=3.8'
      )

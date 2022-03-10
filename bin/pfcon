@@ -147,7 +147,7 @@ def synopsis(ab_shortOnly = False):
 
             pfcon                                                   \\
                 --port 5005                                         \\
-                --storeBase /home/localuser/storeBase               \\
+                --storeBase /var/local/storeBase               \\
                 --verbosity 1                                       \\
                 --ip %s
 

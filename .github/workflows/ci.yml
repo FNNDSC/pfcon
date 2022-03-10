@@ -33,8 +33,12 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - run: docker build -t fnndsc/pfcon .
+      - run: docker build -t localhost/fnndsc/pfcon .
       - uses: FNNDSC/cube-integration-action@v6
+        with:
+          branch: change-storebase
+        env:
+          PFCON_IMAGE: localhost/fnndsc/pfcon
 
   build:
     needs: [test-pfcon, test-cube]
