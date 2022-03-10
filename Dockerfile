@@ -39,13 +39,18 @@ LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
       org.opencontainers.image.source="https://github.com/FNNDSC/pfcon" \
       org.opencontainers.image.licenses="MIT"
 
+# gunicorn is installed using apt-get for non-x86_64 architecture support
+RUN apt-get update \
+    && apt-get install -y gunicorn \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /usr/local/src/pfcon
 COPY ./requirements ./requirements
 ARG ENVIRONMENT=production
 RUN pip install --no-cache-dir -r /usr/local/src/pfcon/requirements/$ENVIRONMENT.txt
 
 COPY . .
-RUN if [ "$ENVIRONMENT" = "local" ]; then pip install -e .; else  pip install .; fi
+RUN if [ "$ENVIRONMENT" = "local" ]; then pip install -e .; else pip install .; fi
 
 # Start pfcon production server
 EXPOSE 5005
