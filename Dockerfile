@@ -40,6 +40,7 @@ LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
       org.opencontainers.image.licenses="MIT"
 
 # gunicorn is installed using apt-get for non-x86_64 architecture support
+ENV PYTHONPATH=/usr/local/lib/python3.8/site-packages:/usr/lib/python3/dist-packages:$PYTHONPATH
 RUN apt-get update \
     && apt-get install -y gunicorn \
     && rm -rf /var/lib/apt/lists/*

@@ -14,15 +14,14 @@ from    argparse            import RawTextHelpFormatter
 from    argparse            import ArgumentParser
 import pudb
 
-from    pfmisc._colors             import Colors
-from    pfmisc                     import local_ip_address
+from colorama import Fore, Style
 
 from pfcon.app import create_app
 from pfcon.config import Config
 
-str_defIP = local_ip_address()
+str_defIP = '0.0.0.0'
 str_version = Config.SERVER_VERSION
-str_desc = Colors.CYAN + """
+str_desc = Fore.CYAN + """
 
         __
        / _|
@@ -39,27 +38,19 @@ str_desc = Colors.CYAN + """
            A controller for processes and data -- part of the pf* family.
 
                               -- version """ + \
-             Colors.YELLOW + str_version + Colors.CYAN + """ --
+             Fore.YELLOW + str_version + Fore.CYAN + """ --
 
     'pfcon' is a module class and stand-alone app that provides a simple API (both
     programmatically and CLI-driven) to coordinate data transfers and process control
     to pman (for process management).
 
-            (c) 2017-2020 Fetal-Neonatal Neuroimaging & Developmental Science Center
+            (c) 2017-2022 Fetal-Neonatal Neuroimaging & Developmental Science Center
                             Boston Children's Hospital
 
-                                http://fnndsc.org
-                                 dev@babyMRI.org
+                                https://fnndsc.org
+                                dev@babyMRI.org
+""" + Style.RESET_ALL
 
-""" + \
-        Colors.BLINK_RED +  """
-
-            +-----------------------------------------------------------+
-            | NOTE THAT THIS SERVER DOES NOT CURRENTLY AUTHENTICATE AND |
-            | WILL HONOR *ALL* DATA PUSH AND PROCESS CONTROL REQUESTS!  |
-            +-----------------------------------------------------------+
-
-""" + Colors.NO_COLOUR
 
 def synopsis(ab_shortOnly = False):
     shortSynopsis =  '''

@@ -15,7 +15,7 @@ setup(
       author_email     =   'dev@babymri.org',
       url              =   'https://github.com/FNNDSC/pfcon',
       packages         =   find_packages(),
-      install_requires =   ['pfmisc', 'Flask', 'Flask_RESTful', 'environs',
+      install_requires =   ['Flask', 'Flask_RESTful', 'environs',
                             'requests', 'keystoneauth1', 'python-keystoneclient',
                             'python-swiftclient'],
       test_suite       =   'nose.collector',
