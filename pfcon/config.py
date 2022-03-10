@@ -23,7 +23,7 @@ class Config:
 
         self.STORE_ENV = env('STORE_ENV', 'mount')
         if self.STORE_ENV == 'mount':
-            self.STORE_BASE = '/var/local/storeBase'
+            self.STORE_BASE = env('STOREBASE', '/var/local/storeBase')
 
         self.env = env
 
