@@ -31,7 +31,13 @@
 #
 
 FROM fnndsc/ubuntu-python3:ubuntu20.04-python3.8.5
-MAINTAINER fnndsc "dev@babymri.org"
+
+LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
+      org.opencontainers.image.title="pfcon" \
+      org.opencontainers.image.description="ChRIS compute resource controller" \
+      org.opencontainers.image.url="https://chrisproject.org/" \
+      org.opencontainers.image.source="https://github.com/FNNDSC/pfcon" \
+      org.opencontainers.image.licenses="MIT"
 
 # Pass a UID on build command line (see above) to set internal UID
 ARG UID=1001
