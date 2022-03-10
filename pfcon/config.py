@@ -1,6 +1,10 @@
-
 from logging.config import dictConfig
 from environs import Env
+
+
+from importlib.metadata import Distribution
+
+pkg = Distribution.from_name(__package__)
 
 
 class Config:
@@ -10,7 +14,7 @@ class Config:
     STATIC_FOLDER = 'static'
     DEBUG = False
     TESTING = False
-    SERVER_VERSION = "4.0.1"
+    SERVER_VERSION = pkg.version
 
     def __init__(self):
         # Environment variables
