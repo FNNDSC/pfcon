@@ -56,7 +56,7 @@ spec:
           args: ["-w", "5", "-b", "0.0.0.0:30005", "-t",  "200", "pfcon.wsgi:application"]
           volumeMounts:
             - name: storebase
-              mountPath: "/home/localuser/storeBase"
+              mountPath: "/var/local/storeBase"
       # Mount a persistent volume onto pfcon's key store (shared data volume with plugins)
       volumes:
         - name: storebase
