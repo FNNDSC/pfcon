@@ -30,7 +30,7 @@
 # docker build --build-arg http_proxy=${PROXY} --build-arg ENVIRONMENT=local -t local/pfcon:dev .
 #
 
-FROM docker.io/library/python:3.8.12-slim-bullseye
+FROM docker.io/library/python:3.8.12-bullseye
 
 LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
       org.opencontainers.image.title="pfcon" \
@@ -38,12 +38,6 @@ LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
       org.opencontainers.image.url="https://chrisproject.org/" \
       org.opencontainers.image.source="https://github.com/FNNDSC/pfcon" \
       org.opencontainers.image.licenses="MIT"
-
-# gunicorn is installed using apt-get for non-x86_64 architecture support
-ENV PYTHONPATH=/usr/local/lib/python3.8/site-packages:/usr/lib/python3/dist-packages:$PYTHONPATH
-RUN apt-get update \
-    && apt-get install -y gunicorn \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/local/src/pfcon
 COPY ./requirements ./requirements
