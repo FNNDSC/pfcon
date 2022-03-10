@@ -76,7 +76,7 @@ class DevConfig(Config):
             }
         })
 
-        self.SECRET_KEY = 'a2oxu^l=@pnsf!5piqz6!!5kdcdpo79y6jebbp+5712yjm*#+q'
+        self.SECRET_KEY = 'DevConfig.SECRET_KEY'
         self.PFCON_USER = 'pfcon'
         self.PFCON_PASSWORD = 'pfcon1234'
 
