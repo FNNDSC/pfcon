@@ -43,7 +43,7 @@ LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
 ARG UID=1001
 ARG ENVIRONMENT=production
 
-ENV UID=$UID DEBIAN_FRONTEND=noninteractive VERSION="0.1"
+ENV UID=$UID DEBIAN_FRONTEND=noninteractive
 ENV APPROOT="/home/localuser/pfcon" REQPATH="/usr/src/requirements"
 
 RUN apt-get update                                                                       \
