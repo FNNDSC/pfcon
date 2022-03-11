@@ -47,6 +47,5 @@ RUN pip install --no-cache-dir -r /usr/local/src/pfcon/requirements/$ENVIRONMENT
 COPY . .
 RUN if [ "$ENVIRONMENT" = "local" ]; then pip install -e .; else pip install .; fi
 
-# Start pfcon production server
 EXPOSE 5005
-CMD ["gunicorn", "-w", "5", "-b", "0.0.0.0:5005", "-t",  "200", "pfcon.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5005", "--workers", "8", "--timeout", "3600", "pfcon.wsgi:application"]
