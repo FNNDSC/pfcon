@@ -35,8 +35,6 @@ jobs:
       - uses: actions/checkout@v2
       - run: docker build -t localhost/fnndsc/pfcon .
       - uses: FNNDSC/cube-integration-action@v6
-        with:
-          branch: change-storebase
         env:
           PFCON_IMAGE: localhost/fnndsc/pfcon
 
