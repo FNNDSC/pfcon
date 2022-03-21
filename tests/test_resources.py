@@ -71,16 +71,14 @@ class TestJobList(ResourceTests):
 
         data = {
             'jid': job_id,
-            'cmd_args': '--saveinputmeta --saveoutputmeta --dir /share/incoming',
+            'entrypoint': ['python3', '/usr/local/bin/simplefsapp'],
+            'args': ['--saveinputmeta', '--saveoutputmeta', '--dir', '/share/incoming'],
             'auid': 'cube',
             'number_of_workers': '1',
             'cpu_limit': '1000',
             'memory_limit': '200',
             'gpu_limit': '0',
             'image': 'fnndsc/pl-simplefsapp',
-            'selfexec': 'simplefsapp',
-            'selfpath': '/usr/local/bin',
-            'execshell': 'python3',
             'type': 'fs',
             'data_file': (memory_zip_file, 'data.txt.zip')
         }
@@ -113,17 +111,15 @@ class TestJob(ResourceTests):
 
         self.job_dir = ''
         self.compute_data = {
-            'cmd_args': '--saveinputmeta --saveoutputmeta --dir cube',
-            'cmd_path_flags': '--dir,',
+            'entrypoint': ['python3', '/usr/local/bin/simplefsapp'],
+            'args': ['--saveinputmeta', '--saveoutputmeta', '--dir', 'cube'],
+            'args_path_flags': ['--dir'],
             'auid': 'cube',
             'number_of_workers': '1',
             'cpu_limit': '1000',
             'memory_limit': '200',
             'gpu_limit': '0',
             'image': 'fnndsc/pl-simplefsapp',
-            'selfexec': 'simplefsapp',
-            'selfpath': '/usr/local/bin',
-            'execshell': 'python3',
             'type': 'fs'
         }
 
