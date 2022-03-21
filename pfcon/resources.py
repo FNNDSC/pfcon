@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 parser = reqparse.RequestParser(bundle_errors=True)
 parser.add_argument('jid', dest='jid', required=True, location='form')
-parser.add_argument('args', dest='args', required=True, type=str, action='append', location='form')
-parser.add_argument('args_path_flags', dest='args_path_flags', type=str, action='append', location='form')
+parser.add_argument('args', dest='args', required=True, type=str, action='append', location='form', default=[])
+parser.add_argument('args_path_flags', dest='args_path_flags', type=str, action='append', location='form', default=[])
 parser.add_argument('auid', dest='auid', required=True, location='form')
 parser.add_argument('number_of_workers', dest='number_of_workers', type=int,
                     required=True, location='form')
