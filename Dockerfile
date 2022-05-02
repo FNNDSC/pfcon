@@ -30,7 +30,7 @@
 # docker build --build-arg http_proxy=${PROXY} --build-arg ENVIRONMENT=local -t local/pfcon:dev .
 #
 
-FROM fnndsc/conda:latest
+FROM fnndsc/conda:python3.10.4
 
 LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
       org.opencontainers.image.title="pfcon" \
@@ -39,11 +39,12 @@ LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
       org.opencontainers.image.source="https://github.com/FNNDSC/pfcon" \
       org.opencontainers.image.licenses="MIT"
 
-RUN conda install -y -c conda-forge msgpack-python==1.0.3 MarkupSafe==2.1.1 netifaces==0.10.9 PyYAML==6.0 wrapt==1.14.0
+
 WORKDIR /usr/local/src/pfcon
 COPY ./requirements ./requirements
+ENV PATH=/opt/conda/bin:$PATH
+RUN conda env update -n base -f /usr/local/src/pfcon/requirements/env.yml
 ARG ENVIRONMENT=production
-
 RUN pip install --no-cache-dir -r /usr/local/src/pfcon/requirements/$ENVIRONMENT.txt
 COPY . .
 RUN if [ "$ENVIRONMENT" = "local" ]; then pip install -e .; else pip install .; fi
