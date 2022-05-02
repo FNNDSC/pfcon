@@ -42,7 +42,7 @@ LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
 
 WORKDIR /usr/local/src/pfcon
 COPY ./requirements ./requirements
-ENV PATH=/opt/conda/bin:$PATH
+RUN conda init bash
 RUN conda env update -n base -f /usr/local/src/pfcon/requirements/env.yml
 ARG ENVIRONMENT=production
 RUN pip install --no-cache-dir -r /usr/local/src/pfcon/requirements/$ENVIRONMENT.txt
