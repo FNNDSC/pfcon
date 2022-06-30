@@ -6,6 +6,7 @@ import os
 import io
 import time
 import zipfile
+import json
 from unittest import TestCase
 from unittest import mock, skip
 
@@ -27,11 +28,12 @@ class ResourceTests(TestCase):
         self.client = self.app.test_client()
         with self.app.test_request_context():
             # create a header with authorization token
-            pfcon_user = self.app.config.get('PFCON_USER')
-            pfcon_password = self.app.config.get('PFCON_PASSWORD')
             url = url_for('api.auth')
-            response = self.client.post(url, data={'pfcon_user': pfcon_user,
-                                                   'pfcon_password': pfcon_password})
+            creds = {
+                'pfcon_user': self.app.config.get('PFCON_USER'),
+                'pfcon_password': self.app.config.get('PFCON_PASSWORD')
+            }
+            response = self.client.post(url, data=json.dumps(creds), content_type='application/json')
             self.headers = {'Authorization': 'Bearer ' + response.json['token']}
 
     def tearDown(self):
