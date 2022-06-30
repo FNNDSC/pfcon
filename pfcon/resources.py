@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 parser = reqparse.RequestParser(bundle_errors=True)
 parser.add_argument('jid', dest='jid', required=True, location='form')
-parser.add_argument('cmd_args', dest='cmd_args', required=True, location='form')
-parser.add_argument('cmd_path_flags', dest='cmd_path_flags', location='form')
+parser.add_argument('args', dest='args', required=True, type=str, action='append', location='form', default=[])
+parser.add_argument('args_path_flags', dest='args_path_flags', type=str, action='append', location='form', default=[])
 parser.add_argument('auid', dest='auid', required=True, location='form')
 parser.add_argument('number_of_workers', dest='number_of_workers', type=int,
                     required=True, location='form')
@@ -28,9 +28,7 @@ parser.add_argument('memory_limit', dest='memory_limit', type=int, required=True
 parser.add_argument('gpu_limit', dest='gpu_limit', type=int, required=True,
                     location='form')
 parser.add_argument('image', dest='image', required=True, location='form')
-parser.add_argument('selfexec', dest='selfexec', required=True, location='form')
-parser.add_argument('selfpath', dest='selfpath', required=True, location='form')
-parser.add_argument('execshell', dest='execshell', required=True, location='form')
+parser.add_argument('entrypoint', dest='entrypoint', type=str, required=True, action='append', location='form')
 parser.add_argument('type', dest='type', choices=('ds', 'fs', 'ts'), required=True,
                     location='form')
 parser.add_argument('data_file', dest='data_file', required=True, location='files')
@@ -85,17 +83,15 @@ class JobList(Resource):
 
         # process compute
         compute_data = {
-            'cmd_args': args.cmd_args,
-            'cmd_path_flags': args.cmd_path_flags,
+            'args': args.args,
+            'args_path_flags': args.args_path_flags,
             'auid': args.auid,
             'number_of_workers': args.number_of_workers,
             'cpu_limit': args.cpu_limit,
             'memory_limit': args.memory_limit,
             'gpu_limit': args.gpu_limit,
             'image': args.image,
-            'selfexec': args.selfexec,
-            'selfpath': args.selfpath,
-            'execshell': args.execshell,
+            'entrypoint': args.entrypoint,
             'type': args.type,
         }
         pman = PmanService.get_service_obj()
