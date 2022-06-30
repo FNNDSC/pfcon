@@ -168,23 +168,12 @@ if (( ! b_skipIntro )) ; then
 fi
 windowBottom
 
-if (( ! b_skipIntro )) ; then
-    title -d 1 "Will use containers with following version info:"
-    for CORE in ${A_CONTAINER[@]} ; do
-        cparse $CORE " " "REPO" "CONTAINER" "MMN" "ENV"
-        if [[   $CONTAINER != "pl-simplefsapp"  ]] ; then
-            windowBottom
-            CMD="docker run --rm --entrypoint $CONTAINER ${REPO}/$CONTAINER --version"
-            if [[   $CONTAINER == "pfcon:dev"  ]] ; then
-              CMD="docker run --rm --entrypoint pfcon ${REPO}/$CONTAINER --version"
-            fi
-            Ver=$(echo $CMD | sh | grep Version)
-            echo -en "\033[2A\033[2K"
-            printf "${White}%40s${Green}%40s${Yellow}\n"            \
-                    "${REPO}/$CONTAINER" "$Ver"                     | ./boxes.sh
-        fi
-    done
-fi
+title -d 1 "Building :dev"
+    cd $HERE
+    CMD="docker compose -f swarm/docker-compose_dev.yml build"
+    echo "$CMD"                                                    | ./boxes.sh
+    echo $CMD | sh                                                 | ./boxes.sh -c
+windowBottom
 
 title -d 1 "Changing permissions to 755 on" "$HERE"
     cd $HERE
