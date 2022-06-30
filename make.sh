@@ -118,12 +118,10 @@ while getopts ":hsiUO:S:" opt; do
 done
 shift $(($OPTIND - 1))
 
-export PFCONREPO=fnndsc
 export PMANREPO=fnndsc
 export TAG=
 if (( $# == 1 )) ; then
     REPO=$1
-    export PFCONREPO=$(echo $REPO | awk -F \: '{print $1}')
     export TAG=$(echo $REPO | awk -F \: '{print $2}')
     if (( ${#TAG} )) ; then
         TAG=":$TAG"
@@ -131,7 +129,6 @@ if (( $# == 1 )) ; then
 fi
 
 declare -a A_CONTAINER=(
-    "fnndsc/pfcon:dev^PFCONREPO"
     "fnndsc/pman^PMANREPO"
     "fnndsc/pl-simplefsapp"
 )

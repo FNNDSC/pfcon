@@ -12,7 +12,11 @@ version: '3.7'
 
 services:
   pfcon:
-    image: ${PFCONREPO:?}/pfcon:dev
+    image: localhost:5000/fnndsc/pfcon:dev
+    build:
+      context: ..
+      args:
+        ENVIRONMENT: local
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     # We need to mount a physical dir in the HOST onto the key store in pfcon. This dir
