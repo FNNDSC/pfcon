@@ -12,8 +12,6 @@ setup(
       install_requires =   ['Flask', 'Flask_RESTful', 'environs',
                             'requests', 'keystoneauth1', 'python-keystoneclient',
                             'python-swiftclient', 'PyJWT'],
-      test_suite       =   'nose.collector',
-      tests_require    =   ['nose'],
       license          =   'MIT',
       zip_safe         =   False,
       python_requires  =   '>=3.10.2'

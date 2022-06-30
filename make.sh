@@ -241,9 +241,9 @@ if (( ! b_skipUnitTests )) ; then
     title -d 1 "Running pfcon tests..."
     sleep 5
     if [[ $ORCHESTRATOR == swarm ]]; then
-        docker exec $pfcon_dev nosetests --exe tests
+        docker exec $pfcon_dev pytest --color=yes
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
-        kubectl exec $pfcon_dev -- nosetests --exe tests
+        kubectl exec $pfcon_dev -- pytest --color=yes
     fi
     status=$?
     title -d 1 "pfcon test results"
