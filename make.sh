@@ -58,9 +58,7 @@
 #
 #   -s
 #
-#       Optional skip intro steps. This skips the check on latest versions
-#       of containers and the interval version number printing. Makes for
-#       slightly faster startup.
+#       Optional skip intro steps.
 #
 #   [local|fnndsc[:dev]] (optional, default = 'fnndsc')
 #

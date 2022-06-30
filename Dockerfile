@@ -30,7 +30,7 @@
 # docker build --build-arg http_proxy=${PROXY} --build-arg ENVIRONMENT=local -t local/pfcon:dev .
 #
 
-FROM python:3.10.3-bullseye
+FROM python:3.10.5-bullseye
 
 WORKDIR /usr/local/src/pfcon
 COPY ./requirements ./requirements
@@ -50,4 +50,5 @@ LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
       org.opencontainers.image.url="https://chrisproject.org/" \
       org.opencontainers.image.source="https://github.com/FNNDSC/pfcon" \
       org.opencontainers.image.version=$BUILD_VERSION \
+      org.opencontainers.image.revision=$BUILD_VERSION \
       org.opencontainers.image.licenses="MIT"
