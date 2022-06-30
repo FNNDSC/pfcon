@@ -26,6 +26,7 @@ Overview
 ********
 
 This repository implements ``pfcon`` -- a controlling service that acts as the interface to a process manager ``pman`` service.
+Primarily, ``pfcon`` provides "compute resource" services to a ChRIS backend.
 
 Most simply, a local zip file can be pushed to a remote ``pfcon``, then after unpacking the data some process is run on it in the remote space using the controlled ``pman`` service. The resultant data can then be downloaded back as a zip file to the local space.
 
