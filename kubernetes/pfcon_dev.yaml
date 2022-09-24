@@ -51,19 +51,14 @@ spec:
           env:
             - name: APPLICATION_MODE
               value: development
-          command: ["pfcon"]
-          # We need to mount a physical dir in the HOST onto the key store in pfcon. This
-          # dir is given by the STOREBASE env variable substitution. The keystore can be
-          # specified by the --storeBase flag during development.
-          args: ["--ip", "0.0.0.0", "--port", "30006", "--storeBase", "/var/local/storeBase", "--verbosity", "1"]
+          command: ["python"]
+          args: ["-m", "pfcon"]
           volumeMounts:
             - mountPath: "/var/local/storeBase"
               name: "storebase"
-            - mountPath: "/home/localuser/pfcon/pfcon"
+            - mountPath: "/app/pfcon"
               name: "pfcon-source"
-            - mountPath: "/home/localuser/pfcon/bin"
-              name: "pfcon-bin"
-            - mountPath: "/home/localuser/pfcon/tests"
+            - mountPath: "/app/tests"
               name: "pfcon-tests"
       volumes:
         - name: "storebase"
@@ -72,9 +67,6 @@ spec:
         - name: "pfcon-source"
           hostPath:
             path: ${SOURCEDIR}/pfcon
-        - name: "pfcon-bin"
-          hostPath:
-            path: ${SOURCEDIR}/bin
         - name: "pfcon-tests"
           hostPath:
             path: ${SOURCEDIR}/tests

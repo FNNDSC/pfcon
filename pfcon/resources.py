@@ -16,8 +16,10 @@ logger = logging.getLogger(__name__)
 
 parser = reqparse.RequestParser(bundle_errors=True)
 parser.add_argument('jid', dest='jid', required=True, location='form')
-parser.add_argument('args', dest='args', required=True, type=str, action='append', location='form', default=[])
-parser.add_argument('args_path_flags', dest='args_path_flags', type=str, action='append', location='form', default=[])
+parser.add_argument('args', dest='args', required=True, type=str, action='append',
+                    location='form', default=[])
+parser.add_argument('args_path_flags', dest='args_path_flags', type=str, action='append',
+                    location='form', default=[])
 parser.add_argument('auid', dest='auid', required=True, location='form')
 parser.add_argument('number_of_workers', dest='number_of_workers', type=int,
                     required=True, location='form')
@@ -28,9 +30,12 @@ parser.add_argument('memory_limit', dest='memory_limit', type=int, required=True
 parser.add_argument('gpu_limit', dest='gpu_limit', type=int, required=True,
                     location='form')
 parser.add_argument('image', dest='image', required=True, location='form')
-parser.add_argument('entrypoint', dest='entrypoint', type=str, required=True, action='append', location='form')
+parser.add_argument('entrypoint', dest='entrypoint', type=str, required=True,
+                    action='append', location='form')
 parser.add_argument('type', dest='type', choices=('ds', 'fs', 'ts'), required=True,
                     location='form')
+parser.add_argument('env', dest='env', type=str, action='append', location='form',
+                    default=[])
 parser.add_argument('data_file', dest='data_file', required=True, location='files')
 
 parser_auth = reqparse.RequestParser(bundle_errors=True)
@@ -93,6 +98,7 @@ class JobList(Resource):
             'image': args.image,
             'entrypoint': args.entrypoint,
             'type': args.type,
+            'env': args.env
         }
         pman = PmanService.get_service_obj()
         try:
@@ -171,7 +177,7 @@ class JobFile(Resource):
             swift = SwiftStore(app.config)
             content = swift.getData(job_id)
 
-        return send_file(content, attachment_filename=f'{job_id}.zip',
+        return send_file(content, download_name=f'{job_id}.zip',
                          as_attachment=True, mimetype='application/zip')
 
 

@@ -32,10 +32,11 @@
 
 FROM python:3.10.5-bullseye
 
-WORKDIR /usr/local/src/pfcon
+WORKDIR /app
+
 COPY ./requirements ./requirements
 ARG ENVIRONMENT=production
-RUN pip install --no-cache-dir -r /usr/local/src/pfcon/requirements/$ENVIRONMENT.txt
+RUN pip install --no-cache-dir -r /app/requirements/$ENVIRONMENT.txt
 
 COPY . .
 ARG BUILD_VERSION=unknown

@@ -1,6 +1,6 @@
 # Local development dependencies go here
 
 -r base.txt
-pudb==2020.1
+pudb==2022.1.2
 
-pytest~=7.1.2
+pytest~=7.1.3
