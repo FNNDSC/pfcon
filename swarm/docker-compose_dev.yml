@@ -27,8 +27,8 @@ services:
       - APPLICATION_MODE=development
     volumes:
       - ${STOREBASE:?}:/var/local/storeBase:z
-      - ../pfcon:/home/localuser/pfcon/pfcon:z
-      - ../tests:/home/localuser/pfcon/tests:z
+      - ../pfcon:/app/pfcon:z
+      - ../tests:/app/tests:z
     ports:
       - "30006:5005"
     depends_on:
