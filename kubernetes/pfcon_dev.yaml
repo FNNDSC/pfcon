@@ -12,7 +12,7 @@ spec:
     env: development
   ports:
     - port: 30006
-      targetPort: 30006
+      targetPort: 5005
       nodePort: 30006
 
 ---
@@ -47,7 +47,7 @@ spec:
           stdin: true
           tty: true
           ports:
-            - containerPort: 30006
+            - containerPort: 5005
           env:
             - name: APPLICATION_MODE
               value: development
