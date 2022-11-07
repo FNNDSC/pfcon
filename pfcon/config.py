@@ -55,10 +55,10 @@ class DevConfig(Config):
                     'class': 'logging.StreamHandler',
                     'formatter': 'simple',
                 },
-                'file': {
+                'console_stdout': {
                     'level': 'DEBUG',
-                    'class': 'logging.FileHandler',
-                    'filename': '/tmp/debug.log',
+                    'class': 'logging.StreamHandle',
+                    'stream': 'ext://sys.stdout',
                     'formatter': 'simple'
                 }
             },
@@ -69,7 +69,7 @@ class DevConfig(Config):
                 },
                 'pfcon': {  # pfcon package logger
                     'level': 'DEBUG',
-                    'handlers': ['console_simple', 'file'],
+                    'handlers': ['console_simple', 'console_stdout'],
                     'propagate': False
                     # required to avoid double logging with root logger
                 },
