@@ -7,10 +7,11 @@ import jwt
 
 from flask import request, send_file, current_app as app
 from flask_restful import reqparse, abort, Resource
+from swiftclient.exceptions import ClientException
 
 from .services import PmanService, ServiceException
-from .mount_dir import MountDir
-from .swift_store import SwiftStore
+from .zip_file_storage import ZipFileStorage
+from .swift_storage import SwiftStorage
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,10 @@ parser.add_argument('type', dest='type', choices=('ds', 'fs', 'ts'), required=Tr
                     location='form')
 parser.add_argument('env', dest='env', type=str, action='append', location='form',
                     default=[])
-parser.add_argument('data_file', dest='data_file', required=True, location='files')
+
+parser.add_argument('input_dirs', dest='input_dirs', required=False, type=str,
+                    action='append', location='form')
+parser.add_argument('data_file', dest='data_file', required=False, location='files')
 
 parser_auth = reqparse.RequestParser(bundle_errors=True)
 parser_auth.add_argument('pfcon_user', dest='pfcon_user', required=True)
@@ -45,48 +49,73 @@ parser_auth.add_argument('pfcon_password', dest='pfcon_password', required=True)
 
 class JobList(Resource):
     """
-    Resource representing the list of jobs running on the compute.
+    Resource representing the list of jobs running on the compute environment.
     """
 
     def __init__(self):
         super(JobList, self).__init__()
 
-        self.store_env = app.config.get('STORE_ENV')
+        self.storage_env = app.config.get('STORAGE_ENV')
+        self.pfcon_innetwork = app.config.get('PFCON_INNETWORK')
+        self.storebase = app.config.get('STORE_BASE')
 
     def get(self):
-        return {
-            'server_version': app.config.get('SERVER_VERSION')
+        response = {
+            'server_version': app.config.get('SERVER_VERSION'),
+            'pfcon_innetwork': self.pfcon_innetwork,
+            'storage_env': self.storage_env
         }
+        if self.pfcon_innetwork:
+            if self.storage_env == 'swift':
+                auth_url =  app.config['SWIFT_CONNECTION_PARAMS']['authurl']
+                response['swift_auth_url'] = auth_url
+        return response
 
     def post(self):
         args = parser.parse_args()
+
+        if self.pfcon_innetwork:
+            if args.input_dirs is None:
+                abort(400, message='input_dirs: field is required')
+        else:
+            if request.files['data_file'] is None:
+                abort(400, message='data_file: field is required')
+
         job_id = args.jid.lstrip('/')
+        logger.info(f'Received job {job_id}')
 
         # process data
-        if self.store_env == 'mount':
-            storebase = app.config.get('STORE_BASE')
-            job_dir = os.path.join(storebase, 'key-' + job_id)
-            incoming_dir = os.path.join(job_dir, 'incoming')
-            outgoing_dir = os.path.join(job_dir, 'outgoing')
-            os.makedirs(incoming_dir, exist_ok=True)
-            os.makedirs(outgoing_dir, exist_ok=True)
-            mdir = MountDir(app.config)
 
-            logger.info(f'Received job {job_id}')
-            try:
-                d_info = mdir.store_data(job_id, incoming_dir, request.files['data_file'])
-            except zipfile.BadZipFile as e:
-                logger.error(f'Error while decompressing and storing job {job_id} data, '
-                             f'detail: {str(e)}')
-                abort(400, message='data_file: Bad zip file')
+        job_dir = os.path.join(self.storebase, 'key-' + job_id)
+        incoming_dir = os.path.join(job_dir, 'incoming')
+        outgoing_dir = os.path.join(job_dir, 'outgoing')
+        os.makedirs(incoming_dir, exist_ok=True)
+        os.makedirs(outgoing_dir, exist_ok=True)
 
-        if self.store_env == 'swift':
-            swift = SwiftStore(app.config)
-            d_info = swift.storeData(job_id, 'incoming', request.files['data_file'])
+        if self.pfcon_innetwork:
+            if self.storage_env == 'swift':
+                storage = SwiftStorage(app.config)
+                try:
+                    d_info = storage.store_data(job_id, incoming_dir, args.input_dirs)
+                except ClientException as e:
+                    logger.error(f'Error while fetching files from swift and '
+                                 f'storing job {job_id} data, detail: {str(e)}')
+                    abort(400, message='input_dirs: Error fetching files from swift')
+        else:
+            if self.storage_env == 'zipfile':
+                storage = ZipFileStorage(app.config)
+                data_file = request.files['data_file']
+                try:
+                    d_info = storage.store_data(job_id, incoming_dir, data_file)
+                except zipfile.BadZipFile as e:
+                    logger.error(f'Error while decompressing and storing job {job_id} '
+                                 f'data, detail: {str(e)}')
+                    abort(400, message='data_file: Bad zip file')
 
         logger.info(f'Successfully stored job {job_id} input data')
 
         # process compute
+
         compute_data = {
             'args': args.args,
             'args_path_flags': args.args_path_flags,
@@ -105,21 +134,20 @@ class JobList(Resource):
             d_compute_response = pman.run_job(job_id, compute_data)
         except ServiceException as e:
             abort(e.code, message=str(e))
-        return {
-                   'data': d_info,
-                   'compute': d_compute_response
-               }, 201
+
+        return {'data': d_info, 'compute': d_compute_response}, 201
 
 
 class Job(Resource):
     """
-    Resource representing a single job running on the compute.
+    Resource representing a single job running on the compute environment.
     """
 
     def __init__(self):
         super(Job, self).__init__()
 
-        self.store_env = app.config.get('STORE_ENV')
+        self.storage_env = app.config.get('STORAGE_ENV')
+        self.pfcon_innetwork = app.config.get('PFCON_INNETWORK')
 
     def get(self, job_id):
         pman = PmanService.get_service_obj()
@@ -132,53 +160,80 @@ class Job(Resource):
         }
 
     def delete(self, job_id):
-        if self.store_env == 'mount':
-            storebase = app.config.get('STORE_BASE')
-            job_dir = os.path.join(storebase, 'key-' + job_id)
-            if os.path.isdir(job_dir):
-                mdir = MountDir()
-                logger.info(f'Deleting job {job_id} data from store')
-                mdir.delete_data(job_dir)
-                logger.info(f'Successfully removed job {job_id} data from store')
+        storage = None
+
+        if self.pfcon_innetwork:
+            if self.storage_env == 'swift':
+                storage = SwiftStorage(app.config)
+        else:
+            if self.storage_env == 'zipfile':
+                storage = ZipFileStorage(app.config)
+
+        storebase = app.config.get('STORE_BASE')
+        job_dir = os.path.join(storebase, 'key-' + job_id)
+        if os.path.isdir(job_dir):
+            logger.info(f'Deleting job {job_id} data from store')
+            storage.delete_data(job_dir)
+            logger.info(f'Successfully removed job {job_id} data from store')
+
         pman = PmanService.get_service_obj()
         try:
             pman.delete_job(job_id)
         except ServiceException as e:
             abort(e.code, message=str(e))
+
         logger.info(f'Successfully removed job {job_id} from remote compute')
         return '', 204
 
 
 class JobFile(Resource):
     """
-    Resource representing a single job data for a job running on the compute.
+    Resource representing a single job data for a job running on the compute environment.
     """
 
     def __init__(self):
         super(JobFile, self).__init__()
 
-        self.store_env = app.config.get('STORE_ENV')
+        self.storage_env = app.config.get('STORAGE_ENV')
+        self.pfcon_innetwork = app.config.get('PFCON_INNETWORK')
 
     def get(self, job_id):
-        if self.store_env == 'mount':
-            storebase = app.config.get('STORE_BASE')
-            job_dir = os.path.join(storebase, 'key-' + job_id)
-            if not os.path.isdir(job_dir):
-                abort(404)
-            outgoing_dir = os.path.join(job_dir, 'outgoing')
-            if not os.path.exists(outgoing_dir):
-                os.mkdir(outgoing_dir)
-            mdir = MountDir(app.config)
-            logger.info(f'Retrieving job {job_id} output data')
-            content = mdir.get_data(job_id, outgoing_dir)
-            logger.info(f'Successfully retrieved job {job_id} output data')
+        storebase = app.config.get('STORE_BASE')
+        job_dir = os.path.join(storebase, 'key-' + job_id)
+        if not os.path.isdir(job_dir):
+            abort(404)
+        outgoing_dir = os.path.join(job_dir, 'outgoing')
+        if not os.path.exists(outgoing_dir):
+            os.mkdir(outgoing_dir)
 
-        if self.store_env == 'swift':
-            swift = SwiftStore(app.config)
-            content = swift.getData(job_id)
+        logger.info(f'Retrieving job {job_id} output data')
 
-        return send_file(content, download_name=f'{job_id}.zip',
-                         as_attachment=True, mimetype='application/zip')
+        content = b''
+        download_name = f'{job_id}.zip'
+        mimetype = 'application/zip'
+
+        if self.pfcon_innetwork:
+            job_output_path = request.args.get('job_output_path')
+            if job_output_path:
+                if self.storage_env == 'swift':
+                    storage = SwiftStorage(app.config)
+                    content = storage.get_data(job_id, outgoing_dir,
+                                               job_output_path=job_output_path)
+                    download_name = f'{job_id}.json'
+                    mimetype = 'application/json'
+            else:
+                # if no query parameter passed then the job's zip file is returned
+                storage = ZipFileStorage(app.config)
+                content = storage.get_data(job_id, outgoing_dir)
+        else:
+            if self.storage_env == 'zipfile':
+                storage = ZipFileStorage(app.config)
+                content = storage.get_data(job_id, outgoing_dir)
+
+        logger.info(f'Successfully retrieved job {job_id} output data')
+
+        return send_file(content, download_name=download_name, as_attachment=True,
+                         mimetype=mimetype)
 
 
 class Auth(Resource):

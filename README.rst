@@ -87,6 +87,22 @@ Remove pfcon's containers
     $> cd pfcon
     $> ./unmake.sh
 
+Start pfcon's development server and backend containers operating in-network (with Swift storage)
+-------------------------------------------------------------------------------------------------
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./make.sh -N
+
+Remove pfcon's containers operating in-network (with Swift storage)
+-------------------------------------------------------------------
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./unmake.sh -N
+
 Remove the local Docker Swarm cluster if desired
 ------------------------------------------------
 
@@ -130,6 +146,23 @@ Remove pfcon's containers
 
     $> cd pfcon
     $> ./unmake.sh -O kubernetes
+
+
+Start pfcon's development server and backend containers operating in-network (with Swift storage)
+-------------------------------------------------------------------------------------------------
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./make.sh -N -O kubernetes
+
+Remove pfcon's containers operating in-network (with Swift storage)
+-------------------------------------------------------------------
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./unmake.sh -N -O kubernetes
 
 
 **********************

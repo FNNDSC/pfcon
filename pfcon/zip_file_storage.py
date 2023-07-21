@@ -1,5 +1,6 @@
 """
-Handle MountDir file storage.
+Handle zip file-based storage. This is used when pfcon is out-of-network and
+configured to receive a zip file with the data.
 """
 
 import logging
@@ -7,28 +8,30 @@ import datetime
 import zipfile
 import os
 import io
-import shutil
+
+from .base_storage import BaseStorage
 
 
 logger = logging.getLogger(__name__)
 
 
-class MountDir:
+class ZipFileStorage(BaseStorage):
 
-    def __init__(self, config=None):
+    def __init__(self, config):
 
-        self.config = config
+        super().__init__(config)
 
-    def store_data(self, job_id, job_incoming_dir, input_stream):
+    def store_data(self, job_id, job_incoming_dir, data, **kwargs):
         """
-        Unpack and store the files/directories in the input zip stream at the specified
-        incoming directory.
+        Unpack and store the files/directories in the input zip stream data at the
+        specified incoming directory.
         """
-        with zipfile.ZipFile(input_stream, 'r', zipfile.ZIP_DEFLATED) as job_zip:
+        with zipfile.ZipFile(data, 'r', zipfile.ZIP_DEFLATED) as job_zip:
             filenames = job_zip.namelist()
             nfiles = len(filenames)
             logger.info(f'{nfiles} files to decompress for job {job_id}')
             job_zip.extractall(path=job_incoming_dir)
+
         return {
             'jid': job_id,
             'nfiles': nfiles,
@@ -36,13 +39,14 @@ class MountDir:
             'path': job_incoming_dir
         }
 
-    def get_data(self, job_id, job_outgoing_dir):
+    def get_data(self, job_id, job_outgoing_dir, **kwargs):
         """
         Create job zip file ready for transmission to a remote origin from the
         outgoing directory.
         """
         memory_zip_file = io.BytesIO()
         nfiles = 0
+
         with zipfile.ZipFile(memory_zip_file, 'w', zipfile.ZIP_DEFLATED) as job_zip:
             for root, dirs, files in os.walk(job_outgoing_dir):
                 for filename in files:
@@ -58,11 +62,6 @@ class MountDir:
                         else:
                             nfiles += 1
         memory_zip_file.seek(0)
+
         logger.info(f'{nfiles} files compressed for job {job_id}')
         return memory_zip_file
-
-    def delete_data(self, job_dir):
-        """
-        Delete job data from the store.
-        """
-        shutil.rmtree(job_dir)
