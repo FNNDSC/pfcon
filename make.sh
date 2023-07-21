@@ -6,9 +6,9 @@
 #
 # SYNPOSIS
 #
-#   make.sh                     [-h] [-i] [-s] [-U]     \
-#                               [-O <swarm|kubernetes>] \
-#                               [-S <storeBase>]        \
+#   make.sh                     [-h] [-i] [-s] [-N] [-U]   \
+#                               [-O <swarm|kubernetes>]    \
+#                               [-S <storeBase>]           \
 #                               [local|fnndsc[:dev]]
 #
 # DESC
@@ -19,16 +19,20 @@
 #
 # TYPICAL CASES:
 #
-#   Run full pfcon instantiation on Swarm:
+#   Run full pfcon instantiation operating out-of-network on Swarm:
 #
 #       unmake.sh ; sudo rm -fr CHRIS_REMOTE_FS; rm -fr CHRIS_REMOTE_FS; make.sh
+#
+#   Run full pfcon instantiation operating in-network on Swarm:
+#
+#       unmake.sh -N; sudo rm -fr CHRIS_REMOTE_FS; rm -fr CHRIS_REMOTE_FS; make.sh -N
 #
 #   Skip the intro:
 #
 #       unmake.sh ; sudo rm -fr CHRIS_REMOTE_FS; rm -fr CHRIS_REMOTE_FS; make.sh -s
 #
 #
-#   Run full pfcon instantiation on Kubernetes:
+#   Run full pfcon instantiation operating out-of-network on Kubernetes:
 #
 #       unmake.sh -O kubernetes; sudo rm -fr CHRIS_REMOTE_FS; rm -fr CHRIS_REMOTE_FS; make.sh -O kubernetes
 #
@@ -51,6 +55,11 @@
 #   -i
 #
 #       Optional do not automatically attach interactive terminal to pfcon container.
+#
+#   -N
+#
+#       Optional set pfcon to operate in-network mode (using a swift storage instead of
+#       a zip file).
 #
 #   -U
 #
@@ -84,17 +93,19 @@ ORCHESTRATOR=swarm
 HERE=$(pwd)
 
 print_usage () {
-    echo "Usage: ./make.sh [-h] [-i] [-s] [-U] [-O <swarm|kubernetes>] [-S <storeBase>] [local|fnndsc[:dev]]"
+    echo "Usage: ./make.sh [-h] [-i] [-s] [-N] [-U] [-O <swarm|kubernetes>] [-S <storeBase>] [local|fnndsc[:dev]]"
     exit 1
 }
 
-while getopts ":hsiUO:S:" opt; do
+while getopts ":hsiNUO:S:" opt; do
     case $opt in
         h) print_usage
            ;;
         s) b_skipIntro=1
           ;;
         i) b_norestartinteractive_pfcon_dev=1
+          ;;
+        N) b_pfconInNetwork=1
           ;;
         U) b_skipUnitTests=1
           ;;
@@ -116,6 +127,7 @@ while getopts ":hsiUO:S:" opt; do
 done
 shift $(($OPTIND - 1))
 
+export SWIFTREPO=fnndsc
 export PMANREPO=fnndsc
 export TAG=
 if (( $# == 1 )) ; then
@@ -127,6 +139,7 @@ if (( $# == 1 )) ; then
 fi
 
 declare -a A_CONTAINER=(
+    "fnndsc/docker-swift-onlyone^SWIFTREPO"
     "fnndsc/pman^PMANREPO"
     "fnndsc/pl-simplefsapp"
 )
@@ -141,6 +154,11 @@ title -d 1 "Setting global exports..."
         if [[ ! -d $STOREBASE ]] ; then
             mkdir -p $STOREBASE
         fi
+    fi
+    if (( b_pfconInNetwork )) ; then
+        echo -e "PFCON_INNETWORK=True"                             | ./boxes.sh
+    else
+        echo -e "PFCON_INNETWORK=False"                            | ./boxes.sh
     fi
     echo -e "ORCHESTRATOR=$ORCHESTRATOR"                           | ./boxes.sh
     echo -e "exporting STOREBASE=$STOREBASE "                      | ./boxes.sh
@@ -168,7 +186,11 @@ windowBottom
 
 title -d 1 "Building :dev"
     cd $HERE
-    CMD="docker compose -f swarm/docker-compose_dev.yml build"
+    if (( b_pfconInNetwork )) ; then
+        CMD="docker compose -f swarm/docker-compose_dev_innetwork.yml build"
+    else
+        CMD="docker compose -f swarm/docker-compose_dev.yml build"
+    fi
     echo "$CMD"                                                    | ./boxes.sh
     echo $CMD | sh                                                 | ./boxes.sh -c
 windowBottom
@@ -209,11 +231,21 @@ windowBottom
 
 title -d 1 "Starting pfcon containerized dev environment on $ORCHESTRATOR"
     if [[ $ORCHESTRATOR == swarm ]]; then
-        echo "docker stack deploy -c swarm/docker-compose_dev.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
-        docker stack deploy -c swarm/docker-compose_dev.yml pfcon_dev_stack
+        if (( b_pfconInNetwork )) ; then
+            echo "docker stack deploy -c swarm/docker-compose_dev_innetwork.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
+            docker stack deploy -c swarm/docker-compose_dev_innetwork.yml pfcon_dev_stack
+        else
+            echo "docker stack deploy -c swarm/docker-compose_dev.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
+            docker stack deploy -c swarm/docker-compose_dev.yml pfcon_dev_stack
+        fi
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
-        echo "envsubst < kubernetes/pfcon_dev.yaml | kubectl apply -f -"           | ./boxes.sh ${LightCyan}
-        envsubst < kubernetes/pfcon_dev.yaml | kubectl apply -f -
+        if (( b_pfconInNetwork )) ; then
+            echo "envsubst < kubernetes/pfcon_dev_innetwork.yaml | kubectl apply -f -" | ./boxes.sh ${LightCyan}
+            envsubst < kubernetes/pfcon_dev_innetwork.yaml | kubectl apply -f -
+        else
+            echo "envsubst < kubernetes/pfcon_dev.yaml | kubectl apply -f -"           | ./boxes.sh ${LightCyan}
+            envsubst < kubernetes/pfcon_dev.yaml | kubectl apply -f -
+        fi
     fi
 windowBottom
 
@@ -241,9 +273,17 @@ if (( ! b_skipUnitTests )) ; then
     title -d 1 "Running pfcon tests..."
     sleep 5
     if [[ $ORCHESTRATOR == swarm ]]; then
-        docker exec $pfcon_dev pytest --color=yes
+        if (( b_pfconInNetwork )) ; then
+            docker exec $pfcon_dev pytest tests/test_resources_innetwork.py --color=yes
+        else
+            docker exec $pfcon_dev pytest tests/test_resources.py --color=yes
+        fi
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
-        kubectl exec $pfcon_dev -- pytest --color=yes
+        if (( b_pfconInNetwork )) ; then
+            kubectl exec $pfcon_dev -- pytest tests/test_resources_innetwork.py --color=yes
+        else
+            kubectl exec $pfcon_dev -- pytest tests/test_resources.py --color=yes
+        fi
     fi
     status=$?
     title -d 1 "pfcon test results"

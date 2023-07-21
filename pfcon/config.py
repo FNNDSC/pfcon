@@ -1,8 +1,10 @@
+
 from logging.config import dictConfig
 from environs import Env
 
-
 from importlib.metadata import Distribution
+from .swiftmanager import SwiftManager
+
 
 pkg = Distribution.from_name(__package__)
 
@@ -21,10 +23,18 @@ class Config:
         env = Env()
         env.read_env()  # also read .env file, if it exists
 
-        self.STORE_ENV = env('STORE_ENV', 'mount')
-        if self.STORE_ENV == 'mount':
-            self.STORE_BASE = env('STOREBASE', '/var/local/storeBase')
+        self.PFCON_INNETWORK = env.bool('PFCON_INNETWORK', False)
 
+        if self.PFCON_INNETWORK:
+            self.STORAGE_ENV = env('STORAGE_ENV', 'swift')
+            if self.STORAGE_ENV != 'swift':
+                raise ValueError(f"Unsupported value '{self.STORAGE_ENV}' for STORAGE_ENV")
+        else:
+            self.STORAGE_ENV = env('STORAGE_ENV', 'zipfile')
+            if self.STORAGE_ENV != 'zipfile':
+                raise ValueError(f"Unsupported value '{self.STORAGE_ENV}' for STORAGE_ENV")
+
+        self.STORE_BASE = env('STOREBASE', '/var/local/storeBase')
         self.env = env
 
 
@@ -57,7 +67,7 @@ class DevConfig(Config):
                 },
                 'console_stdout': {
                     'level': 'DEBUG',
-                    'class': 'logging.StreamHandle',
+                    'class': 'logging.StreamHandler',
                     'stream': 'ext://sys.stdout',
                     'formatter': 'simple'
                 }
@@ -82,6 +92,18 @@ class DevConfig(Config):
 
         # EXTERNAL SERVICES
         self.COMPUTE_SERVICE_URL = self.env('COMPUTE_SERVICE_URL', 'http://pman:5010/api/v1/')
+
+        if self.STORAGE_ENV == 'swift':
+            SWIFT_AUTH_URL = self.env('SWIFT_AUTH_URL',
+                                      'http://swift_service:8080/auth/v1.0')
+            SWIFT_USERNAME = 'chris:chris1234'
+            SWIFT_KEY = 'testing'
+            self.SWIFT_CONTAINER_NAME = 'users'
+            self.SWIFT_CONNECTION_PARAMS = {'user': SWIFT_USERNAME,
+                                            'key': SWIFT_KEY,
+                                            'authurl': SWIFT_AUTH_URL}
+            SwiftManager(self.SWIFT_CONTAINER_NAME,
+                         self.SWIFT_CONNECTION_PARAMS).create_container()
 
 
 class ProdConfig(Config):
@@ -138,3 +160,12 @@ class ProdConfig(Config):
 
         # EXTERNAL SERVICES
         self.COMPUTE_SERVICE_URL = env('COMPUTE_SERVICE_URL')
+
+        if self.STORAGE_ENV == 'swift':
+            SWIFT_AUTH_URL = env('SWIFT_AUTH_URL')
+            SWIFT_USERNAME = env('SWIFT_USERNAME')
+            SWIFT_KEY = env('SWIFT_KEY')
+            self.SWIFT_CONTAINER_NAME = env('SWIFT_CONTAINER_NAME')
+            self.SWIFT_CONNECTION_PARAMS = {'user': SWIFT_USERNAME,
+                                            'key': SWIFT_KEY,
+                                            'authurl': SWIFT_AUTH_URL}

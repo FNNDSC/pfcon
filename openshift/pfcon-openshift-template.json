@@ -97,7 +97,7 @@
                   "value": "http://pman-test-moc.k-apps.osh.massopen.cloud/api/v1/"
                 },
                 {
-                  "name": "STORE_ENV",
+                  "name": "STORAGE_ENV",
                   "value": "swift"
                 },
                 {

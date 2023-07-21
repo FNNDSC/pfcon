@@ -6,7 +6,7 @@
 #
 # SYNPOSIS
 #
-#   unmake.sh                     [-h]
+#   unmake.sh                     [-h] [-N]
 #                                 [-O <swarm|kubernetes>]
 #                                 [-S <storeBase>]
 #
@@ -21,6 +21,10 @@
 #
 #       unmake.sh
 #
+#   Destroy pfcon dev instance operating in-network on Swarm:
+#
+#       unmake.sh -N
+#
 #   Destroy pfcon dev instance on Kubernetes:
 #
 #       unmake.sh -O kubernetes
@@ -29,6 +33,11 @@
 #
 #
 #   -h
+#
+#   -N
+#
+#       Explicitly set pfcon to operate in-network mode (using a swift storage instead of
+#       a zip file).
 #
 #       Optional print usage help.
 #
@@ -49,14 +58,16 @@ declare -i STEP=0
 ORCHESTRATOR=swarm
 
 print_usage () {
-    echo "Usage: ./unmake.sh [-h] [-O <swarm|kubernetes>] [-S <storeBase>]"
+    echo "Usage: ./unmake.sh [-h] [-N] [-O <swarm|kubernetes>] [-S <storeBase>]"
     exit 1
 }
 
-while getopts ":hO:S:" opt; do
+while getopts ":hNO:S:" opt; do
     case $opt in
         h) print_usage
            ;;
+        N) b_pfconInNetwork=1
+          ;;
         O) ORCHESTRATOR=$OPTARG
            if ! [[ "$ORCHESTRATOR" =~ ^(swarm|kubernetes)$ ]]; then
               echo "Invalid value for option -- O"
@@ -79,18 +90,37 @@ title -d 1 "Setting global exports..."
     if [ -z ${STOREBASE+x} ]; then
         STOREBASE=$(pwd)/CHRIS_REMOTE_FS
     fi
+    if (( b_pfconInNetwork )) ; then
+        echo -e "PFCON_INNETWORK=True"                             | ./boxes.sh
+    else
+        echo -e "PFCON_INNETWORK=False"                            | ./boxes.sh
+    fi
     echo -e "ORCHESTRATOR=$ORCHESTRATOR"                | ./boxes.sh
     echo -e "exporting STOREBASE=$STOREBASE "           | ./boxes.sh
     export STOREBASE=$STOREBASE
+    export SOURCEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+    echo -e "exporting SOURCEDIR=$SOURCEDIR "                           | ./boxes.sh
 windowBottom
 
 title -d 1 "Destroying pfcon containerized dev environment on $ORCHESTRATOR"
     if [[ $ORCHESTRATOR == swarm ]]; then
         echo "docker stack rm pfcon_dev_stack"                               | ./boxes.sh ${LightCyan}
         docker stack rm pfcon_dev_stack
+        if (( b_pfconInNetwork )) ; then
+            echo "docker volume rm -f pfcon_dev_stack_swift_storage_dev"
+            sleep 15
+            docker volume rm pfcon_dev_stack_swift_storage_dev
+        fi
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
-        echo "kubectl delete -f kubernetes/pfcon_dev.yaml"                   | ./boxes.sh ${LightCyan}
-        kubectl delete -f kubernetes/pfcon_dev.yaml
+        if (( b_pfconInNetwork )) ; then
+            echo "kubectl delete -f kubernetes/pfcon_dev_innetwork.yaml"     | ./boxes.sh ${LightCyan}
+            kubectl delete -f kubernetes/pfcon_dev_innetwork.yaml
+            echo "Removing swift_storage folder $SOURCEDIR/swift_storage"  | ./boxes.sh
+            rm -fr $SOURCEDIR/swift_storage
+        else
+            echo "kubectl delete -f kubernetes/pfcon_dev.yaml"               | ./boxes.sh ${LightCyan}
+            kubectl delete -f kubernetes/pfcon_dev.yaml
+        fi
     fi
     echo "Removing STOREBASE tree $STOREBASE"                                | ./boxes.sh
     rm -fr $STOREBASE
