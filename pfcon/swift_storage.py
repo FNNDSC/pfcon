@@ -69,29 +69,37 @@ class SwiftStorage(BaseStorage):
         with the prefix specified by job_output_path keyword argument.
         Then create job json file ready for transmission to a remote origin. The json
         file contains the job_output_path prefix and the list of relative file paths
-        created in swift storage.
+        in swift storage.
         """
         swift_output_path = kwargs['job_output_path']
-        swift_rel_file_paths = []
+        try:
+            files_already_in_swift = set(self.swift_manager.ls(swift_output_path))
+        except ClientException as e:
+            logger.error(f'Error while listing swift storage files in {swift_output_path} '
+                         f'for job {job_id}, detail: {str(e)}')
+            raise
 
+        swift_rel_file_paths = []
         for root, dirs, files in os.walk(job_outgoing_dir):
             for filename in files:
                 local_file_path = os.path.join(root, filename)
                 if not os.path.islink(local_file_path):
                     rel_file_path = os.path.relpath(local_file_path, job_outgoing_dir)
                     swift_file_path = os.path.join(swift_output_path, rel_file_path)
-                    try:
-                        if not self.swift_manager.obj_exists(swift_file_path):
+
+                    if swift_file_path not in files_already_in_swift:  # ensure GET is idempotent
+                        try:
                             with open(local_file_path, 'rb') as f:
                                 self.swift_manager.upload_obj(swift_file_path, f.read())
-                    except ClientException as e:
-                        logger.error(f'Error while uploading file {swift_file_path} to '
-                                     f'swift storage for job {job_id}, detail: {str(e)}')
-                        raise
-                    except Exception as e:
-                        logger.error(f'Failed to read file {local_file_path} for '
-                                     f'job {job_id}, detail: {str(e)}')
-                        raise
+                        except ClientException as e:
+                            logger.error(f'Error while uploading file {swift_file_path} '
+                                         f'to swift storage for job {job_id},'
+                                         f' detail: {str(e)}')
+                            raise
+                        except Exception as e:
+                            logger.error(f'Failed to read file {local_file_path} for '
+                                         f'job {job_id}, detail: {str(e)}')
+                            raise
                     swift_rel_file_paths.append(rel_file_path)
 
         data = {'job_output_path': swift_output_path,
