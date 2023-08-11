@@ -59,8 +59,8 @@ class ZipFileStorage(BaseStorage):
                         except Exception as e:
                             logger.error(f'Failed to read file {local_file_path} for '
                                          f'job {job_id}, detail: {str(e)}')
-                        else:
-                            nfiles += 1
+                            raise
+                        nfiles += 1
         memory_zip_file.seek(0)
 
         logger.info(f'{nfiles} files compressed for job {job_id}')

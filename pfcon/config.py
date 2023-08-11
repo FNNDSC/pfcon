@@ -27,12 +27,15 @@ class Config:
 
         if self.PFCON_INNETWORK:
             self.STORAGE_ENV = env('STORAGE_ENV', 'swift')
-            if self.STORAGE_ENV != 'swift':
+            if self.STORAGE_ENV not in ('swift', 'filesystem'):
                 raise ValueError(f"Unsupported value '{self.STORAGE_ENV}' for STORAGE_ENV")
         else:
             self.STORAGE_ENV = env('STORAGE_ENV', 'zipfile')
             if self.STORAGE_ENV != 'zipfile':
                 raise ValueError(f"Unsupported value '{self.STORAGE_ENV}' for STORAGE_ENV")
+
+        if self.STORAGE_ENV == 'filesystem':
+            self.FILESYSTEM_BASEDIR = env('FILESYSTEM_BASEDIR', '/filesystem')
 
         self.STORE_BASE = env('STOREBASE', '/var/local/storeBase')
         self.env = env

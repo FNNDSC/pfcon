@@ -1,0 +1,73 @@
+# https://docs.docker.com/compose/yml/
+# Each service defined in docker-compose.yml must specify exactly one of
+# image or build. Other keys are optional, and are analogous to their
+# docker run command-line counterparts.
+#
+# As with docker run, options specified in the Dockerfile (e.g., CMD,
+# EXPOSE, VOLUME, ENV) are respected by default - you don't need to
+# specify them again in docker-compose.yml.
+#
+
+version: '3.7'
+
+services:
+  pfcon:
+    image: localhost:5000/fnndsc/pfcon:dev
+    build:
+      context: ..
+      args:
+        ENVIRONMENT: local
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    # We need to mount a physical dir in the HOST onto the key store in pfcon. This dir
+    # is given by the STOREBASE env variable substitution. The keystore can be specified
+    # by the --storeBase flag during development.
+    command: ["python", "-m", "pfcon"]
+    environment:
+      - APPLICATION_MODE=development
+      - PFCON_INNETWORK=true
+      - STORAGE_ENV=filesystem
+    volumes:
+      - fs_storage_dev:/filesystem
+      - ${STOREBASE:?}:/var/local/storeBase:z
+      - ../pfcon:/app/pfcon:z
+      - ../tests:/app/tests:z
+    ports:
+      - "30006:5005"
+    depends_on:
+      - pman
+      - swift_service
+    networks:
+      - remote
+    labels:
+      name: "pfcon"
+      role: "pfcon service"
+
+  pman:
+    image: ${PMANREPO:?}/pman
+    # Since pman spins off containers of its own it needs to mount storeBase dir (where
+    # pfcon shares the data) into the spawned container. This directory is passed in the
+    # STOREBASE env variable.
+    environment:
+      - STORAGE_TYPE=host
+      - STOREBASE
+      - SECRET_KEY="w1kxu^l=@pnsf!5piqz6!!5kdcdpo79y6jebbp+2244yjm*#+k"
+      - CONTAINER_ENV=swarm
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:z
+    deploy:
+      placement:
+        constraints:
+          - "node.role==manager"
+    networks:
+      - remote
+    labels:
+      name: "pman"
+      role: "pman service"
+
+
+networks:
+  remote:
+
+volumes:
+  fs_storage_dev:

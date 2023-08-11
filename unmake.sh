@@ -6,8 +6,9 @@
 #
 # SYNPOSIS
 #
-#   unmake.sh                     [-h] [-N]
-#                                 [-O <swarm|kubernetes>]
+#   unmake.sh                     [-h] [-N] \
+#                                 [-F <swift|filesystem|zipfile>]   \
+#                                 [-O <swarm|kubernetes>]  \
 #                                 [-S <storeBase>]
 #
 #
@@ -21,9 +22,13 @@
 #
 #       unmake.sh
 #
-#   Destroy pfcon dev instance operating in-network on Swarm:
+#   Destroy pfcon dev instance operating in-network on Swarm using Swift storage:
 #
-#       unmake.sh -N
+#       unmake.sh -N -F swift
+#
+#   Destroy pfcon dev instance operating in-network on Swarm using mounted filesystem storage:
+#
+#       unmake.sh -N -F filesystem
 #
 #   Destroy pfcon dev instance on Kubernetes:
 #
@@ -41,6 +46,12 @@
 #
 #       Optional print usage help.
 #
+#   -F <swift|filesystem|zipfile>
+#
+#       Explicitly set the storage environment. This option must be swift or filesystem
+#       for pfcon operating in-network mode. For pfcon operating in out-of-network mode
+#       it must be set to zipfile (default).
+#
 #   -O <swarm|kubernetes>
 #
 #       Explicitly set the orchestrator. Default is swarm.
@@ -56,18 +67,25 @@ source ./decorate.sh
 
 declare -i STEP=0
 ORCHESTRATOR=swarm
+STORAGE=zipfile
 
 print_usage () {
-    echo "Usage: ./unmake.sh [-h] [-N] [-O <swarm|kubernetes>] [-S <storeBase>]"
+    echo "Usage: ./unmake.sh [-h] [-N] [-F <swift|filesystem|zipfile>] [-O <swarm|kubernetes>] [-S <storeBase>]"
     exit 1
 }
 
-while getopts ":hNO:S:" opt; do
+while getopts ":hNF:O:S:" opt; do
     case $opt in
         h) print_usage
            ;;
         N) b_pfconInNetwork=1
           ;;
+        F) STORAGE=$OPTARG
+           if ! [[ "$STORAGE" =~ ^(swift|filesystem|zipfile)$ ]]; then
+              echo "Invalid value for option -- F"
+              print_usage
+           fi
+           ;;
         O) ORCHESTRATOR=$OPTARG
            if ! [[ "$ORCHESTRATOR" =~ ^(swarm|kubernetes)$ ]]; then
               echo "Invalid value for option -- O"
@@ -92,10 +110,15 @@ title -d 1 "Setting global exports..."
     fi
     if (( b_pfconInNetwork )) ; then
         echo -e "PFCON_INNETWORK=True"                             | ./boxes.sh
+        if [[ $STORAGE == 'zipfile' ]]; then
+            echo -e "Need to pass '-F <swift|filesystem>' when PFCON_INNETWORK=True"  | ./boxes.sh
+            exit 1
+        fi
     else
         echo -e "PFCON_INNETWORK=False"                            | ./boxes.sh
     fi
     echo -e "ORCHESTRATOR=$ORCHESTRATOR"                | ./boxes.sh
+    echo -e "STORAGE=$STORAGE"                          | ./boxes.sh
     echo -e "exporting STOREBASE=$STOREBASE "           | ./boxes.sh
     export STOREBASE=$STOREBASE
     export SOURCEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -107,9 +130,15 @@ title -d 1 "Destroying pfcon containerized dev environment on $ORCHESTRATOR"
         echo "docker stack rm pfcon_dev_stack"                               | ./boxes.sh ${LightCyan}
         docker stack rm pfcon_dev_stack
         if (( b_pfconInNetwork )) ; then
-            echo "docker volume rm -f pfcon_dev_stack_swift_storage_dev"
-            sleep 15
-            docker volume rm pfcon_dev_stack_swift_storage_dev
+            if [[ $STORAGE == 'swift' ]]; then
+                echo "docker volume rm -f pfcon_dev_stack_swift_storage_dev"
+                sleep 15
+                docker volume rm pfcon_dev_stack_swift_storage_dev
+            elif [[ $STORAGE == 'filesystem' ]]; then
+                echo "docker volume rm -f pfcon_dev_stack_fs_storage_dev"
+                sleep 15
+                docker volume rm pfcon_dev_stack_fs_storage_dev
+            fi
         fi
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
         if (( b_pfconInNetwork )) ; then
