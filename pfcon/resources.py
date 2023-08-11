@@ -12,6 +12,8 @@ from swiftclient.exceptions import ClientException
 from .services import PmanService, ServiceException
 from .zip_file_storage import ZipFileStorage
 from .swift_storage import SwiftStorage
+from .filesystem_storage import FileSystemStorage
+
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +103,15 @@ class JobList(Resource):
                     logger.error(f'Error while fetching files from swift and '
                                  f'storing job {job_id} data, detail: {str(e)}')
                     abort(400, message='input_dirs: Error fetching files from swift')
+
+            elif self.storage_env == 'filesystem':
+                storage = FileSystemStorage(app.config)
+                try:
+                    d_info = storage.store_data(job_id, incoming_dir, args.input_dirs)
+                except Exception as e:
+                    logger.error(f'Error while copying files from filesystem and '
+                                 f'storing job {job_id} data, detail: {str(e)}')
+                    abort(400, message='input_dirs: Error copying files from filesystem')
         else:
             if self.storage_env == 'zipfile':
                 storage = ZipFileStorage(app.config)
@@ -165,6 +176,9 @@ class Job(Resource):
         if self.pfcon_innetwork:
             if self.storage_env == 'swift':
                 storage = SwiftStorage(app.config)
+
+            elif self.storage_env == 'filesystem':
+                storage = FileSystemStorage(app.config)
         else:
             if self.storage_env == 'zipfile':
                 storage = ZipFileStorage(app.config)
@@ -214,13 +228,18 @@ class JobFile(Resource):
 
         if self.pfcon_innetwork:
             job_output_path = request.args.get('job_output_path')
+
             if job_output_path:
+                storage = None
                 if self.storage_env == 'swift':
                     storage = SwiftStorage(app.config)
-                    content = storage.get_data(job_id, outgoing_dir,
-                                               job_output_path=job_output_path)
-                    download_name = f'{job_id}.json'
-                    mimetype = 'application/json'
+                elif self.storage_env == 'filesystem':
+                    storage = FileSystemStorage(app.config)
+
+                content = storage.get_data(job_id, outgoing_dir,
+                                           job_output_path=job_output_path.lstrip('/'))
+                download_name = f'{job_id}.json'
+                mimetype = 'application/json'
             else:
                 # if no query parameter passed then the job's zip file is returned
                 storage = ZipFileStorage(app.config)
