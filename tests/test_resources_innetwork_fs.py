@@ -3,9 +3,7 @@ import logging
 from pathlib import Path
 import shutil
 import os
-import io
 import time
-import zipfile
 import json
 from unittest import TestCase
 from unittest import mock, skip
@@ -25,8 +23,7 @@ class ResourceTests(TestCase):
         logging.disable(logging.WARNING)
 
         self.app = create_app({'PFCON_INNETWORK': True,
-                               'STORAGE_ENV': 'filesystem',
-                               'FILESYSTEM_BASEDIR': '/filesystem'
+                               'STORAGE_ENV': 'filesystem'
                                })
         self.client = self.app.test_client()
         with self.app.test_request_context():
@@ -39,8 +36,8 @@ class ResourceTests(TestCase):
             response = self.client.post(url, data=json.dumps(creds), content_type='application/json')
             self.headers = {'Authorization': 'Bearer ' + response.json['token']}
 
-            self.fs_base_dir = self.app.config.get('FILESYSTEM_BASEDIR')
-            self.user_dir = os.path.join(self.fs_base_dir, 'foo')
+            self.storebase_mount = self.app.config.get('STOREBASE_MOUNT')
+            self.user_dir = os.path.join(self.storebase_mount, 'foo')
 
             # copy a file to the filesystem storage input path
             self.fs_input_path = os.path.join(self.user_dir, 'feed/input')
@@ -50,12 +47,7 @@ class ResourceTests(TestCase):
             with open(self.fs_input_path + '/test.txt', 'w') as f:
                 f.write('Test file')
 
-            self.job_dir = ''
-
     def tearDown(self):
-        if os.path.isdir(self.job_dir):
-            shutil.rmtree(self.job_dir)
-
         # delete files from filesystem storage
         if os.path.isdir(self.user_dir):
             shutil.rmtree(self.user_dir)
@@ -83,7 +75,6 @@ class TestJobList(ResourceTests):
 
     def test_post(self):
         job_id = 'chris-jid-1'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
 
         data = {
             'jid': job_id,
@@ -96,7 +87,8 @@ class TestJobList(ResourceTests):
             'gpu_limit': '0',
             'image': 'fnndsc/pl-simplefsapp',
             'type': 'fs',
-            'input_dirs': [os.path.relpath(self.fs_input_path, self.fs_base_dir)]
+            'input_dirs': [os.path.relpath(self.fs_input_path, self.storebase_mount)],
+            'output_dir': os.path.relpath(self.fs_output_path, self.storebase_mount)
         }
         # make the POST request
         response = self.client.post(self.url, data=data, headers=self.headers)
@@ -134,18 +126,13 @@ class TestJob(ResourceTests):
             'memory_limit': '200',
             'gpu_limit': '0',
             'image': 'fnndsc/pl-simplefsapp',
-            'type': 'fs'
+            'type': 'fs',
+            'input_dir': os.path.relpath(self.fs_input_path, self.storebase_mount),
+            'output_dir': os.path.relpath(self.fs_output_path, self.storebase_mount)
         }
 
     def test_get(self):
         job_id = 'chris-jid-2'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
-        incoming = os.path.join(self.job_dir, 'incoming')
-        Path(incoming).mkdir(parents=True, exist_ok=True)
-        outgoing = os.path.join(self.job_dir, 'outgoing')
-        Path(outgoing).mkdir(parents=True, exist_ok=True)
-        with open(os.path.join(incoming, 'test.txt'), 'w') as f:
-            f.write('job input test file')
 
         with self.app.test_request_context():
             # create job
@@ -166,13 +153,6 @@ class TestJob(ResourceTests):
 
     def test_delete(self):
         job_id = 'chris-jid-3'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
-        incoming = os.path.join(self.job_dir, 'incoming')
-        Path(incoming).mkdir(parents=True, exist_ok=True)
-        outgoing = os.path.join(self.job_dir, 'outgoing')
-        Path(outgoing).mkdir(parents=True, exist_ok=True)
-        with open(os.path.join(incoming, 'test.txt'), 'w') as f:
-            f.write('job input test file')
 
         with self.app.test_request_context():
             # create job
@@ -193,41 +173,30 @@ class TestJobFile(ResourceTests):
 
     def test_get_without_query_parameters(self):
         job_id = 'chris-jid-4'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
 
         with self.app.test_request_context():
             url = url_for('api.jobfile', job_id=job_id)
-        outgoing = os.path.join(self.job_dir, 'outgoing')
-        test_file_path = os.path.join(outgoing, 'out')
-        Path(test_file_path).mkdir(parents=True, exist_ok=True)
-        with open(os.path.join(test_file_path, 'test.txt'), 'w') as f:
-            f.write('job input test file')
 
         response = self.client.get(url, headers=self.headers)
-        self.assertEqual(response.status_code, 200)
-        memory_zip_file = io.BytesIO(response.data)
-        with zipfile.ZipFile(memory_zip_file, 'r', zipfile.ZIP_DEFLATED) as job_zip:
-            filenames = job_zip.namelist()
-        self.assertEqual(len(filenames), 1)
-        self.assertEqual(filenames[0], 'out/test.txt')
+        self.assertEqual(response.status_code, 400)
 
     def test_get_with_query_parameters(self):
         job_id = 'chris-jid-4'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
 
         with self.app.test_request_context():
             url = url_for('api.jobfile', job_id=job_id)
-        outgoing = os.path.join(self.job_dir, 'outgoing')
-        test_file_path = os.path.join(outgoing, 'out')
-        Path(test_file_path).mkdir(parents=True, exist_ok=True)
-        with open(os.path.join(test_file_path, 'test.txt'), 'w') as f:
-            f.write('job input test file')
 
-        job_output_path = os.path.relpath(self.fs_output_path, self.fs_base_dir)
+        test_file_path = os.path.join(self.fs_output_path, 'out')
+        Path(test_file_path).mkdir(parents=True, exist_ok=True)
+
+        with open(os.path.join(test_file_path, 'test.txt'), 'w') as f:
+            f.write('job output test file')
+
+        job_output_path = os.path.relpath(self.fs_output_path, self.storebase_mount)
         response = self.client.get(url,
                                    query_string={'job_output_path': job_output_path},
                                    headers=self.headers)
         self.assertEqual(response.status_code, 200)
         content = json.loads(response.data.decode())
         self.assertEqual(content['job_output_path'], job_output_path)
-        self.assertEqual(content['rel_file_paths'], ["out/test.txt"])
+        self.assertEqual(content['rel_file_paths'], ['out/test.txt'])

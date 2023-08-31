@@ -28,7 +28,6 @@ services:
       - PFCON_INNETWORK=true
       - STORAGE_ENV=filesystem
     volumes:
-      - fs_storage_dev:/filesystem
       - ${STOREBASE:?}:/var/local/storeBase:z
       - ../pfcon:/app/pfcon:z
       - ../tests:/app/tests:z
@@ -36,7 +35,6 @@ services:
       - "30006:5005"
     depends_on:
       - pman
-      - swift_service
     networks:
       - remote
     labels:
@@ -68,6 +66,3 @@ services:
 
 networks:
   remote:
-
-volumes:
-  fs_storage_dev:

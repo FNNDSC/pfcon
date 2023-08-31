@@ -1,6 +1,7 @@
 
 from logging.config import dictConfig
 from environs import Env
+import os
 
 from importlib.metadata import Distribution
 from .swiftmanager import SwiftManager
@@ -34,10 +35,8 @@ class Config:
             if self.STORAGE_ENV != 'zipfile':
                 raise ValueError(f"Unsupported value '{self.STORAGE_ENV}' for STORAGE_ENV")
 
-        if self.STORAGE_ENV == 'filesystem':
-            self.FILESYSTEM_BASEDIR = env('FILESYSTEM_BASEDIR', '/filesystem')
+        self.STOREBASE_MOUNT = env('STOREBASE_MOUNT', '/var/local/storeBase')
 
-        self.STORE_BASE = env('STOREBASE', '/var/local/storeBase')
         self.env = env
 
 
