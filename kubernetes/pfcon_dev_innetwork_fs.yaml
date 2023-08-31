@@ -41,11 +41,8 @@ spec:
         - name: init-pfcon
           image: busybox:1.32
           command: [ 'sh', '-c', "until wget --spider -S -T 2 http://pman:5010/api/v1/ 2>&1 | grep '200 OK'; do echo waiting for pman; done" ]
-        - name: init-swift
-          image: busybox:1.32
-          command: [ "sh", "-c", "until wget --spider -S -T 2 http://swift:8080/info 2>&1 | grep '200 OK'; do echo waiting for Swift storage; sleep2; done" ]
       containers:
-        - image: fnndsc/pfcon:dev
+        - image: localhost:5000/fnndsc/pfcon:dev
           name: pfcon
           stdin: true
           tty: true
@@ -57,7 +54,7 @@ spec:
             - name: PFCON_INNETWORK
               value: true
             - name: STORAGE_ENV
-              value: swift
+              value: filesystem
           command: ["python"]
           args: ["-m", "pfcon"]
           volumeMounts:
@@ -134,62 +131,3 @@ spec:
               value: ${STOREBASE}
             - name: CONTAINER_ENV
               value: kubernetes
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: swift
-  labels:
-    app: swift
-    env: production
-spec:
-  type: NodePort
-  selector:
-    app: swift
-    env: production
-  ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30080
-
----
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: swift
-  labels:
-    app: swift
-    env: production
-spec:
-  replicas: 1  # stateful service, so only a single replica must be used
-  selector:
-    matchLabels:
-      app: swift
-      env: production
-  template:
-    metadata:
-      name: swift
-      labels:
-        app: swift
-        env: production
-    spec:
-      containers:
-        - name: swift
-          image: fnndsc/docker-swift-onlyone
-          ports:
-            - containerPort: 8080
-          env:
-            - name: SWIFT_USERNAME
-              value: chris:chris1234
-            - name: SWIFT_KEY
-              value: testing
-          volumeMounts:
-            - name: swiftdb
-              mountPath: "/srv"
-      volumes:
-        - name: swiftdb
-          hostPath:
-            path: ${SOURCEDIR}/swift_storage

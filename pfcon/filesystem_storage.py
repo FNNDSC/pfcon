@@ -1,6 +1,6 @@
 """
-Handle filesystem-based (eg. mount directory) storage. This is used when pfcon is
-in-network and configured to directly copy the data from a filesystem.
+Handle filesystem-based (eg. mounted directory) storage. This is used when pfcon is
+in-network and configured to directly access the data from a filesystem.
 """
 
 import logging
@@ -8,7 +8,6 @@ import datetime
 import os
 import json
 import io
-import shutil
 
 
 from .base_storage import BaseStorage
@@ -23,33 +22,17 @@ class FileSystemStorage(BaseStorage):
 
         super().__init__(config)
 
-        self.base_dir = config.get('FILESYSTEM_BASEDIR')
+        self.fs_mount_base_dir = config.get('STOREBASE_MOUNT')
 
-
-    def store_data(self, job_id, job_incoming_dir, data, **kwargs):
+    def store_data(self, job_id, job_incoming_dir, data=None, **kwargs):
         """
-        Copy all the files/folders under each input folder in the specified data list
-        into the specified incoming directory.
+        Count the number of files in the specified job incoming directory.
         """
         nfiles = 0
-        for rel_path in data:
-            abs_path = os.path.join(self.base_dir, rel_path.strip('/'))
+        for root, dirs, files in os.walk(job_incoming_dir):
+            nfiles += len(files)
 
-            for root, dirs, files in os.walk(abs_path):
-                local_path = root.replace(abs_path, job_incoming_dir, 1)
-                os.makedirs(local_path, exist_ok=True)
-
-                for filename in files:
-                    fs_file_path = os.path.join(root, filename)
-                    try:
-                        shutil.copy(fs_file_path, local_path)
-                    except Exception as e:
-                        logger.error(f'Failed to copy file {fs_file_path} for '
-                                     f'job {job_id}, detail: {str(e)}')
-                        raise
-                    nfiles += 1
-
-        logger.info(f'{nfiles} files copied from file system for job {job_id}')
+        logger.info(f'{nfiles} files found in file system for job {job_id}')
         return {
             'jid': job_id,
             'nfiles': nfiles,
@@ -59,33 +42,32 @@ class FileSystemStorage(BaseStorage):
 
     def get_data(self, job_id, job_outgoing_dir, **kwargs):
         """
-        Copy output files/folders from the specified outgoing directory into the folder
-        specified by job_output_path keyword argument (relative to the FS base dir).
+        List the output files' relative paths from the folder specified by
+        the job_output_path keyword argument which in turn is relative to the filesystem
+        base directory (assumed to be the storebase mount directory).
         Then create job json file ready for transmission to a remote origin. The json
         file contains the job_output_path prefix and the list of relative file paths.
         """
-        job_output_path = kwargs['job_output_path']
-        fs_output_path = os.path.join(self.base_dir, job_output_path)
         fs_rel_file_paths = []
+        job_output_path = kwargs['job_output_path']
+        abs_path = os.path.join(self.fs_mount_base_dir, job_output_path)
 
-        for root, dirs, files in os.walk(job_outgoing_dir):
-            rel_path = os.path.relpath(root, job_outgoing_dir)
+        for root, dirs, files in os.walk(abs_path):
+            rel_path = os.path.relpath(root, abs_path)
             if rel_path == '.':
                 rel_path = ''
-            fs_path = os.path.join(fs_output_path, rel_path)
-            os.makedirs(fs_path, exist_ok=True)
 
             for filename in files:
                 local_file_path = os.path.join(root, filename)
                 if not os.path.islink(local_file_path):
-                    try:
-                        shutil.copy(local_file_path, fs_path)
-                    except Exception as e:
-                        logger.error(f'Failed to copy file {local_file_path} for '
-                                     f'job {job_id}, detail: {str(e)}')
-                        raise
                     fs_rel_file_paths.append(os.path.join(rel_path, filename))
 
-        data = {'job_output_path': job_output_path,
+        data = {'job_output_path': kwargs['job_output_path'],
                 'rel_file_paths': fs_rel_file_paths}
         return io.BytesIO(json.dumps(data).encode())
+
+    def delete_data(self, job_dir):
+        """
+        Delete job data from the local storage.
+        """
+        pass

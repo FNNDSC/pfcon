@@ -53,6 +53,8 @@ class ResourceTests(TestCase):
             with io.StringIO('Test file') as f:
                 self.swift_manager.upload_obj(self.swift_input_path + '/test.txt',
                                               f.read(), content_type='text/plain')
+
+            self.storebase_mount = self.app.config.get('STOREBASE_MOUNT')
             self.job_dir = ''
 
     def tearDown(self):
@@ -91,7 +93,7 @@ class TestJobList(ResourceTests):
 
     def test_post(self):
         job_id = 'chris-jid-1'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
+        self.job_dir = os.path.join(self.storebase_mount, 'key-' + job_id)
 
         data = {
             'jid': job_id,
@@ -147,11 +149,16 @@ class TestJob(ResourceTests):
 
     def test_get(self):
         job_id = 'chris-jid-2'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
+        self.job_dir = os.path.join(self.storebase_mount, 'key-' + job_id)
         incoming = os.path.join(self.job_dir, 'incoming')
+        input_dir = os.path.relpath(incoming, self.storebase_mount)
         Path(incoming).mkdir(parents=True, exist_ok=True)
         outgoing = os.path.join(self.job_dir, 'outgoing')
+        output_dir = os.path.relpath(outgoing, self.storebase_mount)
         Path(outgoing).mkdir(parents=True, exist_ok=True)
+        self.compute_data['input_dir'] = input_dir
+        self.compute_data['output_dir'] = output_dir
+
         with open(os.path.join(incoming, 'test.txt'), 'w') as f:
             f.write('job input test file')
 
@@ -174,11 +181,16 @@ class TestJob(ResourceTests):
 
     def test_delete(self):
         job_id = 'chris-jid-3'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
+        self.job_dir = os.path.join(self.storebase_mount, 'key-' + job_id)
         incoming = os.path.join(self.job_dir, 'incoming')
+        input_dir = os.path.relpath(incoming, self.storebase_mount)
         Path(incoming).mkdir(parents=True, exist_ok=True)
         outgoing = os.path.join(self.job_dir, 'outgoing')
+        output_dir = os.path.relpath(outgoing, self.storebase_mount)
         Path(outgoing).mkdir(parents=True, exist_ok=True)
+        self.compute_data['input_dir'] = input_dir
+        self.compute_data['output_dir'] = output_dir
+
         with open(os.path.join(incoming, 'test.txt'), 'w') as f:
             f.write('job input test file')
 
@@ -201,13 +213,14 @@ class TestJobFile(ResourceTests):
 
     def test_get_without_query_parameters(self):
         job_id = 'chris-jid-4'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
+        self.job_dir = os.path.join(self.storebase_mount, 'key-' + job_id)
 
         with self.app.test_request_context():
             url = url_for('api.jobfile', job_id=job_id)
         outgoing = os.path.join(self.job_dir, 'outgoing')
         test_file_path = os.path.join(outgoing, 'out')
         Path(test_file_path).mkdir(parents=True, exist_ok=True)
+
         with open(os.path.join(test_file_path, 'test.txt'), 'w') as f:
             f.write('job input test file')
 
@@ -221,7 +234,7 @@ class TestJobFile(ResourceTests):
 
     def test_get_with_query_parameters(self):
         job_id = 'chris-jid-4'
-        self.job_dir = os.path.join('/var/local/storeBase', 'key-' + job_id)
+        self.job_dir = os.path.join(self.storebase_mount, 'key-' + job_id)
 
         with self.app.test_request_context():
             url = url_for('api.jobfile', job_id=job_id)
@@ -229,7 +242,7 @@ class TestJobFile(ResourceTests):
         test_file_path = os.path.join(outgoing, 'out')
         Path(test_file_path).mkdir(parents=True, exist_ok=True)
         with open(os.path.join(test_file_path, 'test.txt'), 'w') as f:
-            f.write('job input test file')
+            f.write('job output test file')
 
         response = self.client.get(url, query_string={'job_output_path': self.swift_output_path},
                                    headers=self.headers)

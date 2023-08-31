@@ -134,18 +134,19 @@ title -d 1 "Destroying pfcon containerized dev environment on $ORCHESTRATOR"
                 echo "docker volume rm -f pfcon_dev_stack_swift_storage_dev"
                 sleep 15
                 docker volume rm pfcon_dev_stack_swift_storage_dev
-            elif [[ $STORAGE == 'filesystem' ]]; then
-                echo "docker volume rm -f pfcon_dev_stack_fs_storage_dev"
-                sleep 15
-                docker volume rm pfcon_dev_stack_fs_storage_dev
             fi
         fi
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
         if (( b_pfconInNetwork )) ; then
-            echo "kubectl delete -f kubernetes/pfcon_dev_innetwork.yaml"     | ./boxes.sh ${LightCyan}
-            kubectl delete -f kubernetes/pfcon_dev_innetwork.yaml
-            echo "Removing swift_storage folder $SOURCEDIR/swift_storage"  | ./boxes.sh
-            rm -fr $SOURCEDIR/swift_storage
+            if [[ $STORAGE == 'swift' ]]; then
+                echo "kubectl delete -f kubernetes/pfcon_dev_innetwork.yaml"     | ./boxes.sh ${LightCyan}
+                kubectl delete -f kubernetes/pfcon_dev_innetwork.yaml
+                echo "Removing swift_storage folder $SOURCEDIR/swift_storage"  | ./boxes.sh
+                rm -fr $SOURCEDIR/swift_storage
+            elif [[ $STORAGE == 'filesystem' ]]; then
+                echo "kubectl delete -f kubernetes/pfcon_dev_innetwork_fs.yaml"     |  ./boxes.sh ${LightCyan}
+                kubectl delete -f kubernetes/pfcon_dev_innetwork_fs.yaml
+            fi
         else
             echo "kubectl delete -f kubernetes/pfcon_dev.yaml"               | ./boxes.sh ${LightCyan}
             kubectl delete -f kubernetes/pfcon_dev.yaml
