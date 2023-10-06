@@ -133,12 +133,6 @@ class ProdConfig(Config):
                     'class': 'logging.StreamHandler',
                     'formatter': 'simple',
                 },
-                'file': {
-                    'level': 'DEBUG',
-                    'class': 'logging.FileHandler',
-                    'filename': '/tmp/debug.log',
-                    'formatter': 'simple'
-                }
             },
             'loggers': {
                 '': {  # root logger
@@ -147,7 +141,7 @@ class ProdConfig(Config):
                 },
                 'pfcon': {  # pfcon package logger
                     'level': 'INFO',
-                    'handlers': ['file'],
+                    'handlers': ['console_simple'],
                     'propagate': False
                 },
             }
