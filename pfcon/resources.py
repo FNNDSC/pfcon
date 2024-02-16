@@ -80,7 +80,7 @@ class JobList(Resource):
         if self.pfcon_innetwork:
             if args.input_dirs is None:
                 abort(400, message='input_dirs: field is required')
-            if self.storage_env == 'filesystem' and args.output_dir is None:
+            if args.output_dir is None:
                 abort(400, message='output_dir: field is required')
         else:
             if request.files['data_file'] is None:
@@ -99,6 +99,7 @@ class JobList(Resource):
             input_dir = args.input_dirs[0].strip('/')
             output_dir = args.output_dir.strip('/')
             incoming_dir = os.path.join(self.storebase_mount, input_dir)
+
             storage = FileSystemStorage(app.config)
             try:
                 d_info = storage.store_data(job_id, incoming_dir)
@@ -117,7 +118,8 @@ class JobList(Resource):
                 if self.storage_env == 'swift':
                     storage = SwiftStorage(app.config)
                     try:
-                        d_info = storage.store_data(job_id, incoming_dir, args.input_dirs)
+                        d_info = storage.store_data(job_id, incoming_dir, args.input_dirs,
+                                                    job_output_path=args.output_dir.strip('/'))
                     except ClientException as e:
                         logger.error(f'Error while fetching files from swift and '
                                      f'storing job {job_id} data, detail: {str(e)}')

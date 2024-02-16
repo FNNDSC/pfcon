@@ -106,7 +106,8 @@ class TestJobList(ResourceTests):
             'gpu_limit': '0',
             'image': 'fnndsc/pl-simplefsapp',
             'type': 'fs',
-            'input_dirs': [self.swift_input_path]
+            'input_dirs': [self.swift_input_path],
+            'output_dir': self.swift_output_path
         }
         # make the POST request
         response = self.client.post(self.url, data=data, headers=self.headers)
