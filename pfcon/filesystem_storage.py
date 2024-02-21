@@ -1,6 +1,8 @@
 """
-Handle filesystem-based (eg. mounted directory) storage. This is used when pfcon is
-in-network and configured to directly access the data from a filesystem.
+Handle filesystem-based storage. This is used when pfcon is in-network and configured
+to directly access the data from a ChRIS shared filesystem. It assumes that both the
+input (read-only)and the output (read-write) directories in the shared storage are
+directly mounted into the plugin container.
 """
 
 import logging
@@ -24,7 +26,7 @@ class FileSystemStorage(BaseStorage):
 
         self.fs_mount_base_dir = config.get('STOREBASE_MOUNT')
 
-    def store_data(self, job_id, job_incoming_dir, data=None, **kwargs):
+    def store_data(self, job_id, job_incoming_dir, data, **kwargs):
         """
         Count the number of files in the specified job incoming directory.
         """

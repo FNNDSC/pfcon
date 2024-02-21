@@ -38,6 +38,7 @@ class SwiftStorage(BaseStorage):
         all_obj_paths = set()
 
         for swift_path in data:
+            swift_path = swift_path.strip('/')
             obj_paths = set()
             visited_paths = set()
 
@@ -54,10 +55,14 @@ class SwiftStorage(BaseStorage):
 
                     local_file_path = obj_path.replace(swift_path, '', 1).lstrip('/')
                     local_file_path = os.path.join(job_incoming_dir, local_file_path)
-                    os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
 
-                    with open(local_file_path, 'wb') as f:
-                        f.write(contents)
+                    try:
+                        with open(local_file_path, 'wb') as f:
+                            f.write(contents)
+                    except FileNotFoundError:
+                        os.makedirs(os.path.dirname(local_file_path))
+                        with open(local_file_path, 'wb') as f:
+                            f.write(contents)
 
                     all_obj_paths.add(obj_path)
 
@@ -121,7 +126,7 @@ class SwiftStorage(BaseStorage):
 
     def _find_all_storage_object_paths(self, storage_path, obj_paths, visited_paths):
         """
-        Find all object storage paths from the passed storage path (prefix) by
+        Find all object storage paths under the passed storage path (prefix) by
         recursively following ChRIS links. The resulting set of object paths is given
         by the obj_paths set argument.
         """
