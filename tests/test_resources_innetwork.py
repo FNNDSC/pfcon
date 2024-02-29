@@ -127,6 +127,59 @@ class TestJobList(ResourceTests):
             # cleanup swarm job
             pman.delete_job(job_id)
 
+    def test_post_with_chris_links(self):
+        job_id = 'chris-jid-1'
+        self.job_dir = os.path.join(self.storebase_mount, 'key-' + job_id)
+
+        data = {
+            'jid': job_id,
+            'entrypoint': ['python3', '/usr/local/bin/simpledsapp'],
+            'args': ['--saveinputmeta', '--saveoutputmeta', '--prefix', 'lo'],
+            'auid': 'cube',
+            'number_of_workers': '1',
+            'cpu_limit': '1000',
+            'memory_limit': '200',
+            'gpu_limit': '0',
+            'image': 'fnndsc/pl-simpledsapp',
+            'type': 'ds',
+            'input_dirs': [self.swift_input_path],
+            'output_dir': self.swift_output_path
+        }
+
+        pipeline_dir = 'PIPELINES/bob'
+        with io.StringIO('Test pipeline') as f:
+            self.swift_manager.upload_obj(pipeline_dir + '/pipeline.yml', f.read(),
+                                          content_type='text/plain')
+        link_dir = 'home/bob'
+        with io.StringIO('PIPELINES/bob') as f:
+            self.swift_manager.upload_obj(link_dir + '/PIPELINES_bob.chrislink', f.read(),
+                                          content_type='text/plain')
+
+        with io.StringIO('home/bob') as f:
+            self.swift_manager.upload_obj(self.swift_input_path + '/home_bob.chrislink',
+                                          f.read(), content_type='text/plain')
+
+        # make the POST request
+        response = self.client.post(self.url, data=data, headers=self.headers)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('compute', response.json)
+        self.assertIn('data', response.json)
+        self.assertEqual(response.json['data']['nfiles'], 2)
+
+        with self.app.test_request_context():
+            pman = PmanService.get_service_obj()
+            for _ in range(10):
+                time.sleep(3)
+                d_compute_response = pman.get_job(job_id)
+                if d_compute_response['status'] == 'finishedSuccessfully': break
+            self.assertEqual(d_compute_response['status'], 'finishedSuccessfully')
+
+            self.assertTrue(os.path.isfile(f'{self.storebase_mount}/key-{job_id}/outgoing/home_bob/PIPELINES_bob/lopipeline.yml'))
+
+
+            # cleanup swarm job
+            pman.delete_job(job_id)
+
 
 class TestJob(ResourceTests):
     """

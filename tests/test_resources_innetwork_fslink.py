@@ -23,7 +23,7 @@ class ResourceTests(TestCase):
         logging.disable(logging.WARNING)
 
         self.app = create_app({'PFCON_INNETWORK': True,
-                               'STORAGE_ENV': 'filesystem'
+                               'STORAGE_ENV': 'fslink'
                                })
         self.client = self.app.test_client()
         with self.app.test_request_context():
@@ -37,7 +37,7 @@ class ResourceTests(TestCase):
             self.headers = {'Authorization': 'Bearer ' + response.json['token']}
 
             self.storebase_mount = self.app.config.get('STOREBASE_MOUNT')
-            self.user_dir = os.path.join(self.storebase_mount, 'foo')
+            self.user_dir = os.path.join(self.storebase_mount, 'home/foo')
 
             # copy a file to the filesystem storage input path
             self.fs_input_path = os.path.join(self.user_dir, 'feed/input')
@@ -51,6 +51,10 @@ class ResourceTests(TestCase):
         # delete files from filesystem storage
         if os.path.isdir(self.user_dir):
             shutil.rmtree(self.user_dir)
+
+        pipeline_dir = os.path.join(self.storebase_mount, 'PIPELINES')
+        if os.path.isdir(pipeline_dir):
+            shutil.rmtree(pipeline_dir)
 
         # re-enable logging
         logging.disable(logging.NOTSET)
@@ -71,7 +75,7 @@ class TestJobList(ResourceTests):
         self.assertEqual(response.status_code, 200)
         self.assertTrue('server_version' in response.json)
         self.assertTrue(response.json['pfcon_innetwork'])
-        self.assertEqual(response.json['storage_env'], 'filesystem')
+        self.assertEqual(response.json['storage_env'], 'fslink')
 
     def test_post(self):
         job_id = 'chris-jid-1'
@@ -90,6 +94,7 @@ class TestJobList(ResourceTests):
             'input_dirs': [os.path.relpath(self.fs_input_path, self.storebase_mount)],
             'output_dir': os.path.relpath(self.fs_output_path, self.storebase_mount)
         }
+
         # make the POST request
         response = self.client.post(self.url, data=data, headers=self.headers)
         self.assertEqual(response.status_code, 201)
@@ -104,6 +109,56 @@ class TestJobList(ResourceTests):
                 d_compute_response = pman.get_job(job_id)
                 if d_compute_response['status'] == 'finishedSuccessfully': break
             self.assertEqual(d_compute_response['status'], 'finishedSuccessfully')
+
+            # cleanup swarm job
+            pman.delete_job(job_id)
+
+    def test_post_with_chris_links(self):
+        job_id = 'chris-jid-1'
+
+        data = {
+            'jid': job_id,
+            'entrypoint': ['python3', '/usr/local/bin/simpledsapp'],
+            'args': ['--saveinputmeta', '--saveoutputmeta', '--prefix', 'lo'],
+            'auid': 'cube',
+            'number_of_workers': '1',
+            'cpu_limit': '1000',
+            'memory_limit': '200',
+            'gpu_limit': '0',
+            'image': 'fnndsc/pl-simpledsapp',
+            'type': 'ds',
+            'input_dirs': [os.path.relpath(self.fs_input_path, self.storebase_mount)],
+            'output_dir': os.path.relpath(self.fs_output_path, self.storebase_mount)
+        }
+
+        pipeline_dir = os.path.join(self.storebase_mount, 'PIPELINES/bob')
+        os.makedirs(pipeline_dir, exist_ok=True)
+        link_dir = os.path.join(self.storebase_mount, 'home/bob')
+        os.makedirs(link_dir, exist_ok=True)
+
+        with open(pipeline_dir + '/pipeline.yml', 'w') as f:
+            f.write('Test pipeline')
+        with open(link_dir + '/PIPELINES_bob.chrislink', 'w') as f:
+            f.write('PIPELINES/bob')
+        with open(self.fs_input_path + '/home_bob.chrislink', 'w') as f:
+            f.write('home/bob')
+
+        # make the POST request
+        response = self.client.post(self.url, data=data, headers=self.headers)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('compute', response.json)
+        self.assertIn('data', response.json)
+        self.assertEqual(response.json['data']['nfiles'], 2)
+
+        with self.app.test_request_context():
+            pman = PmanService.get_service_obj()
+            for _ in range(10):
+                time.sleep(3)
+                d_compute_response = pman.get_job(job_id)
+                if d_compute_response['status'] == 'finishedSuccessfully': break
+            self.assertEqual(d_compute_response['status'], 'finishedSuccessfully')
+
+            self.assertTrue(os.path.isfile(f'{self.fs_output_path}/home_bob/PIPELINES_bob/lopipeline.yml'))
 
             # cleanup swarm job
             pman.delete_job(job_id)

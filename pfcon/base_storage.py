@@ -45,39 +45,53 @@ class BaseStorage(abc.ABC):
         Rearrange the local job incoming directory tree by creating folders that trace
         the source dirs pointed by ChRIS link files.
         """
-        linked_paths = set()
-        nlinks = 0
+        self.job_incoming_dir = job_incoming_dir
+        self._linked_paths = set()
+        self._nlinks = 0
+        self._already_copied_src_set = set()
 
-        for root, dirs, files in os.walk(job_incoming_dir):
+        self._process_chrislink_files(job_incoming_dir)
+
+        linked_path_top_folders = set()
+        for path in self._linked_paths:
+            linked_path_top_folders.add(path.split('/', 1)[0])
+
+        for folder in linked_path_top_folders:
+            if folder not in self._linked_paths:
+                self.deletesrc(os.path.join(job_incoming_dir, folder))
+
+        return self._nlinks
+
+    def _process_chrislink_files(self, dir):
+        """
+        Recursively expand (substitute by actual folders) and remove ChRIS link files.
+        """
+        for root, dirs, files in os.walk(dir):
             for filename in files:
                 if filename.endswith('.chrislink'):
                     link_file_path = os.path.join(root, filename)
 
-                    with open(link_file_path, 'rb') as f:
-                        path = f.read().decode().strip()
-                        if os.path.isfile(os.path.join(job_incoming_dir, path)):
-                            path = os.path.dirname(path)
+                    if not link_file_path.startswith(tuple(self._already_copied_src_set)):  # only expand a link once
+                        with open(link_file_path, 'rb') as f:
+                            rel_path = f.read().decode().strip()
+                            abs_path = os.path.join(self.job_incoming_dir, rel_path)
 
-                        source_trace_dir = path.replace('/', '_')
-                        dst_path = os.path.join(root, source_trace_dir)
+                            if os.path.isfile(abs_path):
+                                rel_path = os.path.dirname(rel_path)
+                                abs_path = os.path.dirname(abs_path)
 
-                        if not os.path.isdir(dst_path):
-                            self.copysrc(os.path.join(job_incoming_dir, path), dst_path)
+                            source_trace_dir = rel_path.replace('/', '_')
+                            dst_path = os.path.join(root, source_trace_dir)
 
-                        linked_paths.add(path)
+                            if not os.path.isdir(dst_path):  # only copy once to a dest path
+                                self.copysrc(abs_path, dst_path)
+                                self._already_copied_src_set.add(abs_path)
+                                self._process_chrislink_files(dst_path)  # recursive call
 
-                    os.remove(link_file_path)
-                    nlinks += 1
+                            self._linked_paths.add(rel_path)
 
-        linked_path_top_folders = set()
-        for path in linked_paths:
-            linked_path_top_folders.add(path.split('/', 1)[0])
-
-        for folder in linked_path_top_folders:
-            if folder not in linked_paths:
-                self.deletesrc(os.path.join(job_incoming_dir, folder))
-
-        return nlinks
+                        os.remove(link_file_path)
+                        self._nlinks += 1
 
     @staticmethod
     def copysrc(src, dst):
