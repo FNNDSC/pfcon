@@ -7,7 +7,7 @@
 # SYNPOSIS
 #
 #   unmake.sh                     [-h] [-N] \
-#                                 [-F <swift|filesystem|zipfile>]   \
+#                                 [-F <swift|filesystem|fslink|zipfile>]   \
 #                                 [-O <swarm|kubernetes>]  \
 #                                 [-S <storeBase>]
 #
@@ -25,6 +25,11 @@
 #   Destroy pfcon dev instance operating in-network on Swarm using Swift storage:
 #
 #       unmake.sh -N -F swift
+#
+#   Destroy pfcon dev instance operating in-network on Swarm using mounted filesystem
+#   with ChRIS links storage:
+#
+#       unmake.sh -N -F fslink
 #
 #   Destroy pfcon dev instance operating in-network on Swarm using mounted filesystem storage:
 #
@@ -46,7 +51,7 @@
 #
 #       Optional print usage help.
 #
-#   -F <swift|filesystem|zipfile>
+#   -F <swift|filesystem|fslink|zipfile>
 #
 #       Explicitly set the storage environment. This option must be swift or filesystem
 #       for pfcon operating in-network mode. For pfcon operating in out-of-network mode
@@ -67,10 +72,10 @@ source ./decorate.sh
 
 declare -i STEP=0
 ORCHESTRATOR=swarm
-STORAGE=zipfile
+STORAGE_ENV=zipfile
 
 print_usage () {
-    echo "Usage: ./unmake.sh [-h] [-N] [-F <swift|filesystem|zipfile>] [-O <swarm|kubernetes>] [-S <storeBase>]"
+    echo "Usage: ./unmake.sh [-h] [-N] [-F <swift|filesystem|fslink|zipfile>] [-O <swarm|kubernetes>] [-S <storeBase>]"
     exit 1
 }
 
@@ -80,8 +85,8 @@ while getopts ":hNF:O:S:" opt; do
            ;;
         N) b_pfconInNetwork=1
           ;;
-        F) STORAGE=$OPTARG
-           if ! [[ "$STORAGE" =~ ^(swift|filesystem|zipfile)$ ]]; then
+        F) STORAGE_ENV=$OPTARG
+           if ! [[ "$STORAGE_ENV" =~ ^(swift|filesystem|fslink|zipfile)$ ]]; then
               echo "Invalid value for option -- F"
               print_usage
            fi
@@ -110,15 +115,16 @@ title -d 1 "Setting global exports..."
     fi
     if (( b_pfconInNetwork )) ; then
         echo -e "PFCON_INNETWORK=True"                             | ./boxes.sh
-        if [[ $STORAGE == 'zipfile' ]]; then
-            echo -e "Need to pass '-F <swift|filesystem>' when PFCON_INNETWORK=True"  | ./boxes.sh
+        if [[ $STORAGE_ENV == 'zipfile' ]]; then
+            echo -e "Need to pass '-F <swift|filesystem|fslink|>' when PFCON_INNETWORK=True"  | ./boxes.sh
             exit 1
         fi
     else
         echo -e "PFCON_INNETWORK=False"                            | ./boxes.sh
     fi
     echo -e "ORCHESTRATOR=$ORCHESTRATOR"                | ./boxes.sh
-    echo -e "STORAGE=$STORAGE"                          | ./boxes.sh
+    echo -e "exporting STORAGE_ENV=$STORAGE_ENV "               | ./boxes.sh
+    export STORAGE_ENV=$STORAGE_ENV
     echo -e "exporting STOREBASE=$STOREBASE "           | ./boxes.sh
     export STOREBASE=$STOREBASE
     export SOURCEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -130,7 +136,7 @@ title -d 1 "Destroying pfcon containerized dev environment on $ORCHESTRATOR"
         echo "docker stack rm pfcon_dev_stack"                               | ./boxes.sh ${LightCyan}
         docker stack rm pfcon_dev_stack
         if (( b_pfconInNetwork )) ; then
-            if [[ $STORAGE == 'swift' ]]; then
+            if [[ $STORAGE_ENV == 'swift' ]]; then
                 echo "docker volume rm -f pfcon_dev_stack_swift_storage_dev"
                 sleep 15
                 docker volume rm pfcon_dev_stack_swift_storage_dev
@@ -138,12 +144,12 @@ title -d 1 "Destroying pfcon containerized dev environment on $ORCHESTRATOR"
         fi
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
         if (( b_pfconInNetwork )) ; then
-            if [[ $STORAGE == 'swift' ]]; then
+            if [[ $STORAGE_ENV == 'swift' ]]; then
                 echo "kubectl delete -f kubernetes/pfcon_dev_innetwork.yaml"     | ./boxes.sh ${LightCyan}
                 kubectl delete -f kubernetes/pfcon_dev_innetwork.yaml
                 echo "Removing swift_storage folder $SOURCEDIR/swift_storage"  | ./boxes.sh
                 rm -fr $SOURCEDIR/swift_storage
-            elif [[ $STORAGE == 'filesystem' ]]; then
+            else
                 echo "kubectl delete -f kubernetes/pfcon_dev_innetwork_fs.yaml"     |  ./boxes.sh ${LightCyan}
                 kubectl delete -f kubernetes/pfcon_dev_innetwork_fs.yaml
             fi
