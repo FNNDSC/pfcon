@@ -15,7 +15,7 @@ services:
     image: localhost:5000/fnndsc/pfcon:dev
     build:
       context: ..
-      target: build
+      target: dev
       args:
         ENVIRONMENT: local
     stdin_open: true # docker run -i
@@ -23,7 +23,6 @@ services:
     # We need to mount a physical dir in the HOST onto the key store in pfcon. This dir
     # is given by the STOREBASE env variable substitution. The keystore can be specified
     # by the --storeBase flag during development.
-    command: ["python", "-m", "pfcon"]
     environment:
       - APPLICATION_MODE=development
     volumes:

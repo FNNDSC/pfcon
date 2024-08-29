@@ -14,7 +14,7 @@ on:
 jobs:
   test-pfcon:
     name: tests (pfcon)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Start Docker Swarm
@@ -28,7 +28,7 @@ jobs:
           docker swarm leave --force
   test-cube:
     name: tests (CUBE)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t localhost/fnndsc/pfcon .
@@ -38,7 +38,7 @@ jobs:
 
   build:
     needs: [test-pfcon, test-cube]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - name: Install pixi
