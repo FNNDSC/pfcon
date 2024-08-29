@@ -3,7 +3,7 @@ FROM ghcr.io/prefix-dev/pixi:0.27.1 AS install
 COPY . /app
 WORKDIR /app
 
-RUN --mount=type=cache,target=/root/.cache/rattler/cache,sharing=locked pixi install
+RUN --mount=type=cache,target=/root/.cache/rattler/cache,sharing=private pixi install
 
 # development stage
 FROM install AS dev
@@ -25,6 +25,7 @@ RUN pixi run postinstall-production
 # production minimal image
 FROM docker.io/library/debian:bookworm-slim
 
+ARG ENVIRONMENT=prod
 COPY --from=build /app/.pixi/envs/${ENVIRONMENT} /app/.pixi/envs/${ENVIRONMENT}
 COPY --from=build /entrypoint.sh /entrypoint.sh
 
