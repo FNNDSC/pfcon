@@ -48,6 +48,7 @@ jobs:
       with:
         pixi-version: v0.28.2
     - name: Set version
+      if: steps.install-pixi.outcome == 'success'
       run:
         ref_name='${{ github.ref_name }}'
         version_number="${ref_name:1}"
