@@ -48,38 +48,22 @@ jobs:
       with:
         pixi-version: v0.28.2
     - name: Set version
-      id: set-version
-      if: steps.install-pixi.outcome == 'success'
       run:
         ref_name='${{ github.ref_name }}'
         version_number="${ref_name:1}"
         pixi project version set "$version_number"
-        echo "LABEL org.opencontainers.image.version=\"$version_number\"" >> Dockerfile
-        echo "version=$version_number" >> "$GITHUB_OUTPUT"
-    - name: Get build tags
-      id: info
-      shell: python
-      run: |
-        import os
-        import itertools
-
-        commit_sha = '${{ github.sha }}'
-        short_sha = commit_sha[:7]
-        git_refs = []
-        version_number = '${{ steps.set-version.outputs.version }}'
-        if version_number:
-            sanitized_version_number = version_number.replace('+', '.')
-            git_refs.append(sanitized_version_number)
-        registries = ['docker.io', 'ghcr.io']
-        repo = '${{ github.repository }}'.lower()
-        tags = ['latest'] + git_refs
-        names = ','.join(''.join(c) for c in itertools.product(
-            (r + '/' for r in registries),
-            [repo],
-            (':' + t for t in tags)
-        ))
-        with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-            out.write(f'tags={names}\n')
+    - name: Docker meta
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          docker.io/fnndsc/pfcon
+          ghcr.io/fnndsc/pfcon
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=pep440,pattern={{version}}
+          type=pep440,pattern={{major}}.{{minor}}
     - uses: docker/setup-qemu-action@v3
     - uses: docker/setup-buildx-action@v3
     - name: Login to DockerHub
@@ -105,7 +89,8 @@ jobs:
         push: ${{ steps.login-dockerhub.outcome == 'success' && steps.login-ghcr.outcome == 'success' }}
         context: .
         file: ./Dockerfile
-        tags: "${{ steps.info.outputs.tags }}"
         platforms: linux/amd64,linux/arm64
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max

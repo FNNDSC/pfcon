@@ -33,10 +33,3 @@ ENTRYPOINT [ "/entrypoint.sh" ]
 CMD ["gunicorn", "--bind", "0.0.0.0:5005", "--workers", "8", "--timeout", "3600", "pfcon.wsgi:application"]
 
 EXPOSE 5005
-
-LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
-      org.opencontainers.image.title="pfcon" \
-      org.opencontainers.image.description="ChRIS compute resource controller" \
-      org.opencontainers.image.url="https://chrisproject.org/" \
-      org.opencontainers.image.source="https://github.com/FNNDSC/pfcon" \
-      org.opencontainers.image.licenses="MIT"
