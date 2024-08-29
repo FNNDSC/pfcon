@@ -307,18 +307,18 @@ if (( ! b_skipUnitTests )) ; then
     if [[ $ORCHESTRATOR == swarm ]]; then
         if (( b_pfconInNetwork )) ; then
             if [[ $STORAGE == 'swift' ]]; then
-                docker exec $pfcon_dev pytest tests/test_resources_innetwork.py --color=yes
+                docker exec $pfcon_dev pixi run pytest tests/test_resources_innetwork.py --color=yes
             elif [[ $STORAGE == 'filesystem' ]]; then
-                docker exec $pfcon_dev pytest tests/test_resources_innetwork_fs.py --color=yes
+                docker exec $pfcon_dev pixi run pytest tests/test_resources_innetwork_fs.py --color=yes
             fi
         else
             docker exec $pfcon_dev pytest tests/test_resources.py --color=yes
         fi
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
         if (( b_pfconInNetwork )) ; then
-            kubectl exec $pfcon_dev -- pytest tests/test_resources_innetwork.py --color=yes
+            kubectl exec $pfcon_dev -- pixi run pytest tests/test_resources_innetwork.py --color=yes
         else
-            kubectl exec $pfcon_dev -- pytest tests/test_resources.py --color=yes
+            kubectl exec $pfcon_dev -- pixi run pytest tests/test_resources.py --color=yes
         fi
     fi
     status=$?

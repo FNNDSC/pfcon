@@ -15,6 +15,7 @@ services:
     image: localhost:5000/fnndsc/pfcon:dev
     build:
       context: ..
+      target: build
       args:
         ENVIRONMENT: local
     stdin_open: true # docker run -i
