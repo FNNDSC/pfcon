@@ -28,7 +28,7 @@ class Config:
 
         if self.PFCON_INNETWORK:
             self.STORAGE_ENV = env('STORAGE_ENV', 'swift')
-            if self.STORAGE_ENV not in ('swift', 'filesystem'):
+            if self.STORAGE_ENV not in ('swift', 'filesystem', 'fslink'):
                 raise ValueError(f"Unsupported value '{self.STORAGE_ENV}' for STORAGE_ENV")
         else:
             self.STORAGE_ENV = env('STORAGE_ENV', 'zipfile')

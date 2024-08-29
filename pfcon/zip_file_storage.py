@@ -32,6 +32,9 @@ class ZipFileStorage(BaseStorage):
             logger.info(f'{nfiles} files to decompress for job {job_id}')
             job_zip.extractall(path=job_incoming_dir)
 
+        nlinks = self.process_chrislink_files(job_incoming_dir)
+        nfiles -= nlinks
+
         return {
             'jid': job_id,
             'nfiles': nfiles,
@@ -51,7 +54,8 @@ class ZipFileStorage(BaseStorage):
             for root, dirs, files in os.walk(job_outgoing_dir):
                 for filename in files:
                     local_file_path = os.path.join(root, filename)
-                    if not os.path.islink(local_file_path):
+
+                    if not os.path.islink(local_file_path) and not local_file_path.endswith('.chrislink'):
                         arc_file_path = os.path.relpath(local_file_path, job_outgoing_dir)
                         try:
                             with open(local_file_path, 'rb') as f:
@@ -61,6 +65,7 @@ class ZipFileStorage(BaseStorage):
                                          f'job {job_id}, detail: {str(e)}')
                             raise
                         nfiles += 1
+
         memory_zip_file.seek(0)
 
         logger.info(f'{nfiles} files compressed for job {job_id}')

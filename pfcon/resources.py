@@ -13,6 +13,7 @@ from .services import PmanService, ServiceException
 from .zip_file_storage import ZipFileStorage
 from .swift_storage import SwiftStorage
 from .filesystem_storage import FileSystemStorage
+from .fslink_storage import FSLinkStorage
 
 
 logger = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ class JobList(Resource):
         if self.pfcon_innetwork:
             if args.input_dirs is None:
                 abort(400, message='input_dirs: field is required')
-            if self.storage_env == 'filesystem' and args.output_dir is None:
+            if args.output_dir is None:
                 abort(400, message='output_dir: field is required')
         else:
             if request.files['data_file'] is None:
@@ -99,31 +100,50 @@ class JobList(Resource):
             input_dir = args.input_dirs[0].strip('/')
             output_dir = args.output_dir.strip('/')
             incoming_dir = os.path.join(self.storebase_mount, input_dir)
+
             storage = FileSystemStorage(app.config)
             try:
-                d_info = storage.store_data(job_id, incoming_dir)
+                d_info = storage.store_data(job_id, incoming_dir, None)
             except Exception as e:
                 logger.error(f'Error while accessing files from shared filesystem '
                              f'for job {job_id}, detail: {str(e)}')
-                abort(400, message='input_dirs: Error accessing files from shared '
-                                   'filesystem')
+                abort(400,
+                      message='input_dirs: Error accessing files from shared filesystem')
         else:
             incoming_dir = os.path.join(self.storebase_mount, input_dir)
-            outgoing_dir = os.path.join(self.storebase_mount, output_dir)
             os.makedirs(incoming_dir, exist_ok=True)
-            os.makedirs(outgoing_dir, exist_ok=True)
 
             if self.pfcon_innetwork:
                 if self.storage_env == 'swift':
+                    outgoing_dir = os.path.join(self.storebase_mount, output_dir)
+                    os.makedirs(outgoing_dir, exist_ok=True)
+
                     storage = SwiftStorage(app.config)
                     try:
-                        d_info = storage.store_data(job_id, incoming_dir, args.input_dirs)
+                        d_info = storage.store_data(job_id, incoming_dir, args.input_dirs,
+                                                    job_output_path=args.output_dir.strip('/'))
                     except ClientException as e:
                         logger.error(f'Error while fetching files from swift and '
                                      f'storing job {job_id} data, detail: {str(e)}')
-                        abort(400, message='input_dirs: Error fetching files from swift')
+                        abort(400,
+                              message='input_dirs: Error fetching files from swift')
+
+                elif self.storage_env == 'fslink':
+                    output_dir = args.output_dir.strip('/')
+                    storage = FSLinkStorage(app.config)
+                    try:
+                        d_info = storage.store_data(job_id, incoming_dir, args.input_dirs,
+                                                    job_output_path=output_dir)
+                    except Exception as e:
+                        logger.error(f'Error while accessing files from shared filesystem '
+                                     f'and storing job {job_id} data, detail: {str(e)}')
+                        abort(400,
+                              message='input_dirs: Error copying files from shared filesystem')
             else:
                 if self.storage_env == 'zipfile':
+                    outgoing_dir = os.path.join(self.storebase_mount, output_dir)
+                    os.makedirs(outgoing_dir, exist_ok=True)
+
                     storage = ZipFileStorage(app.config)
                     data_file = request.files['data_file']
                     try:
@@ -187,11 +207,14 @@ class Job(Resource):
         storage = None
 
         if self.pfcon_innetwork:
-            if self.storage_env == 'swift':
+            if self.storage_env == 'filesystem':
+                storage = FileSystemStorage(app.config)
+
+            elif self.storage_env == 'swift':
                 storage = SwiftStorage(app.config)
 
-            elif self.storage_env == 'filesystem':
-                storage = FileSystemStorage(app.config)
+            elif self.storage_env == 'fslink':
+                storage = FSLinkStorage(app.config)
         else:
             if self.storage_env == 'zipfile':
                 storage = ZipFileStorage(app.config)
@@ -229,7 +252,7 @@ class JobFile(Resource):
         download_name = f'{job_id}.zip'
         mimetype = 'application/zip'
 
-        if self.pfcon_innetwork and self.storage_env == 'filesystem':
+        if self.pfcon_innetwork and self.storage_env in ('filesystem', 'fslink'):
             job_output_path = request.args.get('job_output_path')
             if not job_output_path:
                 abort(400, message='job_output_path: query parameter is required')
@@ -239,7 +262,11 @@ class JobFile(Resource):
             if not os.path.isdir(outgoing_dir):
                 abort(404)
 
-            storage = FileSystemStorage(app.config)
+            if self.storage_env == 'filesystem':
+                storage = FileSystemStorage(app.config)
+            else:
+                storage = FSLinkStorage(app.config)
+
             content = storage.get_data(job_id, outgoing_dir,
                                        job_output_path=job_output_path)
             download_name = f'{job_id}.json'
