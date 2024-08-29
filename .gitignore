@@ -17,3 +17,7 @@
 dc.out
 CHRIS_REMOTE_FS/
 swift_storage/
+
+# pixi environments
+.pixi
+*.egg-info
