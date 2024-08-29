@@ -8,7 +8,7 @@
 #
 #   make.sh                     [-h] [-i] [-s] [-N] [-U]   \
 #                               [-O <swarm|kubernetes>]    \
-#                               [-F <swift|filesystem|fslink|zipfile>]    \
+#                               [-F <swift|filesystem|zipfile>]    \
 #                               [-S <storeBase>]           \
 #                               [local|fnndsc[:dev]]
 #
@@ -31,11 +31,6 @@
 #   Run full pfcon instantiation operating in-network on Swarm using mounted filesystem storage:
 #
 #       unmake.sh -N -F filesystem; sudo rm -fr CHRIS_REMOTE_FS; rm -fr CHRIS_REMOTE_FS; make.sh -N -F filesystem
-#
-#   Run full pfcon instantiation operating in-network on Swarm using mounted filesystem
-#   with ChRIS links storage:
-#
-#       unmake.sh -N -F fslink; sudo rm -fr CHRIS_REMOTE_FS; rm -fr CHRIS_REMOTE_FS; make.sh -N -F fslink
 #
 #   Skip the intro:
 #
@@ -71,9 +66,9 @@
 #       Optional set pfcon to operate in-network mode (using a swift storage instead of
 #       a zip file).
 #
-#   -F <swift|filesystem|fslink|zipfile>
+#   -F <swift|filesystem|zipfile>
 #
-#       Explicitly set the storage environment. This option must be swift, fslink or filesystem
+#       Explicitly set the storage environment. This option must be swift or filesystem
 #       for pfcon operating in-network mode. For pfcon operating in out-of-network mode
 #       it must be set to zipfile (default).
 #
@@ -106,11 +101,11 @@ source ./cparse.sh
 
 declare -i STEP=0
 ORCHESTRATOR=swarm
-STORAGE_ENV=zipfile
+STORAGE=zipfile
 HERE=$(pwd)
 
 print_usage () {
-    echo "Usage: ./make.sh [-h] [-i] [-s] [-N] [-F <swift|filesystem|fslink|zipfile>] [-U] [-O <swarm|kubernetes>] [-S <storeBase>] [local|fnndsc[:dev]]"
+    echo "Usage: ./make.sh [-h] [-i] [-s] [-N] [-F <swift|filesystem|zipfile>] [-U] [-O <swarm|kubernetes>] [-S <storeBase>] [local|fnndsc[:dev]]"
     exit 1
 }
 
@@ -124,8 +119,8 @@ while getopts ":hsiNUF:O:S:" opt; do
           ;;
         N) b_pfconInNetwork=1
           ;;
-        F) STORAGE_ENV=$OPTARG
-           if ! [[ "$STORAGE_ENV" =~ ^(swift|filesystem|fslink|zipfile)$ ]]; then
+        F) STORAGE=$OPTARG
+           if ! [[ "$STORAGE" =~ ^(swift|filesystem|zipfile)$ ]]; then
               echo "Invalid value for option -- F"
               print_usage
            fi
@@ -180,16 +175,15 @@ title -d 1 "Setting global exports..."
     fi
     if (( b_pfconInNetwork )) ; then
         echo -e "PFCON_INNETWORK=True"                             | ./boxes.sh
-        if [[ $STORAGE_ENV == 'zipfile' ]]; then
-            echo -e "Need to pass '-F <swift|filesystem|fslink|>' when PFCON_INNETWORK=True"  | ./boxes.sh
+        if [[ $STORAGE == 'zipfile' ]]; then
+            echo -e "Need to pass '-F <swift|filesystem>' when PFCON_INNETWORK=True"  | ./boxes.sh
             exit 1
         fi
     else
         echo -e "PFCON_INNETWORK=False"                            | ./boxes.sh
     fi
     echo -e "ORCHESTRATOR=$ORCHESTRATOR"                           | ./boxes.sh
-    echo -e "exporting STORAGE_ENV=$STORAGE_ENV"                   | ./boxes.sh
-    export STORAGE_ENV=$STORAGE_ENV
+    echo -e "STORAGE=$STORAGE"                                     | ./boxes.sh
     echo -e "exporting STOREBASE=$STOREBASE "                      | ./boxes.sh
     export STOREBASE=$STOREBASE
     export SOURCEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -216,9 +210,9 @@ windowBottom
 title -d 1 "Building :dev"
     cd $HERE
     if (( b_pfconInNetwork )) ; then
-        if [[ $STORAGE_ENV == 'swift' ]]; then
+        if [[ $STORAGE == 'swift' ]]; then
             CMD="docker compose -f swarm/docker-compose_dev_innetwork.yml build"
-        else
+        elif [[ $STORAGE == 'filesystem' ]]; then
             CMD="docker compose -f swarm/docker-compose_dev_innetwork_fs.yml build"
         fi
     else
@@ -265,10 +259,10 @@ windowBottom
 title -d 1 "Starting pfcon containerized dev environment on $ORCHESTRATOR"
     if [[ $ORCHESTRATOR == swarm ]]; then
         if (( b_pfconInNetwork )) ; then
-            if [[ $STORAGE_ENV == 'swift' ]]; then
+            if [[ $STORAGE == 'swift' ]]; then
                 echo "docker stack deploy -c swarm/docker-compose_dev_innetwork.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
                 docker stack deploy -c swarm/docker-compose_dev_innetwork.yml pfcon_dev_stack
-            else
+            elif [[ $STORAGE == 'filesystem' ]]; then
                 echo "docker stack deploy -c swarm/docker-compose_dev_innetwork_fs.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
                 docker stack deploy -c swarm/docker-compose_dev_innetwork_fs.yml pfcon_dev_stack
             fi
@@ -312,21 +306,19 @@ if (( ! b_skipUnitTests )) ; then
     sleep 5
     if [[ $ORCHESTRATOR == swarm ]]; then
         if (( b_pfconInNetwork )) ; then
-            if [[ $STORAGE_ENV == 'swift' ]]; then
-                docker exec $pfcon_dev pytest tests/test_resources_innetwork.py --color=yes
-            elif [[ $STORAGE_ENV == 'filesystem' ]]; then
-                docker exec $pfcon_dev pytest tests/test_resources_innetwork_fs.py --color=yes
-            elif [[ $STORAGE_ENV == 'fslink' ]]; then
-                docker exec $pfcon_dev pytest tests/test_resources_innetwork_fslink.py --color=yes
+            if [[ $STORAGE == 'swift' ]]; then
+                docker exec $pfcon_dev pixi run pytest tests/test_resources_innetwork.py --color=yes
+            elif [[ $STORAGE == 'filesystem' ]]; then
+                docker exec $pfcon_dev pixi run pytest tests/test_resources_innetwork_fs.py --color=yes
             fi
         else
             docker exec $pfcon_dev pytest tests/test_resources.py --color=yes
         fi
     elif [[ $ORCHESTRATOR == kubernetes ]]; then
         if (( b_pfconInNetwork )) ; then
-            kubectl exec $pfcon_dev -- pytest tests/test_resources_innetwork.py --color=yes
+            kubectl exec $pfcon_dev -- pixi run pytest tests/test_resources_innetwork.py --color=yes
         else
-            kubectl exec $pfcon_dev -- pytest tests/test_resources.py --color=yes
+            kubectl exec $pfcon_dev -- pixi run pytest tests/test_resources.py --color=yes
         fi
     fi
     status=$?

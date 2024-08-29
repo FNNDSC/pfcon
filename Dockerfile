@@ -1,55 +1,41 @@
-#
-# Docker file for pfcon image
-#
-# Build production image:
-#
-#   docker build -t <name> .
-#
-# For example if building a local production image:
-#
-#   docker build -t local/pfcon .
-#
-# Build development image:
-#
-#   docker build --build-arg ENVIRONMENT=local -t <name>:<tag> .
-#
-# For example if building a local development image:
-#
-#   docker build --build-arg ENVIRONMENT=local -t local/pfcon:dev .
-#
-# In the case of a proxy (located at say proxy.tch.harvard.edu:3128), do:
-#
-#    export PROXY="http://proxy.tch.harvard.edu:3128"
-#
-# then add to any of the previous build commands:
-#
-#    --build-arg http_proxy=${PROXY}
-#
-# For example if building a local development image:
-#
-# docker build --build-arg http_proxy=${PROXY} --build-arg ENVIRONMENT=local -t local/pfcon:dev .
-#
+FROM ghcr.io/prefix-dev/pixi:0.27.1 AS install
 
-FROM python:3.10.5-bullseye
-
+COPY . /app
 WORKDIR /app
 
-COPY ./requirements ./requirements
-ARG ENVIRONMENT=production
-RUN pip install --no-cache-dir -r /app/requirements/$ENVIRONMENT.txt
+RUN --mount=type=cache,target=/root/.cache/rattler/cache,sharing=locked pixi install
 
-COPY . .
-ARG BUILD_VERSION=unknown
-RUN if [ "$ENVIRONMENT" = "local" ]; then pip install -e .; else pip install .; fi
+# development stage
+FROM install AS dev
+
+CMD ["pixi", "run", "python", "-m", "pfcon"]
+EXPOSE 5005
+
+# production build stage
+FROM install AS build
+
+RUN pixi run build
+
+ARG ENVIRONMENT=prod
+RUN printf '#!/bin/sh\n%s\nexec "$@"' "$(pixi shell-hook -e ${ENVIRONMENT})" > /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+# must be the last command of this stage, or else pixi will overwrite the installed package.
+RUN pixi run postinstall-production
+
+# production minimal image
+FROM docker.io/library/debian:bookworm-slim
+
+COPY --from=build /app/.pixi/envs/${ENVIRONMENT} /app/.pixi/envs/${ENVIRONMENT}
+COPY --from=build /entrypoint.sh /entrypoint.sh
+
+ENTRYPOINT [ "/entrypoint.sh" ]
+CMD ["gunicorn", "--bind", "0.0.0.0:5005", "--workers", "8", "--timeout", "3600", "pfcon.wsgi:application"]
 
 EXPOSE 5005
-CMD ["gunicorn", "--bind", "0.0.0.0:5005", "--workers", "8", "--timeout", "3600", "pfcon.wsgi:application"]
 
 LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
       org.opencontainers.image.title="pfcon" \
       org.opencontainers.image.description="ChRIS compute resource controller" \
       org.opencontainers.image.url="https://chrisproject.org/" \
       org.opencontainers.image.source="https://github.com/FNNDSC/pfcon" \
-      org.opencontainers.image.version=$BUILD_VERSION \
-      org.opencontainers.image.revision=$BUILD_VERSION \
       org.opencontainers.image.licenses="MIT"

@@ -1,8 +1,0 @@
-Flask==2.3.3
-Flask-RESTful==0.3.10
-requests==2.31.0
-keystoneauth1==4.3.1
-python-keystoneclient==4.2.0
-python-swiftclient==4.4.0
-PyJWT===2.8.0
-environs==9.5.0
