@@ -50,7 +50,7 @@ jobs:
         run-install: false
     - name: Set version
       if: steps.install-pixi.outcome == 'success'
-      run:
+      run: |
         ref_name='${{ github.ref_name }}'
         version_number="${ref_name:1}"
         pixi project version set "$version_number"
