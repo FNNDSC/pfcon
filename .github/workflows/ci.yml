@@ -47,6 +47,7 @@ jobs:
       uses: prefix-dev/setup-pixi@v0.8.1
       with:
         pixi-version: v0.28.2
+        run-install: false
     - name: Set version
       if: steps.install-pixi.outcome == 'success'
       run:
