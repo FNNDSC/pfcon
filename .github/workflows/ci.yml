@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t localhost/fnndsc/pfcon .
-      - uses: FNNDSC/cube-integration-action@master
+      - uses: FNNDSC/ChRIS_ultron_backEnd@master
         env:
           PFCON_IMAGE: localhost/fnndsc/pfcon
 
