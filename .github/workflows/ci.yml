@@ -39,17 +39,22 @@ jobs:
   build:
     needs: [test-pfcon, test-cube]
     runs-on: ubuntu-24.04
+    env:
+      PIXI_COLOR: always
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install micromamba
+      uses: mamba-org/setup-micromamba@v2
+      with:
+        cache-downloads: true
     - name: Install pixi
-      id: install-pixi
-      if: startsWith(github.ref, 'refs/tags/v')
       uses: prefix-dev/setup-pixi@v0.8.1
       with:
         pixi-version: v0.38.0
         run-install: false
     - name: Set version
-      if: steps.install-pixi.outcome == 'success'
+      if: startsWith(github.ref, 'refs/tags/v')
       run: |
         ref_name='${{ github.ref_name }}'
         version_number="${ref_name:1}"
@@ -67,6 +72,23 @@ jobs:
           type=pep440,pattern={{version}}
           type=pep440,pattern={{major}}.{{minor}}
           type=raw,value=latest,enable={{is_default_branch}}
+
+      # pixi and micromamba don't have ppc64le images available, so to build
+      # images for ppc64le, we create conda environments using micromamba
+      # which are then copied into the container images. This also happens
+      # to be more efficient than running a package manager during docker
+      # build using QEMU.
+    - name: Export conda-explicit-spec
+      run: pixi project export conda-explicit-spec --frozen --ignore-pypi-errors conda-specs
+    - name: Create env for linux/amd64
+      run: micromamba create --platform linux-64      --relocate-prefix /opt/conda-env -f conda-specs/prod_linux-64_conda_spec.txt -p ./envs/linux/amd64
+    - name: Create env for linux/arm64
+      run: micromamba create --platform linux-aarch64 --relocate-prefix /opt/conda-env -f conda-specs/prod_linux-aarch64_conda_spec.txt -p ./envs/linux/arm64
+    - name: Create env for linux/ppc64le
+      run: micromamba create --platform linux-ppc64le --relocate-prefix /opt/conda-env -f conda-specs/prod_linux-ppc64le_conda_spec.txt -p ./envs/linux/ppc64le
+    - name: Build wheel
+      run: pixi run build
+
     - uses: docker/setup-qemu-action@v3
     - uses: docker/setup-buildx-action@v3
     - name: Login to DockerHub
@@ -84,15 +106,13 @@ jobs:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Build and push
       uses: docker/build-push-action@v6
       with:
-        build-args: ENVIRONMENT=prod
         push: ${{ steps.login-dockerhub.outcome == 'success' && steps.login-ghcr.outcome == 'success' }}
         context: .
-        file: ./Dockerfile
-        platforms: linux/amd64,linux/arm64
+        file: ./prod.Dockerfile
+        platforms: linux/amd64,linux/arm64,linux/ppc64le
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha

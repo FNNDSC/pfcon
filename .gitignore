@@ -21,3 +21,8 @@ swift_storage/
 # pixi environments
 .pixi
 *.egg-info
+
+# build
+conda-specs/
+envs/
+

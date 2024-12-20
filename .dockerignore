@@ -3,6 +3,7 @@ __pycache__/
 
 .dockerignore
 Dockerfile
+prod.Dockerfile
 .travis.yml
 .gitignore
 .github
@@ -11,6 +12,6 @@ LICENSE
 CHRIS_REMOTE_FS
 swift_storage
 
-dist/
 .pixi/
+conda-specs/
 
