@@ -8,8 +8,6 @@
 # specify them again in docker-compose.yml.
 #
 
-version: '3.7'
-
 services:
   pfcon:
     image: localhost:5000/fnndsc/pfcon:dev

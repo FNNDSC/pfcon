@@ -8,8 +8,6 @@
 # specify them again in docker-compose.yml.
 #
 
-version: '3.7'
-
 services:
   pfcon:
     image: localhost:5000/fnndsc/pfcon:dev
@@ -26,7 +24,7 @@ services:
     environment:
       - APPLICATION_MODE=development
       - PFCON_INNETWORK=true
-      - STORAGE_ENV
+      - STORAGE_ENV=fslink
     volumes:
       - ${STOREBASE:?}:/var/local/storeBase:z
       - ../pfcon:/app/pfcon:z
