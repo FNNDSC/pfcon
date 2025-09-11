@@ -10,10 +10,10 @@ from flask_restful import reqparse, abort, Resource
 from swiftclient.exceptions import ClientException
 
 from .services import PmanService, ServiceException
-from .zip_file_storage import ZipFileStorage
-from .swift_storage import SwiftStorage
-from .filesystem_storage import FileSystemStorage
-from .fslink_storage import FSLinkStorage
+from .storage.zip_file_storage import ZipFileStorage
+from .storage.swift_storage import SwiftStorage
+from .storage.filesystem_storage import FileSystemStorage
+from .storage.fslink_storage import FSLinkStorage
 
 
 logger = logging.getLogger(__name__)

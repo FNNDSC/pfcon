@@ -1,10 +1,9 @@
 
 from logging.config import dictConfig
 from environs import Env
-import os
 
 from importlib.metadata import Distribution
-from .swiftmanager import SwiftManager
+from .storage.swiftmanager import SwiftManager
 
 
 pkg = Distribution.from_name(__package__)

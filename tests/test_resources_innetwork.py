@@ -14,7 +14,7 @@ from flask import url_for
 
 from pfcon.app import create_app
 from pfcon.services import PmanService, ServiceException
-from pfcon.swiftmanager import SwiftManager
+from pfcon.storage.swiftmanager import SwiftManager
 
 
 class ResourceTests(TestCase):

@@ -38,6 +38,7 @@ python-keystoneclient = "4.2.*"
 python-swiftclient = "4.4.*"
 pyjwt = "2.8.*"
 environs = "14.2.*"
+jinja2 = "3.1.*"
 
 [tool.pixi.feature.test.dependencies]
 pytest = "7.4.*"
