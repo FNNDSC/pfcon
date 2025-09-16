@@ -4,16 +4,23 @@ import logging
 import zipfile
 from datetime import datetime, timedelta
 import jwt
+from typing import List, Collection, Literal
 
 from flask import request, send_file, current_app as app
 from flask_restful import reqparse, abort, Resource
 from swiftclient.exceptions import ClientException
 
-from .services import PmanService, ServiceException
 from .storage.zip_file_storage import ZipFileStorage
 from .storage.swift_storage import SwiftStorage
 from .storage.filesystem_storage import FileSystemStorage
 from .storage.fslink_storage import FSLinkStorage
+from .compute.abstractmgr import ManagerException
+from .compute.container_user import ContainerUser
+from .compute.dockermgr import DockerManager
+from .compute.openshiftmgr import OpenShiftManager
+from .compute.kubernetesmgr import KubernetesManager
+from .compute.swarmmgr import SwarmManager
+from .compute.cromwellmgr import CromwellManager
 
 
 logger = logging.getLogger(__name__)
@@ -63,11 +70,21 @@ class JobList(Resource):
         self.pfcon_innetwork = app.config.get('PFCON_INNETWORK')
         self.storebase_mount = app.config.get('STOREBASE_MOUNT')
 
+        # mounting points for the input and outputdir in the app's container!
+        self.str_app_container_inputdir = '/share/incoming'
+        self.str_app_container_outputdir = '/share/outgoing'
+
+        self.container_env = app.config.get('CONTAINER_ENV')
+        self.user = ContainerUser.parse(app.config.get('CONTAINER_USER'))
+        self.compute_volume_type = app.config.get('COMPUTE_VOLUME_TYPE')
+
     def get(self):
         response = {
             'server_version': app.config.get('SERVER_VERSION'),
             'pfcon_innetwork': self.pfcon_innetwork,
-            'storage_env': self.storage_env
+            'storage_env': self.storage_env,
+            'container_env': self.container_env,
+            'compute_volume_type': self.compute_volume_type
         }
         if self.pfcon_innetwork:
             if self.storage_env == 'swift':
@@ -77,15 +94,7 @@ class JobList(Resource):
 
     def post(self):
         args = parser.parse_args()
-
-        if self.pfcon_innetwork:
-            if args.input_dirs is None:
-                abort(400, message='input_dirs: field is required')
-            if args.output_dir is None:
-                abort(400, message='output_dir: field is required')
-        else:
-            if request.files['data_file'] is None:
-                abort(400, message='data_file: field is required')
+        self._validate_data(args)
 
         job_id = args.jid.lstrip('/')
         logger.info(f'Received job {job_id}')
@@ -120,8 +129,10 @@ class JobList(Resource):
 
                     storage = SwiftStorage(app.config)
                     try:
-                        d_info = storage.store_data(job_id, incoming_dir, args.input_dirs,
-                                                    job_output_path=args.output_dir.strip('/'))
+                        d_info = storage.store_data(
+                            job_id, incoming_dir, args.input_dirs,
+                            job_output_path=args.output_dir.strip('/')
+                        )
                     except ClientException as e:
                         logger.error(f'Error while fetching files from swift and '
                                      f'storing job {job_id} data, detail: {str(e)}')
@@ -135,10 +146,11 @@ class JobList(Resource):
                         d_info = storage.store_data(job_id, incoming_dir, args.input_dirs,
                                                     job_output_path=output_dir)
                     except Exception as e:
-                        logger.error(f'Error while accessing files from shared filesystem '
-                                     f'and storing job {job_id} data, detail: {str(e)}')
-                        abort(400,
-                              message='input_dirs: Error copying files from shared filesystem')
+                        logger.error(f'Error while accessing files from shared '
+                                     f'filesystem and storing job {job_id} data, '
+                                     f'detail: {str(e)}')
+                        abort(400, message='input_dirs: Error copying files from shared '
+                                           'filesystem')
             else:
                 if self.storage_env == 'zipfile':
                     outgoing_dir = os.path.join(self.storebase_mount, output_dir)
@@ -149,36 +161,98 @@ class JobList(Resource):
                     try:
                         d_info = storage.store_data(job_id, incoming_dir, data_file)
                     except zipfile.BadZipFile as e:
-                        logger.error(f'Error while decompressing and storing job {job_id} '
-                                     f'data, detail: {str(e)}')
+                        logger.error(f'Error while decompressing and storing '
+                                     f'job {job_id} data, detail: {str(e)}')
                         abort(400, message='data_file: Bad zip file')
 
             logger.info(f'Successfully stored job {job_id} input data')
 
         # process compute
 
-        compute_data = {
-            'args': args.args,
-            'args_path_flags': args.args_path_flags,
-            'auid': args.auid,
-            'number_of_workers': args.number_of_workers,
-            'cpu_limit': args.cpu_limit,
-            'memory_limit': args.memory_limit,
-            'gpu_limit': args.gpu_limit,
-            'image': args.image,
-            'entrypoint': args.entrypoint,
-            'type': args.type,
-            'env': args.env,
-            'input_dir': input_dir,
-            'output_dir': output_dir,
-        }
-        pman = PmanService.get_service_obj()
-        try:
-            d_compute_response = pman.run_job(job_id, compute_data)
-        except ServiceException as e:
-            abort(e.code, message=str(e))
+        if app.config.get('ENABLE_HOME_WORKAROUND'):
+            args.env.append('HOME=/tmp')
 
-        return {'data': d_info, 'compute': d_compute_response}, 201
+        cmd = self.build_app_cmd(args.args, args.args_path_flags, args.entrypoint,
+                                 args.type)
+
+        resources_dict = {'number_of_workers': args.number_of_workers,
+                          'cpu_limit': args.cpu_limit,
+                          'memory_limit': args.memory_limit,
+                          'gpu_limit': args.gpu_limit,
+                          }
+        mounts_dict = {'inputdir_source': '',
+                       'inputdir_target': self.str_app_container_inputdir,
+                       'outputdir_source': '',
+                       'outputdir_target': self.str_app_container_outputdir
+                       }
+
+        if self.compute_volume_type in ('host', 'docker_local_volume'):
+            storebase = app.config.get('STOREBASE')
+            mounts_dict['inputdir_source'] = os.path.join(storebase, input_dir)
+            mounts_dict['outputdir_source'] = os.path.join(storebase, output_dir)
+        elif self.compute_volume_type == 'kubernetes_pvc':
+            mounts_dict['inputdir_source'] = input_dir
+            mounts_dict['outputdir_source'] = output_dir
+
+        logger.info(f'Scheduling job {job_id} on the {self.container_env} cluster')
+
+        compute_mgr = get_compute_mgr(self.container_env)
+        try:
+            job = compute_mgr.schedule_job(args.image, cmd, job_id, resources_dict,
+                                           args.env, self.user.get_uid(),
+                                           self.user.get_gid(), mounts_dict)
+        except ManagerException as e:
+            logger.error(f'Error from {self.container_env} while scheduling job '
+                         f'{job_id}, detail: {str(e)}')
+            abort(e.status_code, message=str(e))
+
+        job_info = compute_mgr.get_job_info(job)
+
+        logger.info(f'Successful job {job_id} schedule response from '
+                    f'{self.container_env}: {job_info}')
+
+        d_compute = {
+            'jid': job_id,
+            'image': job_info.image,
+            'cmd': job_info.cmd,
+            'status': job_info.status.value,
+            'message': job_info.message,
+            'timestamp': job_info.timestamp,
+            'logs': ''
+        }
+        return {'data': d_info, 'compute': d_compute}, 201
+
+    def _validate_data(self, args):
+        if self.pfcon_innetwork:
+            if args.input_dirs is None:
+                abort(400, message='input_dirs: field is required')
+
+            if args.output_dir is None:
+                abort(400, message='output_dir: field is required')
+        else:
+            if request.files['data_file'] is None:
+                abort(400, message='data_file: field is required')
+
+        if len(args.entrypoint) == 0:
+            abort(400, message='entrypoint: cannot be empty')
+
+        for s in args.env:
+            if len(s.split('=', 1)) != 2:
+                abort(400, message='env: must be a list of "key=value" strings')
+
+    def build_app_cmd(
+            self,
+            args: List[str],
+            args_path_flags: Collection[str],
+            entrypoint: List[str],
+            plugin_type: Literal['ds', 'fs', 'ts']
+    ) -> List[str]:
+        cmd = entrypoint + localize_path_args(args, args_path_flags,
+                                              self.str_app_container_inputdir)
+        if plugin_type == 'ds':
+            cmd.append(self.str_app_container_inputdir)
+        cmd.append(self.str_app_container_outputdir)
+        return cmd
 
 
 class Job(Resource):
@@ -192,16 +266,37 @@ class Job(Resource):
         self.storage_env = app.config.get('STORAGE_ENV')
         self.pfcon_innetwork = app.config.get('PFCON_INNETWORK')
         self.storebase_mount = app.config.get('STOREBASE_MOUNT')
+        self.container_env = app.config.get('CONTAINER_ENV')
+        self.compute_mgr = get_compute_mgr(self.container_env)
+        self.job_logs_tail = app.config.get('JOB_LOGS_TAIL')
 
     def get(self, job_id):
-        pman = PmanService.get_service_obj()
+        logger.info(f'Getting job {job_id} status from the {self.container_env} '
+                    f'cluster')
         try:
-            d_compute_response = pman.get_job(job_id)
-        except ServiceException as e:
-            abort(e.code, message=str(e))
-        return {
-            'compute': d_compute_response
+            job = self.compute_mgr.get_job(job_id)
+        except ManagerException as e:
+            abort(e.status_code, message=str(e))
+
+        job_info = self.compute_mgr.get_job_info(job)
+
+        logger.info(f'Successful job {job_id} status response from '
+                    f'{self.container_env}: {job_info}')
+
+        job_logs = self.compute_mgr.get_job_logs(job, self.job_logs_tail)
+        if isinstance(job_logs, bytes):
+            job_logs = job_logs.decode(encoding='utf-8', errors='replace')
+
+        d_compute = {
+            'jid': job_id,
+            'image': job_info.image,
+            'cmd': job_info.cmd,
+            'status': job_info.status.value,
+            'message': job_info.message,
+            'timestamp': job_info.timestamp,
+            'logs': job_logs
         }
+        return {'compute': d_compute}
 
     def delete(self, job_id):
         storage = None
@@ -220,16 +315,24 @@ class Job(Resource):
                 storage = ZipFileStorage(app.config)
 
         job_dir = os.path.join(self.storebase_mount, 'key-' + job_id)
+
         if os.path.isdir(job_dir):
             logger.info(f'Deleting job {job_id} data from store')
             storage.delete_data(job_dir)
             logger.info(f'Successfully removed job {job_id} data from store')
 
-        pman = PmanService.get_service_obj()
+        if not app.config.get('REMOVE_JOBS'):
+            logger.info(f'Not deleting job {job_id} from {self.container_env} '
+                        'because config.REMOVE_JOBS=no')
+            return '', 204
+
+        logger.info(f'Deleting job {job_id} from {self.container_env}')
         try:
-            pman.delete_job(job_id)
-        except ServiceException as e:
-            abort(e.code, message=str(e))
+            job = self.compute_mgr.get_job(job_id)
+        except ManagerException as e:
+            abort(e.status_code, message=str(e))
+
+        self.compute_mgr.remove_job(job)  # remove job from compute cluster
 
         logger.info(f'Successfully removed job {job_id} from remote compute')
         return '', 204
@@ -276,6 +379,7 @@ class JobFile(Resource):
             job_dir = os.path.join(self.storebase_mount, 'key-' + job_id)
             if not os.path.isdir(job_dir):
                 abort(404)
+
             outgoing_dir = os.path.join(job_dir, 'outgoing')
             if not os.path.exists(outgoing_dir):
                 os.mkdir(outgoing_dir)
@@ -323,6 +427,7 @@ class Auth(Resource):
 
     def post(self):
         args = parser_auth.parse_args()
+
         if not self.check_credentials(args.pfcon_user, args.pfcon_password):
             abort(400, message='Unable to log in with provided credentials.')
         return {
@@ -341,11 +446,15 @@ class Auth(Resource):
     @staticmethod
     def check_token():
         bearer_token = request.headers.get('Authorization')
+
         if not bearer_token:
             abort(401, message='Missing authorization header.')
+
         if not bearer_token.startswith('Bearer '):
             abort(401, message='Invalid authorization header.')
+
         token = bearer_token.split(' ')[1]
+
         try:
             jwt.decode(token, app.config.get('SECRET_KEY'), algorithms=['HS256'])
         except jwt.ExpiredSignatureError:
@@ -365,3 +474,34 @@ class HealthCheck(Resource):
         return {
             'health': 'OK'
         }
+
+
+def localize_path_args(args: List[str], path_flags: Collection[str],
+                       input_dir: str) -> List[str]:
+    """
+    Replace the strings following path flags with the input directory.
+
+    https://github.com/FNNDSC/CHRIS_docs/blob/7ac85e9ae1070947e6e2cda62747b427028229b0/SPEC.adoc#path-arguments
+    """
+    if len(args) == 0:
+        return args
+
+    if args[0] in path_flags:
+        return [args[0], input_dir] + localize_path_args(args[2:], path_flags,
+                                                         input_dir)
+    return args[0:1] + localize_path_args(args[1:], path_flags, input_dir)
+
+
+def get_compute_mgr(container_env):
+    compute_mgr = None
+    if container_env == 'docker' or container_env == 'podman':
+        compute_mgr = DockerManager(app.config)
+    elif container_env == 'swarm':
+        compute_mgr = SwarmManager(app.config)
+    elif container_env == 'kubernetes':
+        compute_mgr = KubernetesManager(app.config)
+    elif container_env == 'openshift':
+        compute_mgr = OpenShiftManager()
+    elif container_env == 'cromwell':
+        compute_mgr = CromwellManager(app.config)
+    return compute_mgr

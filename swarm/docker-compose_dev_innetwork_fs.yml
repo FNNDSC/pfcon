@@ -25,32 +25,16 @@ services:
       - APPLICATION_MODE=development
       - PFCON_INNETWORK=true
       - STORAGE_ENV=fslink
+      - COMPUTE_VOLUME_TYPE=host
+      - STOREBASE
+      - CONTAINER_ENV=swarm
     volumes:
       - ${STOREBASE:?}:/var/local/storeBase:z
       - ../pfcon:/app/pfcon:z
       - ../tests:/app/tests:z
+      - /var/run/docker.sock:/var/run/docker.sock:z
     ports:
       - "30006:5005"
-    depends_on:
-      - pman
-    networks:
-      - remote
-    labels:
-      name: "pfcon"
-      role: "pfcon service"
-
-  pman:
-    image: ${PMANREPO:?}/pman
-    # Since pman spins off containers of its own it needs to mount storeBase dir (where
-    # pfcon shares the data) into the spawned container. This directory is passed in the
-    # STOREBASE env variable.
-    environment:
-      - STORAGE_TYPE=host
-      - STOREBASE
-      - SECRET_KEY="w1kxu^l=@pnsf!5piqz6!!5kdcdpo79y6jebbp+2244yjm*#+k"
-      - CONTAINER_ENV=swarm
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:z
     deploy:
       placement:
         constraints:
@@ -58,8 +42,7 @@ services:
     networks:
       - remote
     labels:
-      name: "pman"
-      role: "pman service"
+      org.chrisproject.role: "pfcon"
 
 
 networks:
