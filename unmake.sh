@@ -53,9 +53,9 @@
 #
 #   -F <swift|filesystem|fslink|zipfile>
 #
-#       Explicitly set the storage environment. This option must be swift or filesystem
-#       for pfcon operating in-network mode. For pfcon operating in out-of-network mode
-#       it must be set to zipfile (default).
+#       Explicitly set the storage environment. This option must be swift, filesystem of
+#       fslink for pfcon operating in-network mode. For pfcon operating in out-of-network
+#       mode it must be set to zipfile (default).
 #
 #   -O <swarm|kubernetes>
 #

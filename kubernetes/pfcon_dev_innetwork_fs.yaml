@@ -37,10 +37,6 @@ spec:
         app: pfcon
         env: development
     spec:
-      initContainers:
-        - name: init-pfcon
-          image: busybox:1.32
-          command: [ 'sh', '-c', "until wget --spider -S -T 2 http://pman:5010/api/v1/ 2>&1 | grep '200 OK'; do echo waiting for pman; done" ]
       containers:
         - image: localhost:5000/fnndsc/pfcon:dev
           name: pfcon
@@ -54,7 +50,13 @@ spec:
             - name: PFCON_INNETWORK
               value: true
             - name: STORAGE_ENV
-              value: filesystem
+              value: fslink
+            - name: COMPUTE_VOLUME_TYPE
+            - value: host
+            - name: STOREBASE
+              value: ${STOREBASE}
+            - name: CONTAINER_ENV
+              value: kubernetes
           command: ["python"]
           args: ["-m", "pfcon"]
           volumeMounts:
@@ -74,60 +76,3 @@ spec:
         - name: "pfcon-tests"
           hostPath:
             path: ${SOURCEDIR}/tests
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: pman
-  labels:
-    app: pman
-    env: production
-spec:
-  selector:
-    app: pman
-    env: production
-  ports:
-    - port: 5010
-      targetPort: 5010
-
----
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: pman
-  labels:
-    app: pman
-    env: production
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: pman
-      env: production
-  template:
-    metadata:
-      name: pman
-      labels:
-        app: pman
-        env: production
-    spec:
-      containers:
-        - image: fnndsc/pman
-          name: pman
-          ports:
-            - containerPort: 5010
-          # Since pman spins off containers of its own it needs to mount storeBase dir
-          # (where pfcon shares the data) into the spawned container. This directory is
-          # passed in the STOREBASE env variable.
-          env:
-            - name: STORAGE_TYPE
-              value: host
-            - name: SECRET_KEY
-              value: "anysu^l=@pnsf!5piqz6!!5kdcdpo79y6jebbp+2244yjm*#+k"
-            - name: STOREBASE
-              value: ${STOREBASE}
-            - name: CONTAINER_ENV
-              value: kubernetes

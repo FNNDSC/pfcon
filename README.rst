@@ -93,7 +93,7 @@ Start pfcon's development server and backend containers operating in-network (wi
 .. code-block:: bash
 
     $> cd pfcon
-    $> ./make.sh -N
+    $> ./make.sh -N -F swift
 
 Remove pfcon's containers operating in-network (with Swift storage)
 -------------------------------------------------------------------
@@ -101,7 +101,7 @@ Remove pfcon's containers operating in-network (with Swift storage)
 .. code-block:: bash
 
     $> cd pfcon
-    $> ./unmake.sh -N
+    $> ./unmake.sh -N -F swift
 
 Remove the local Docker Swarm cluster if desired
 ------------------------------------------------
