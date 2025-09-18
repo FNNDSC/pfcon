@@ -8,7 +8,7 @@ from typing import Optional
 class ContainerUser:
     """
     Helper for parsing the UID/GID from the ``CONTAINER_USER`` environment variable
-    configuration of *pman*.
+    configuration of *pfcon*.
     """
     uid: None | int | tuple[int, int]
     """Given UID or UID range"""

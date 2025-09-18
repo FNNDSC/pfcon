@@ -340,26 +340,26 @@ if (( ! b_skipUnitTests )) ; then
     if [[ "$CONTAINER_ENV" =~ ^(docker|swarm)$ ]]; then
         if (( b_pfconInNetwork )) ; then
             if [[ $STORAGE_ENV == 'swift' ]]; then
-                docker exec $pfcon_dev pixi run -e local pytest tests/test_resources_innetwork.py --color=yes
+                docker exec $pfcon_dev pixi run -e local pytest tests/test_resources_innetwork.py tests/compute --color=yes
             elif [[ $STORAGE_ENV == 'filesystem' ]]; then
-                docker exec $pfcon_dev pixi run -e local pytest tests/test_resources_innetwork_fs.py --color=yes
+                docker exec $pfcon_dev pixi run -e local pytest tests/test_resources_innetwork_fs.py tests/compute --color=yes
             elif [[ $STORAGE_ENV == 'fslink' ]]; then
-                docker exec $pfcon_dev pixi run -e local pytest tests/test_resources_innetwork_fslink.py --color=yes
+                docker exec $pfcon_dev pixi run -e local pytest tests/test_resources_innetwork_fslink.py tests/compute --color=yes
             fi
         else
-            docker exec $pfcon_dev pixi run -e local pytest tests/test_resources.py --color=yes
+            docker exec $pfcon_dev pixi run -e local pytest tests/test_resources.py tests/compute --color=yes
         fi
     elif [[ $CONTAINER_ENV == kubernetes ]]; then
         if (( b_pfconInNetwork )) ; then
             if [[ $STORAGE_ENV == 'swift' ]]; then
-                kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources_innetwork.py --color=yes
+                kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources_innetwork.py tests/compute --color=yes
             elif [[ $STORAGE_ENV == 'filesystem' ]]; then
-                kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources_innetwork_fs.py --color=yes
+                kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources_innetwork_fs.py tests/compute --color=yes
             elif [[ $STORAGE_ENV == 'fslink' ]]; then
-                kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources_innetwork_fslink.py --color=yes
+                kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources_innetwork_fslink.py tests/compute --color=yes
             fi
         else
-            kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources.py --color=yes
+            kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources.py tests/compute --color=yes
         fi
     fi
     status=$?

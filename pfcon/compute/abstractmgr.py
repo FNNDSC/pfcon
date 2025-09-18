@@ -20,7 +20,7 @@ class JobStatus(Enum):
 
 
 JobName = NewType('JobName', str)
-"""An identifying string which ``pman`` can be queried for to retrieve a submitted job."""
+"""An identifying string which ``pfcon`` can be queried for to retrieve a submitted job."""
 Image = NewType('Image', str)
 """An OCI container image tag, e.g. ``docker.io/fnndsc/pl-simpledsapp:2.0.1``"""
 TimeStamp = NewType('TimeStamp', str)
@@ -38,7 +38,7 @@ Jobs must at least be identifiable by name from the engine.
 @dataclass(frozen=True)
 class JobInfo:
     name: JobName
-    """A name which ``pman`` can be queried for to retrieve this job."""
+    """A name which ``pfcon`` can be queried for to retrieve this job."""
     image: Image
     cmd: str
     timestamp: TimeStamp

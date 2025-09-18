@@ -299,7 +299,7 @@ class KubernetesManager(AbstractManager[V1Job]):
             if self.__is_container_creating_error(e):
                 log = json.loads(e.body)['message']
             else:
-                log = 'Error: check pman logs.'
+                log = 'Error: check pfcon logs.'
                 logger.error('Exception getting logs for pod="%s": %s', pod_name, str(e))
         return log
 

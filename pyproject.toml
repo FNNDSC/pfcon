@@ -16,7 +16,7 @@ platforms = ["linux-64", "linux-aarch64", "linux-ppc64le"]
 
 [tool.pixi.pypi-dependencies]
 pfcon = { path = ".", editable = true }
-# PyPI-only pman packages
+# PyPI-only packages
 docker = ">=7.1,<7.2"
 openshift = ">=0.13,<0.14"
 cromwell-tools = ">=2.4,<2.5"

@@ -13,7 +13,7 @@ from .abstractmgr import (AbstractManager, Image, JobName, ResourcesDict,
 
 class DockerManager(AbstractManager[Container]):
     """
-    Interface between pman and Docker Engine or Podman API.
+    Interface between pfcon and Docker Engine or Podman API.
     """
     def __init__(self, config_dict=None, docker_client: DockerClient = None):
         super().__init__(config_dict)

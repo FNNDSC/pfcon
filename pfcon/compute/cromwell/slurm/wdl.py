@@ -170,7 +170,7 @@ class SlurmRuntimeAttributes:
     https://slurm.schedmd.com/sbatch.html#OPT_partition
     """
 
-    # pman-specific
+    # pfcon-specific
     sharedir: str
     docker: Image
 

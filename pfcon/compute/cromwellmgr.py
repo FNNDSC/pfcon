@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 class CromwellManager(AbstractManager[WorkflowId]):
     """
-    A Cromwell shim for ``pman``.
+    A Cromwell shim for ``pfcom``.
 
     https://cromwell.readthedocs.io/
 
@@ -45,16 +45,16 @@ class CromwellManager(AbstractManager[WorkflowId]):
     expects for a plugin instance's input files to already exist in the
     remote compute environment's filesystem, and instructs Cromwell to also
     write output files to its filesystem, same as how "storeBase" works with
-    the *docker swarm* ``pman`` backend.
+    the *docker swarm* ``pfcon`` backend.
 
-    Tip: the workflow name is not the ``pman`` job name! Currently, the
+    Tip: the workflow name is not the ``pfcon`` job name! Currently, the
     workflow name is hard-coded for every workflow to be ``ChRISJob``.
-    Instead, the ``pman`` job name is tracked by Cromwell as a label with
-    the key :const:`PMAN_CROMWELL_LABEL`.
+    Instead, the ``pfcon`` job name is tracked by Cromwell as a label with
+    the key :const:`PFCON_CROMWELL_LABEL`.
     """
 
-    PMAN_CROMWELL_LABEL = 'org.chrisproject.pman.name'
-    """The Cromwell label key for pman job names."""
+    PFCON_CROMWELL_LABEL = 'org.chrisproject.pfcon.name'
+    """The Cromwell label key for pfcon job names."""
 
     def __init__(self, config_dict=None):
         super().__init__(config_dict)
@@ -71,7 +71,7 @@ class CromwellManager(AbstractManager[WorkflowId]):
         wdl = SlurmJob(image, command, mounts_dict, resources_dict,
                        self.__timelimit).to_wdl()
         res = self.__submit(wdl, name)
-        # Submission does not appear in Cromwell immediately, but pman wants to
+        # Submission does not appear in Cromwell immediately, but pfcon wants to
         # get job info, so we need to wait for Cromwell to catch up.
         self.__must_be_submitted(res)
         return res.id
@@ -81,11 +81,11 @@ class CromwellManager(AbstractManager[WorkflowId]):
         Schedule a WDL file to be executed, and then wait for Cromwell to register it.
 
         :param wdl: WDL
-        :param name: ID which pman can be queried for to retrieve the submitted workflow
+        :param name: ID which pfcon can be queried for to retrieve the submitted workflow
         :return: response from Cromwell
         """
 
-        res = self.__client.submit(wdl, label={self.PMAN_CROMWELL_LABEL: name})
+        res = self.__client.submit(wdl, label={self.PFCON_CROMWELL_LABEL: name})
         self.__must_be_submitted(res)
         if not self.__block_until_metadata_available(res.id):
             raise CromwellException('Workflow was submitted, but timed out waiting for '
@@ -174,7 +174,7 @@ class CromwellManager(AbstractManager[WorkflowId]):
         attrs = SlurmRuntimeAttributes.deserialize(call.runtimeAttributes)
 
         return JobInfo(
-            name=JobName(res.labels[cls.PMAN_CROMWELL_LABEL]),
+            name=JobName(res.labels[cls.PFCON_CROMWELL_LABEL]),
             image=attrs.docker,
             cmd=call.commandLine,
             timestamp=res.end if res.end is not None else '',
@@ -195,7 +195,7 @@ class CromwellManager(AbstractManager[WorkflowId]):
             message = res.calls['ChRISJob.plugin_instance'][0].executionStatus
 
         return JobInfo(
-            name=labels[cls.PMAN_CROMWELL_LABEL],
+            name=labels[cls.PFCON_CROMWELL_LABEL],
             image=job_details.image,
             cmd=job_details.command,
             timestamp=TimeStamp(''),
@@ -209,7 +209,7 @@ class CromwellManager(AbstractManager[WorkflowId]):
 
         :raises CromwellException: if multiple jobs found by the given name
         """
-        res = self.__client.query({self.PMAN_CROMWELL_LABEL: name})
+        res = self.__client.query({self.PFCON_CROMWELL_LABEL: name})
         if res.totalResultsCount < 1:
             return None
         if res.totalResultsCount > 1:

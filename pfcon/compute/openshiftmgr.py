@@ -62,7 +62,7 @@ class OpenShiftManager(AbstractManager):
                 "template": {
                     "metadata": {
                          "labels":{
-                            "job-origin":"pman"
+                            "job-origin":"pfcon"
                         },
                         "name": name
                     },
