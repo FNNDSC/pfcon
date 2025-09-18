@@ -99,7 +99,7 @@
 #
 #       The 'local' family are containers that are assumed built on the local
 #       machine and assumed to exist. The 'local' containers are used when
-#       the 'pfcon/pman' services are being locally developed/debugged.
+#       the pfcon service is being locally developed/debugged.
 #
 #
 
@@ -153,7 +153,6 @@ done
 shift $(($OPTIND - 1))
 
 export SWIFTREPO=fnndsc
-export PMANREPO=fnndsc
 export TAG=
 if (( $# == 1 )) ; then
     REPO=$1
@@ -165,7 +164,6 @@ fi
 
 declare -a A_CONTAINER=(
     "fnndsc/docker-swift-onlyone^SWIFTREPO"
-    "fnndsc/pman^PMANREPO"
     "fnndsc/pl-simplefsapp"
 )
 

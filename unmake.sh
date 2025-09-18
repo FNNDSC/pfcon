@@ -113,6 +113,8 @@ while getopts ":hNF:O:S:" opt; do
 done
 shift $(($OPTIND - 1))
 
+export SWIFTREPO=fnndsc
+
 title -d 1 "Setting global exports..."
     if [ -z ${STOREBASE+x} ]; then
         STOREBASE=$(pwd)/CHRIS_REMOTE_FS
