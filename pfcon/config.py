@@ -153,7 +153,6 @@ class DevConfig(Config):
         self.PFCON_PASSWORD = 'pfcon1234'
 
         # EXTERNAL SERVICES
-        self.COMPUTE_SERVICE_URL = self.env('COMPUTE_SERVICE_URL', 'http://pman:5010/api/v1/')
 
         if self.STORAGE_ENV == 'swift':
             SWIFT_AUTH_URL = self.env('SWIFT_AUTH_URL',
@@ -215,7 +214,6 @@ class ProdConfig(Config):
         self.PFCON_PASSWORD = env('PFCON_PASSWORD')
 
         # EXTERNAL SERVICES
-        self.COMPUTE_SERVICE_URL = env('COMPUTE_SERVICE_URL')
 
         if self.STORAGE_ENV == 'swift':
             SWIFT_AUTH_URL = env('SWIFT_AUTH_URL')

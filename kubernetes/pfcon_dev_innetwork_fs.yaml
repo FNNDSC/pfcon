@@ -50,9 +50,9 @@ spec:
             - name: PFCON_INNETWORK
               value: true
             - name: STORAGE_ENV
-              value: fslink
+              value: ${STORAGE_ENV}
             - name: COMPUTE_VOLUME_TYPE
-            - value: host
+            - value: ${COMPUTE_VOLUME_TYPE}
             - name: STOREBASE
               value: ${STOREBASE}
             - name: CONTAINER_ENV

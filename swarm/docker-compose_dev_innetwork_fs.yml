@@ -11,6 +11,7 @@
 services:
   pfcon:
     image: localhost:5000/fnndsc/pfcon:dev
+    container_name: pfcon
     build:
       context: ..
       target: dev
@@ -24,10 +25,10 @@ services:
     environment:
       - APPLICATION_MODE=development
       - PFCON_INNETWORK=true
-      - STORAGE_ENV=fslink
+      - STORAGE_ENV
       - COMPUTE_VOLUME_TYPE=host
       - STOREBASE
-      - CONTAINER_ENV=swarm
+      - CONTAINER_ENV
     volumes:
       - ${STOREBASE:?}:/var/local/storeBase:z
       - ../pfcon:/app/pfcon:z
@@ -35,10 +36,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:z
     ports:
       - "30006:5005"
-    deploy:
-      placement:
-        constraints:
-          - "node.role==manager"
     networks:
       - remote
     labels:

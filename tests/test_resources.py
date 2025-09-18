@@ -72,7 +72,7 @@ class TestJobList(ResourceTests):
         self.assertFalse(response.json['pfcon_innetwork'])
         self.assertEqual(response.json['storage_env'], 'zipfile')
         self.assertEqual(response.json['compute_volume_type'], 'host')
-        self.assertEqual(response.json['container_env'], 'swarm')
+        self.assertEqual(response.json['container_env'], self.container_env)
 
     def test_post(self):
         job_id = 'chris-jid-1'
@@ -107,10 +107,10 @@ class TestJobList(ResourceTests):
 
         with self.app.test_request_context():
             compute_mgr = get_compute_mgr(self.container_env)
-            job = compute_mgr.get_job(job_id)
 
             for _ in range(10):
                 time.sleep(3)
+                job = compute_mgr.get_job(job_id)
                 job_info = compute_mgr.get_job_info(job)
                 if job_info.status.value == 'finishedSuccessfully': break
 
@@ -133,8 +133,8 @@ class TestJob(ResourceTests):
         self.cmd = ['python3', '/usr/local/bin/simplefsapp', '--saveinputmeta',
                     '--saveoutputmeta', '--dir', '/share/incoming', '/share/outgoing']
 
-        self.resources_dict = {'number_of_workers': '1', 'cpu_limit': '1000',
-                               'memory_limit': '200', 'gpu_limit': '0'}
+        self.resources_dict = {'number_of_workers': 1, 'cpu_limit': 1000,
+                               'memory_limit': 200, 'gpu_limit': 0}
 
         self.mounts_dict = {'inputdir_source': '', 'inputdir_target': '/share/incoming',
                             'outputdir_source': '', 'outputdir_target': '/share/outgoing'}
