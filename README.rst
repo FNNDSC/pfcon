@@ -269,14 +269,14 @@ Environment Variable           Description
 ``COMPUTE_VOLUME_TYPE``         | one of: "host", "docker_local_volume", "kubernetes_pvc"
 ``STOREBASE``                   where job data is stored, valid when ``COMPUTE_VOLUME_TYPE=host``, conflicts with ``VOLUME_NAME``
 ``VOLUME_NAME``                 name of data volume, valid when ``COMPUTE_VOLUME_TYPE=docker_local_volume`` or ``COMPUTE_VOLUME_TYPE=kubernetes_pvc`
-``PFCON_SELECTOR``              label on the pfcon container, may be specified for pman to self-discover ``VOLUME_NAME`` (default: ``org.chrisproject.role=pfcon`
+``PFCON_SELECTOR``              label on the pfcon container, may be specified for pfcon to self-discover ``VOLUME_NAME`` (default: ``org.chrisproject.role=pfcon`
 ``CONTAINER_USER``              Set job container user in the form ``UID:GID``, may be a range for random values
 ``ENABLE_HOME_WORKAROUND``      If set to "yes" then set job environment variable ``HOME=/tmp``
 ``SHM_SIZE``                    Size of ``/dev/shm`` in mebibytes. (Supported only in Docker, Podman, and Kubernetes.)
 ``JOB_LABELS``                  CSV list of key=value pairs, labels to apply to container jobs
 ``JOB_LOGS_TAIL``               (int) maximum size of job logs
 ``IGNORE_LIMITS``               If set to "yes" then do not set resource limits on container jobs (for making things work without effort)
-``REMOVE_JOBS``                 If set to "no" then pman will not delete jobs (for debugging)
+``REMOVE_JOBS``                 If set to "no" then pfcon will not delete jobs (for debugging)
 ============================== ===========================================================
 
 .. _`Flask secret key`: https://flask.palletsprojects.com/en/2.1.x/config/#SECRET_KEY
