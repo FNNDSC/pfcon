@@ -17,15 +17,12 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Start Docker Swarm
-        run: docker swarm init --advertise-addr 127.0.0.1
       - name: Build and run tests
         run: ./make.sh -i
       - name: Tear down
         run: |
           ./unmake.sh
           sudo rm -fr ./CHRIS_REMOTE_FS
-          docker swarm leave --force
   test-cube:
     name: tests (CUBE)
     runs-on: ubuntu-24.04
