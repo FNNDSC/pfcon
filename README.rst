@@ -79,6 +79,12 @@ different compute and storage environments. The currently supported storage opti
 Below are some examples of how to start the different dev environments. Consult the header of the ``make.sh`` script for more
 information on the different command line flags combinations supported by the script.
 
+Local Development
+=================
+
+This project uses a package manager called ``pixi``. For more information,
+read https://github.com/FNNDSC/pfcon/issues/152
+
 Docker-based development environment (default)
 ==============================================
 
