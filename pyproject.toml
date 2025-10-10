@@ -1,6 +1,5 @@
 [project]
 authors = [{name = "FNNDSC", email = "dev@babyMRI.org"}]
-dependencies = []
 description = "ChRIS compute resources Process and File CONtroller"
 name = "pfcon"
 requires-python = ">= 3.11"
@@ -16,12 +15,6 @@ platforms = ["linux-64", "linux-aarch64", "linux-ppc64le"]
 
 [tool.pixi.pypi-dependencies]
 pfcon = { path = ".", editable = true }
-# PyPI-only packages
-docker = ">=7.1,<7.2"
-openshift = ">=0.13,<0.14"
-cromwell-tools = ">=2.4,<2.5"
-kubernetes = ">=27.2,<27.3"
-pyserde = ">=0.6,<0.7"
 
 [tool.pixi.feature.build.tasks]
 build = "hatch build -t wheel"
@@ -39,6 +32,8 @@ python-swiftclient = "4.4.*"
 pyjwt = "2.8.*"
 environs = "14.2.*"
 jinja2 = "3.1.*"
+docker-py = ">=7.1.0,<8"
+python-kubernetes = ">=34.1.0,<35"
 
 [tool.pixi.feature.test.dependencies]
 pytest = "7.4.*"

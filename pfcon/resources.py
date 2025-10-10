@@ -17,10 +17,8 @@ from .storage.fslink_storage import FSLinkStorage
 from .compute.abstractmgr import ManagerException
 from .compute.container_user import ContainerUser
 from .compute.dockermgr import DockerManager
-from .compute.openshiftmgr import OpenShiftManager
 from .compute.kubernetesmgr import KubernetesManager
 from .compute.swarmmgr import SwarmManager
-from .compute.cromwellmgr import CromwellManager
 
 
 logger = logging.getLogger(__name__)
@@ -498,10 +496,8 @@ def get_compute_mgr(container_env):
         compute_mgr = DockerManager(app.config)
     elif container_env == 'swarm':
         compute_mgr = SwarmManager(app.config)
-    elif container_env == 'kubernetes':
+    elif container_env == 'kubernetes' or container_env == 'openshift':
         compute_mgr = KubernetesManager(app.config)
-    elif container_env == 'openshift':
-        compute_mgr = OpenShiftManager()
     elif container_env == 'cromwell':
-        compute_mgr = CromwellManager(app.config)
+        raise ValueError('cromwell not supported')
     return compute_mgr
