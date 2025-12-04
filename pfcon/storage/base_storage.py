@@ -58,8 +58,10 @@ class BaseStorage(abc.ABC):
 
         for folder in linked_path_top_folders:
             if folder not in self._linked_paths:
-                self.deletesrc(os.path.join(job_incoming_dir, folder))
-
+                try:
+                    self.deletesrc(os.path.join(job_incoming_dir, folder))
+                except FileNotFoundError:
+                    pass
         return self._nlinks
 
     def _process_chrislink_files(self, dir):
@@ -84,7 +86,10 @@ class BaseStorage(abc.ABC):
                             dst_path = os.path.join(root, source_trace_dir)
 
                             if not os.path.isdir(dst_path):  # only copy once to a dest path
-                                self.copysrc(abs_path, dst_path)
+                                try:
+                                    self.copysrc(abs_path, dst_path)
+                                except FileNotFoundError:
+                                    pass
                                 self._already_copied_src_set.add(abs_path)
                                 self._process_chrislink_files(dst_path)  # recursive call
 

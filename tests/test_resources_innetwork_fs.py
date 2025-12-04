@@ -91,7 +91,7 @@ class TestJobList(ResourceTests):
         data = {
             'jid': job_id,
             'entrypoint': ['python3', '/usr/local/bin/simplefsapp'],
-            'args': ['--saveinputmeta', '--saveoutputmeta', '--dir', '/share/incoming'],
+            'args': ['--dir', '/share/incoming'],
             'auid': 'cube',
             'number_of_workers': '1',
             'cpu_limit': '1000',
@@ -136,8 +136,8 @@ class TestJob(ResourceTests):
         self.image = 'fnndsc/pl-simplefsapp'
         self.env = []
 
-        self.cmd = ['python3', '/usr/local/bin/simplefsapp', '--saveinputmeta',
-                    '--saveoutputmeta', '--dir', '/share/incoming', '/share/outgoing']
+        self.cmd = ['python3', '/usr/local/bin/simplefsapp',
+                    '--dir', '/share/incoming', '/share/outgoing']
 
         self.resources_dict = {'number_of_workers': 1, 'cpu_limit': 1000,
                                'memory_limit': 200, 'gpu_limit': 0}
