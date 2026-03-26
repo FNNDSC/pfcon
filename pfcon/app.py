@@ -5,7 +5,13 @@ from flask import Flask, request
 from flask_restful import Api
 
 from .config import DevConfig, ProdConfig
-from pfcon.resources import HealthCheck, JobList, Job, JobFile, Auth
+from pfcon.resources import (
+    HealthCheck, Auth,
+    PluginJobList, PluginJob, PluginJobFile,
+    CopyJobList, CopyJob,
+    UploadJobList, UploadJob,
+    DeleteJobList, DeleteJob,
+)
 
 
 def create_app(config_dict=None):
@@ -29,8 +35,16 @@ def create_app(config_dict=None):
     # url mappings
     api.add_resource(HealthCheck, '/health/', endpoint='api.healthcheck')
     api.add_resource(Auth, '/auth-token/', endpoint='api.auth')
-    api.add_resource(JobList, '/jobs/', endpoint='api.joblist')
-    api.add_resource(Job, '/jobs/<string:job_id>/', endpoint='api.job')
-    api.add_resource(JobFile, '/jobs/<string:job_id>/file/', endpoint='api.jobfile')
+
+    # Client-managed job routes
+    api.add_resource(PluginJobList, '/pluginjobs/', endpoint='api.pluginjoblist')
+    api.add_resource(PluginJob, '/pluginjobs/<string:job_id>/', endpoint='api.pluginjob')
+    api.add_resource(PluginJobFile, '/pluginjobs/<string:job_id>/file/', endpoint='api.pluginjobfile')
+    api.add_resource(CopyJobList, '/copyjobs/', endpoint='api.copyjoblist')
+    api.add_resource(CopyJob, '/copyjobs/<string:job_id>/', endpoint='api.copyjob')
+    api.add_resource(UploadJobList, '/uploadjobs/', endpoint='api.uploadjoblist')
+    api.add_resource(UploadJob, '/uploadjobs/<string:job_id>/', endpoint='api.uploadjob')
+    api.add_resource(DeleteJobList, '/deletejobs/', endpoint='api.deletejoblist')
+    api.add_resource(DeleteJob, '/deletejobs/<string:job_id>/', endpoint='api.deletejob')
 
     return app

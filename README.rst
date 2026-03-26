@@ -32,20 +32,19 @@ Swarm, Kubernetes and SLURM.
 .. _`Flask`: https://flask-restful.readthedocs.io/
 
 Primarily, ``pfcon`` provides "compute resource" services to a ChRIS backend. When ``pfcon`` is deployed
-in the so called "in-network" mode it has direct access to the ChRIS's storage environment (currently either
-Swift object storage or a POSIX filesystem). This speeds up and makes more efficent the management of data/files
-provided  to the compute cluster as the input to a scheduled job. Otherwise when ``pfcon`` is not deployed in
+in the so called "in-network" mode it has direct access to the shared ChRIS's storage environment (currently either
+Swift object storage or a POSIX filesystem). This speeds up and makes more efficient the management of data/files
+provided  to the compute cluster as the input to a scheduled plugin job. Otherwise when ``pfcon`` is not deployed in
 "in-network" mode it can accept a zip file (as part of a multipart POST request) containing all the input files
-for the job. In this case the output data from the job can then be downloaded back as a zip file after the job
+for the plugin job. In this case the output data from the job can then be downloaded back as a zip file after the job
 is finished.
 
-After submitting a job ``pfcon``'s API can then be used to query and control the following (for example):
+After submitting a plugin job ``pfcon``'s API can then be used to query and control the following (for example):
 
-- *state*: Is job <job_id> still running?
+- *state*: Is plugin job <job_id> still running?
 
-Visit the `pfcon http API call examples`_ wiki page to see examples of http calls accepted by ``pfcon`` server.
-
-.. _`pfcon http API call examples`: https://github.com/FNNDSC/pfcon/wiki/pfcon-http-API-call-examples
+Check out the `Client Request/Response Flow <req_resp_flow.md>`__ document to see the full workflow involved in running a plugin and 
+examples of http calls accepted by ``pfcon`` server.
 
 Additionally a Python3 client for this server's web API is provided here: https://github.com/FNNDSC/python-pfconclient
 
@@ -88,6 +87,38 @@ read https://github.com/FNNDSC/pfcon/issues/152
 Docker-based development environment (default)
 ==============================================
 
+Start pfcon's dev server operating in-network with shared ``fslink`` storage
+----------------------------------------------------------------------------
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./make.sh -N -F fslink
+
+Remove pfcon's container
+------------------------
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./unmake.sh -N -F fslink
+
+Start pfcon's dev server operating in-network with shared ``swift`` storage
+---------------------------------------------------------------------------
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./make.sh -N -F swift
+
+Remove pfcon's container
+------------------------
+
+.. code-block:: bash
+
+    $> cd pfcon
+    $> ./unmake.sh -N -F swift
+
 Start pfcon's dev server with ``zipfile`` storage
 -------------------------------------------------
 
@@ -104,22 +135,6 @@ Remove pfcon's container
 
     $> cd pfcon
     $> ./unmake.sh
-
-Start pfcon's dev server operating in-network with ``fslink`` storage
----------------------------------------------------------------------
-
-.. code-block:: bash
-
-    $> cd pfcon
-    $> ./make.sh -N -F fslink
-
-Remove pfcon's container
-------------------------
-
-.. code-block:: bash
-
-    $> cd pfcon
-    $> ./unmake.sh -N -F fslink
 
 
 Podman-based development environment
@@ -144,14 +159,14 @@ Start a local Docker Swarm cluster if not already started
 
     $> docker swarm init --advertise-addr 127.0.0.1
 
-Start pfcon's dev server with ``zipfile`` storage
--------------------------------------------------
+Start pfcon's dev server with shared ``fslink`` storage
+-------------------------------------------------------
 
 .. code-block:: bash
 
     $> git clone https://github.com/FNNDSC/pfcon.git
     $> cd pfcon
-    $> ./make.sh -O swarm
+    $> ./make.sh -N -F fslink -O swarm
 
 Remove pfcon's container
 ------------------------
@@ -159,7 +174,7 @@ Remove pfcon's container
 .. code-block:: bash
 
     $> cd pfcon
-    $> ./unmake.sh -O swarm
+    $> ./unmake.sh -N -F fslink -O swarm
 
 Remove the local Docker Swarm cluster if desired
 ------------------------------------------------
@@ -188,14 +203,14 @@ Then create the required alias:
     $> microk8s.kubectl config view --raw > $HOME/.kube/config
 
 
-Start pfcon's dev server with ``zipfile`` storage
--------------------------------------------------
+Start pfcon's dev server with shared ``fslink`` storage
+-------------------------------------------------------
 
 .. code-block:: bash
 
     $> git clone https://github.com/FNNDSC/pfcon.git
     $> cd pfcon
-    $> ./make.sh -O kubernetes
+    $> ./make.sh -N -F fslink -O kubernetes
 
 Remove pfcon's container
 ------------------------
@@ -203,7 +218,7 @@ Remove pfcon's container
 .. code-block:: bash
 
     $> cd pfcon
-    $> ./unmake.sh -O kubernetes
+    $> ./unmake.sh -N -F fslink -O kubernetes
 
 
 *************
@@ -270,12 +285,13 @@ Environment Variable           Description
 ``PFCON_USER``                  ``pfcon`` auth user
 ``PFCON_PASSWORD``              ``pfcon`` auth user's password
 ``PFCON_INNETWORK``             (bool) whether the server was deployed "in-network" mode
+``PFCON_OP_IMAGE``              container image for the data operation (copy, upload, delete) container in "in-network" mode
 ``STORAGE_ENV``                 one of: "swift", "filesystem", "fslink", "zipfile"
 ``CONTAINER_ENV``               one of: "swarm", "kubernetes", "cromwell", "docker"
 ``COMPUTE_VOLUME_TYPE``         | one of: "host", "docker_local_volume", "kubernetes_pvc"
 ``STOREBASE``                   where job data is stored, valid when ``COMPUTE_VOLUME_TYPE=host``, conflicts with ``VOLUME_NAME``
-``VOLUME_NAME``                 name of data volume, valid when ``COMPUTE_VOLUME_TYPE=docker_local_volume`` or ``COMPUTE_VOLUME_TYPE=kubernetes_pvc`
-``PFCON_SELECTOR``              label on the pfcon container, may be specified for pfcon to self-discover ``VOLUME_NAME`` (default: ``org.chrisproject.role=pfcon`
+``VOLUME_NAME``                 name of data volume, valid when ``COMPUTE_VOLUME_TYPE=docker_local_volume`` or ``COMPUTE_VOLUME_TYPE=kubernetes_pvc``
+``PFCON_SELECTOR``              label on the pfcon container, may be specified for pfcon to self-discover ``VOLUME_NAME`` (default: ``org.chrisproject.role=pfcon``
 ``CONTAINER_USER``              Set job container user in the form ``UID:GID``, may be a range for random values
 ``ENABLE_HOME_WORKAROUND``      If set to "yes" then set job environment variable ``HOME=/tmp``
 ``SHM_SIZE``                    Size of ``/dev/shm`` in mebibytes. (Supported only in Docker, Podman, and Kubernetes.)

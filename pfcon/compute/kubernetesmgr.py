@@ -86,7 +86,7 @@ class KubernetesManager(AbstractManager[V1Job]):
         """
         Get the job's info dictionary for a previously scheduled job object.
         """
-        status = JobStatus.notstarted
+        status = JobStatus.notStarted
         message = 'task not available yet'
         conditions = job.status.conditions
         failed = job.status.failed
@@ -100,7 +100,7 @@ class KubernetesManager(AbstractManager[V1Job]):
                         message = condition.message
                         status = JobStatus.finishedWithError
                         break
-        if status == JobStatus.notstarted:
+        if status == JobStatus.notStarted:
             if completion_time and succeeded:
                 message = 'finished'
                 status = JobStatus.finishedSuccessfully
@@ -186,18 +186,21 @@ class KubernetesManager(AbstractManager[V1Job]):
             persistent_volume_claim=pvc,
 
         )
-        volume_mount_inputdir = k_client.V1VolumeMount(
-            mount_path=mounts_dict['inputdir_target'],
-            name='storebase',
-            sub_path=mounts_dict['inputdir_source'],
-            read_only=True
-        )
         volume_mount_outputdir = k_client.V1VolumeMount(
             mount_path=mounts_dict['outputdir_target'],
             name='storebase',
             sub_path=mounts_dict['outputdir_source'],
             read_only=False
         )
+
+        volume_mount_inputdir = None
+        if mounts_dict['inputdir_source']:
+            volume_mount_inputdir = k_client.V1VolumeMount(
+                mount_path=mounts_dict['inputdir_target'],
+                name='storebase',
+                sub_path=mounts_dict['inputdir_source'],
+                read_only=True
+            )
 
         dshm_volume = []
         dshm_mount = []
@@ -221,7 +224,8 @@ class KubernetesManager(AbstractManager[V1Job]):
             command=command,
             security_context=k_client.V1SecurityContext(**security_context),
             resources=k_client.V1ResourceRequirements(limits=limits),
-            volume_mounts=[volume_mount_inputdir, volume_mount_outputdir, *dshm_mount]
+            volume_mounts=([volume_mount_inputdir] if volume_mount_inputdir else [])
+                          + [volume_mount_outputdir, *dshm_mount]
         )
 
         pod_template_metadata = None
