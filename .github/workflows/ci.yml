@@ -29,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t localhost/fnndsc/pfcon .
+      - run: docker build -f opjob.Dockerfile -t ghcr.io/fnndsc/pfconopjob .
       - uses: FNNDSC/ChRIS_ultron_backEnd@master
         env:
           PFCON_IMAGE: localhost/fnndsc/pfcon
