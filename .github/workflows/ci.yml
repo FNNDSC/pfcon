@@ -18,10 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build and run tests
-        run: ./make.sh -i
+        run: ./make.sh -i -N -F fslink 
       - name: Tear down
         run: |
-          ./unmake.sh
+          ./unmake.sh -N -F fslink 
           sudo rm -fr ./CHRIS_REMOTE_FS
   test-cube:
     name: tests (CUBE)
@@ -63,6 +63,19 @@ jobs:
         images: |
           docker.io/fnndsc/pfcon
           ghcr.io/fnndsc/pfcon
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=pep440,pattern={{version}}
+          type=pep440,pattern={{major}}.{{minor}}
+          type=raw,value=latest,enable={{is_default_branch}}
+    - name: Docker meta (opjob)
+      id: meta-opjob
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          docker.io/fnndsc/pfconopjob
+          ghcr.io/fnndsc/pfconopjob
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -112,5 +125,16 @@ jobs:
         platforms: linux/amd64,linux/arm64,linux/ppc64le
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    - name: Build and push (opjob)
+      uses: docker/build-push-action@v6
+      with:
+        push: ${{ steps.login-dockerhub.outcome == 'success' && steps.login-ghcr.outcome == 'success' }}
+        context: .
+        file: ./opjob.Dockerfile
+        platforms: linux/amd64,linux/arm64,linux/ppc64le
+        tags: ${{ steps.meta-opjob.outputs.tags }}
+        labels: ${{ steps.meta-opjob.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max

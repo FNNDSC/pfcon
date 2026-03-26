@@ -23,23 +23,23 @@ build = "hatch build -t wheel"
 postinstall-production = "pip install --no-deps --disable-pip-version-check --no-cache-dir dist/pfcon-*.whl"
 
 [tool.pixi.dependencies]
-flask = "2.3.*"
+flask = "3.1.*"
 flask-restful = "0.3.10.*"
-requests = "2.31.*"
-keystoneauth1 = "4.3.*"
-python-keystoneclient = "4.2.*"
-python-swiftclient = "4.4.*"
-pyjwt = "2.8.*"
-environs = "14.2.*"
+requests = "2.32.*"
+keystoneauth1 = "5.11.*"
+python-keystoneclient = "5.8.*"
+python-swiftclient = "4.9.*"
+pyjwt = "2.11.*"
+environs = "14.6.*"
 jinja2 = "3.1.*"
 docker-py = ">=7.1.0,<8"
-python-kubernetes = ">=34.1.0,<35"
+python-kubernetes = ">=35.0.0,<36"
 
 [tool.pixi.feature.test.dependencies]
-pytest = "7.4.*"
+pytest = "9.0.*"
 
 [tool.pixi.feature.prod.dependencies]
-gunicorn = "21.2.*"
+gunicorn = "23.0.*"
 
 [tool.pixi.feature.build.dependencies]
 hatch = "*"

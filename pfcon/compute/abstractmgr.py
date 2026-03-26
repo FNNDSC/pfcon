@@ -12,7 +12,7 @@ class ManagerException(Exception):
 
 
 class JobStatus(Enum):
-    notstarted = 'notstarted'
+    notStarted = 'notStarted'
     started = 'started'
     finishedSuccessfully = 'finishedSuccessfully'
     finishedWithError = 'finishedWithError'

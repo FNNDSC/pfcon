@@ -60,10 +60,12 @@ class Config:
         if self.COMPUTE_VOLUME_TYPE == 'host':
             self.STOREBASE = env('STOREBASE')
 
+        self.PFCON_SELECTOR = env('PFCON_SELECTOR', 'org.chrisproject.role=pfcon')
+
         if self.COMPUTE_VOLUME_TYPE == 'docker_local_volume':
-            pfcon_selector = env('PFCON_SELECTOR', 'org.chrisproject.role=pfcon')
             self.STOREBASE = get_storebase_from_docker(self.STOREBASE_MOUNT,
-                                                       pfcon_selector, self.VOLUME_NAME)
+                                                       self.PFCON_SELECTOR,
+                                                       self.VOLUME_NAME)
 
         if self.COMPUTE_VOLUME_TYPE == 'kubernetes_pvc':
             if not self.VOLUME_NAME:
@@ -97,6 +99,8 @@ class Config:
             # To configure Docker Engine/Podman, use the standard env variables for the Docker client.
             pass
 
+        self.PFCON_OP_IMAGE = env('PFCON_OP_IMAGE', 'ghcr.io/fnndsc/pfconopjob')
+
         self.env = env
 
 
@@ -104,7 +108,6 @@ class DevConfig(Config):
     """
     Development configuration
     """
-    ENV = 'development'
     DEBUG = True
     TESTING = True
 
@@ -171,7 +174,6 @@ class ProdConfig(Config):
     """
     Production configuration
     """
-    ENV = 'production'
 
     def __init__(self):
         super().__init__()
