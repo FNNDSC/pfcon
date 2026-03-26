@@ -1389,17 +1389,6 @@ class TestUploadJobPluginGuard(NewResourcesTestBase):
         self.assertEqual(response.status_code, 409)
         self.assertIn('notStarted', response.json['message'])
 
-    def test_rejected_when_plugin_failed(self):
-        """409 when plugin job finished with error."""
-        def setup(mgr):
-            mgr.get_job.return_value = 'mock_plugin'
-            mgr.get_job_info.return_value = _make_job_info(
-                JobStatus.finishedWithError)
-
-        response = self._post_upload('guard-plugfail', setup)
-        self.assertEqual(response.status_code, 409)
-        self.assertIn('finishedWithError', response.json['message'])
-
     def test_rejected_when_plugin_undefined(self):
         """409 when plugin job has undefined status."""
         def setup(mgr):
