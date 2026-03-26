@@ -67,44 +67,79 @@ class BaseStorage(abc.ABC):
     def _process_chrislink_files(self, dir):
         """
         Recursively expand (substitute by actual folders) and remove ChRIS link files.
+
+        Uses os.scandir to snapshot the directory contents before expansion so that
+        directories created by copysrc are not walked again by the outer loop — they are
+        handled exclusively by the explicit recursive call on dst_path.  This eliminates
+        the double-traversal that occurred with os.walk.
         """
-        for root, dirs, files in os.walk(dir):
-            for filename in files:
-                if filename.endswith('.chrislink'):
-                    link_file_path = os.path.join(root, filename)
+        try:
+            with os.scandir(dir) as it:
+                entries = list(it)
+        except (FileNotFoundError, NotADirectoryError):
+            return
 
-                    if not link_file_path.startswith(tuple(self._already_copied_src_set)):  # only expand a link once
-                        with open(link_file_path, 'rb') as f:
-                            rel_path = f.read().decode().strip()
-                            abs_path = os.path.join(self.job_incoming_dir, rel_path)
+        subdirs = []
+        for entry in entries:
+            if entry.is_dir(follow_symlinks=False):
+                subdirs.append(entry.path)
+                continue
 
-                            if os.path.isfile(abs_path):
-                                rel_path = os.path.dirname(rel_path)
-                                abs_path = os.path.dirname(abs_path)
+            if not (entry.is_file(follow_symlinks=False) and entry.name.endswith('.chrislink')):
+                continue
 
-                            source_trace_dir = rel_path.replace('/', '_')
-                            dst_path = os.path.join(root, source_trace_dir)
+            link_file_path = entry.path
 
-                            if not os.path.isdir(dst_path):  # only copy once to a dest path
-                                try:
-                                    self.copysrc(abs_path, dst_path)
-                                except FileNotFoundError:
-                                    pass
-                                self._already_copied_src_set.add(abs_path)
-                                self._process_chrislink_files(dst_path)  # recursive call
+            if not any(link_file_path.startswith(p) for p in self._already_copied_src_set):  # only expand a link once
+                with open(link_file_path, 'rb') as f:
+                    rel_path = f.read().decode().strip()
+                    abs_path = os.path.join(self.job_incoming_dir, rel_path)
 
-                            self._linked_paths.add(rel_path)
+                    if os.path.isfile(abs_path):
+                        rel_path = os.path.dirname(rel_path)
+                        abs_path = os.path.dirname(abs_path)
 
-                        os.remove(link_file_path)
-                        self._nlinks += 1
+                    source_trace_dir = rel_path.replace('/', '_')
+                    dst_path = os.path.join(dir, source_trace_dir)
+
+                    if not os.path.isdir(dst_path):  # only copy once to a dest path
+                        try:
+                            self.copysrc(abs_path, dst_path)
+                        except FileNotFoundError:
+                            pass
+                        self._already_copied_src_set.add(abs_path)
+                        self._process_chrislink_files(dst_path)  # recursive call
+
+                    self._linked_paths.add(rel_path)
+
+                os.remove(link_file_path)
+                self._nlinks += 1
+
+        for subdir in subdirs:
+            self._process_chrislink_files(subdir)
+
+    @staticmethod
+    def _link_or_copy(src, dst):
+        """Hard-link src to dst; fall back to a data copy if cross-device or unsupported."""
+        try:
+            os.link(src, dst)
+        except OSError:
+            shutil.copy(src, dst)
 
     @staticmethod
     def copysrc(src, dst):
+        """
+        Copy src (file or directory tree) to dst.
+
+        Prefers hard links over data copies: both source and destination are always
+        inside job_incoming_dir (same POSIX filesystem), so os.link is O(1) instead
+        of O(bytes).  Falls back to a regular copy on any OSError (e.g. EXDEV).
+        """
         try:
-            shutil.copytree(src, dst)
+            shutil.copytree(src, dst, copy_function=BaseStorage._link_or_copy)
         except OSError as e:
             if e.errno in (errno.ENOTDIR, errno.EINVAL):
-                shutil.copy(src, dst)
+                BaseStorage._link_or_copy(src, dst)
             else:
                 raise
 

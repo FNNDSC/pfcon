@@ -26,15 +26,36 @@ class SwarmManager(AbstractManager[Service]):
         """
         Schedule a new job and return the job (swarm service) object.
         """
+        if resources_dict['number_of_workers'] != 1:
+            raise ManagerException(
+                'Compute environment only supports number_of_workers=1, '
+                'got number_of_workers=' + str(resources_dict['number_of_workers']),
+                status_code=400
+            )
+
         restart_policy = docker.types.RestartPolicy(condition='none')
-        mounts = [f'{mounts_dict["inputdir_source"]}:{mounts_dict["inputdir_target"]}:ro',
-                  f'{mounts_dict["outputdir_source"]}:{mounts_dict["outputdir_target"]}:rw']
+
+        mounts = [f'{mounts_dict["outputdir_source"]}:{mounts_dict["outputdir_target"]}:rw']
+        if mounts_dict['inputdir_source']:
+            mounts.insert(0, f'{mounts_dict["inputdir_source"]}:{mounts_dict["inputdir_target"]}:ro')
+
+        resources = docker.types.Resources(
+            cpu_limit=int(resources_dict['cpu_limit'] * 1e6),
+            mem_limit=resources_dict['memory_limit'] * 1024 * 1024,
+        )
+
+        user = None
+        if uid is not None:
+            user = str(uid) if gid is None else f'{uid}:{gid}'
+
         try:
             job = self.docker_client.services.create(image, command,
                                                      name=name,
                                                      env=env,
                                                      mounts=mounts,
                                                      restart_policy=restart_policy,
+                                                     resources=resources,
+                                                     user=user,
                                                      tty=True)
         except docker.errors.APIError as e:
             status_code = 503 if e.response.status_code == 500 else e.response.status_code
@@ -68,7 +89,7 @@ class SwarmManager(AbstractManager[Service]):
             return JobInfo(
                 name=JobName(''), image=Image(''), cmd='', timestamp=TimeStamp(''),
                 message='task not available yet',
-                status=JobStatus.notstarted
+                status=JobStatus.notStarted
             )
 
         return JobInfo(
@@ -102,7 +123,7 @@ class SwarmManager(AbstractManager[Service]):
         """
         if state in ('new', 'allocated', 'pending', 'assigned', 'accepted', 'preparing',
                      'ready', 'starting'):
-            return JobStatus.notstarted
+            return JobStatus.notStarted
         elif state == 'running':
             return JobStatus.started
         elif state in ('failed', 'shutdown'):

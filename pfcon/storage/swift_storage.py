@@ -87,13 +87,16 @@ class SwiftStorage(BaseStorage):
         file contains the job_output_path prefix and the list of relative file paths
         in swift storage.
         """
+        self.upload_data(job_id, job_outgoing_dir, **kwargs)
+        return self.get_output_metadata(job_id, job_outgoing_dir, **kwargs)
+
+    def get_output_metadata(self, job_id, job_outgoing_dir, **kwargs):
+        """
+        Walk the local outgoing directory and return a BytesIO JSON object
+        containing the job_output_path and the list of relative file paths.
+        No network I/O is performed.
+        """
         swift_output_path = kwargs['job_output_path']
-        try:
-            files_already_in_swift = set(self.swift_manager.ls(swift_output_path))
-        except ClientException as e:
-            logger.error(f'Error while listing swift storage files in {swift_output_path} '
-                         f'for job {job_id}, detail: {str(e)}')
-            raise
 
         swift_rel_file_paths = []
         for root, dirs, files in os.walk(job_outgoing_dir):
@@ -102,9 +105,35 @@ class SwiftStorage(BaseStorage):
 
                 if not os.path.islink(local_file_path) and not local_file_path.endswith('.chrislink'):
                     rel_file_path = os.path.relpath(local_file_path, job_outgoing_dir)
+                    swift_rel_file_paths.append(rel_file_path)
+
+        data = {'job_output_path': swift_output_path,
+                'rel_file_paths': swift_rel_file_paths}
+        return io.BytesIO(json.dumps(data).encode())
+
+    def upload_data(self, job_id, job_outgoing_dir, **kwargs):
+        """
+        Upload output files from the specified outgoing directory into swift
+        storage with the prefix specified by job_output_path keyword argument.
+        Already-uploaded files are skipped to ensure idempotency.
+        """
+        swift_output_path = kwargs['job_output_path']
+        try:
+            files_already_in_swift = set(self.swift_manager.ls(swift_output_path))
+        except ClientException as e:
+            logger.error(f'Error while listing swift storage files in {swift_output_path} '
+                         f'for job {job_id}, detail: {str(e)}')
+            raise
+
+        for root, dirs, files in os.walk(job_outgoing_dir):
+            for filename in files:
+                local_file_path = os.path.join(root, filename)
+
+                if not os.path.islink(local_file_path) and not local_file_path.endswith('.chrislink'):
+                    rel_file_path = os.path.relpath(local_file_path, job_outgoing_dir)
                     swift_file_path = os.path.join(swift_output_path, rel_file_path)
 
-                    if swift_file_path not in files_already_in_swift:  # ensure GET is idempotent
+                    if swift_file_path not in files_already_in_swift:
                         try:
                             with open(local_file_path, 'rb') as f:
                                 self.swift_manager.upload_obj(swift_file_path, f.read())
@@ -118,19 +147,13 @@ class SwiftStorage(BaseStorage):
                                          f'job {job_id}, detail: {str(e)}')
                             raise
 
-                    swift_rel_file_paths.append(rel_file_path)
-
-        data = {'job_output_path': swift_output_path,
-                'rel_file_paths': swift_rel_file_paths}
-        return io.BytesIO(json.dumps(data).encode())
-
     def _find_all_storage_object_paths(self, storage_path, obj_paths, visited_paths):
         """
         Find all object storage paths under the passed storage path (prefix) by
         recursively following ChRIS links. The resulting set of object paths is given
         by the obj_paths set argument.
         """
-        if not storage_path.startswith(tuple(visited_paths)):  # avoid infinite loops
+        if not any(storage_path.startswith(p) for p in visited_paths):  # avoid infinite loops
             visited_paths.add(storage_path)
             job_id = self.job_id
             job_output_path = self.job_output_path

@@ -39,14 +39,14 @@ class DockerManager(AbstractManager[Container]):
                 status_code=400
             )
 
-        volumes = {
-            'volumes': {
-                mounts_dict['inputdir_source']: {'bind': mounts_dict['inputdir_target'],
-                                                 'mode': 'ro'},
-                mounts_dict['outputdir_source']: {'bind': mounts_dict['outputdir_target'],
-                                                  'mode': 'rw'},
-            }
+        vol = {
+            mounts_dict['outputdir_source']: {'bind': mounts_dict['outputdir_target'],
+                                              'mode': 'rw'},
         }
+        if mounts_dict['inputdir_source']:
+            vol[mounts_dict['inputdir_source']] = {
+                'bind': mounts_dict['inputdir_target'], 'mode': 'ro'}
+        volumes = {'volumes': vol}
 
         limits = {}
         if not self.ignore_limits:
@@ -118,7 +118,7 @@ def _get_status_from(c: Container) -> JobStatus:
     if state['Running'] or state['Paused']:
         return JobStatus.started
     if state['Status'] == 'created':
-        return JobStatus.notstarted
+        return JobStatus.notStarted
     if state['OOMKilled'] or state['Dead']:
         return JobStatus.finishedWithError
     if state['Status'] == 'exited':
