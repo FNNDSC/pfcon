@@ -37,6 +37,7 @@ python-kubernetes = ">=35.0.0,<36"
 pytest = "9.0.*"
 
 [tool.pixi.feature.prod.dependencies]
+pip = "*"
 gunicorn = "23.0.*"
 
 [tool.pixi.feature.build.dependencies]
