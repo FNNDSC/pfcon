@@ -30,7 +30,6 @@ import sys
 import logging
 
 from pfcon.storage.fslink_storage import FSLinkStorage
-from pfcon.storage.swift_storage import SwiftStorage
 from pfcon.delete_worker import do_delete
 
 
@@ -73,8 +72,9 @@ def do_copy(key_dir):
         storage = FSLinkStorage(config)
         d_info = storage.store_data(job_id, incoming_dir, input_dirs,
                                     job_output_path=job_output_path)
-
     elif storage_env == 'swift':
+        from pfcon.storage.swift_storage import SwiftStorage
+
         config = _get_swift_config()
         storage = SwiftStorage(config)
         d_info = storage.store_data(job_id, incoming_dir, input_dirs,
@@ -102,6 +102,8 @@ def do_upload(key_dir):
     outgoing_dir = os.path.join(key_dir, 'outgoing')
 
     logger.info(f'Starting Swift upload for job {job_id} to {job_output_path}')
+
+    from pfcon.storage.swift_storage import SwiftStorage
 
     config = _get_swift_config()
     storage = SwiftStorage(config)

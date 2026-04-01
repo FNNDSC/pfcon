@@ -3,7 +3,10 @@
 
 FROM docker.io/library/python:3.13-alpine
 
-RUN pip install --no-cache-dir python-swiftclient
+ARG STORAGE_ENV
+RUN if [ "$STORAGE_ENV" = "swift" ]; then \
+      pip install --no-cache-dir python-swiftclient; \
+    fi
 
 COPY pfcon/__init__.py /app/pfcon/__init__.py
 COPY pfcon/copy_worker.py /app/pfcon/copy_worker.py
