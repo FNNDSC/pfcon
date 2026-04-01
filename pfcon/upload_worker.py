@@ -18,9 +18,6 @@ import os
 import sys
 import logging
 
-from pfcon.storage.swift_storage import SwiftStorage
-
-
 logging.basicConfig(level=logging.INFO,
                     format='[%(asctime)s] [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -52,6 +49,8 @@ def main():
             'authurl': os.environ['SWIFT_AUTH_URL'],
         }
     }
+    from pfcon.storage.swift_storage import SwiftStorage
+
     storage = SwiftStorage(config)
     storage.upload_data(job_id, outgoing_dir, job_output_path=job_output_path)
 

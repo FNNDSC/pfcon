@@ -10,10 +10,12 @@
 
 services:
   opjob:
-    image: ghcr.io/fnndsc/pfconopjob
+    image: ghcr.io/fnndsc/pfconopjob-swift
     build:
       context: ..
       dockerfile: opjob.Dockerfile
+      args:
+        STORAGE_ENV: swift
 
   pfcon:
     image: localhost:5000/fnndsc/pfcon:dev
@@ -33,6 +35,7 @@ services:
       - PFCON_INNETWORK=true
       - STORAGE_ENV=swift
       - COMPUTE_VOLUME_TYPE=host
+      - PFCON_OP_IMAGE=ghcr.io/fnndsc/pfconopjob-swift
       - STOREBASE
       - CONTAINER_ENV
     volumes:

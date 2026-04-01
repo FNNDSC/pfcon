@@ -26,8 +26,6 @@ postinstall-production = "pip install --no-deps --disable-pip-version-check --no
 flask = "3.1.*"
 flask-restful = "0.3.10.*"
 requests = "2.32.*"
-keystoneauth1 = "5.11.*"
-python-keystoneclient = "5.8.*"
 python-swiftclient = "4.9.*"
 pyjwt = "2.11.*"
 environs = "14.6.*"
@@ -39,6 +37,7 @@ python-kubernetes = ">=35.0.0,<36"
 pytest = "9.0.*"
 
 [tool.pixi.feature.prod.dependencies]
+pip = "*"
 gunicorn = "23.0.*"
 
 [tool.pixi.feature.build.dependencies]
