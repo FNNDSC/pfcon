@@ -1,0 +1,77 @@
+# https://docs.docker.com/compose/yml/
+# Each service defined in docker-compose.yml must specify exactly one of
+# image or build. Other keys are optional, and are analogous to their
+# docker run command-line counterparts.
+#
+# As with docker run, options specified in the Dockerfile (e.g., CMD,
+# EXPOSE, VOLUME, ENV) are respected by default - you don't need to
+# specify them again in docker-compose.yml.
+#
+
+services:
+  opjob:
+    image: ghcr.io/fnndsc/pfconopjob-s3
+    build:
+      context: ..
+      dockerfile: opjob.Dockerfile
+      args:
+        STORAGE_ENV: s3
+
+  pfcon:
+    image: localhost:5000/fnndsc/pfcon:dev
+    container_name: pfcon
+    build:
+      context: ..
+      target: dev
+      args:
+        ENVIRONMENT: local
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    # We need to mount a physical dir in the HOST onto the key store in pfcon. This dir
+    # is given by the STOREBASE env variable substitution. The keystore can be specified
+    # by the --storeBase flag during development.
+    environment:
+      - APPLICATION_MODE=development
+      - PFCON_INNETWORK=true
+      - STORAGE_ENV=s3
+      - COMPUTE_VOLUME_TYPE=host
+      - PFCON_OP_IMAGE=ghcr.io/fnndsc/pfconopjob-s3
+      - STOREBASE
+      - CONTAINER_ENV
+    volumes:
+      - ${STOREBASE:?}:/var/local/storeBase:z
+      - ../pfcon:/app/pfcon:z
+      - ../tests:/app/tests:z
+      - /var/run/docker.sock:/var/run/docker.sock:z
+    ports:
+      - "30006:5005"
+    depends_on:
+      - s3-service
+    networks:
+      - remote
+    labels:
+      org.chrisproject.role: "pfcon"
+
+  s3-service:
+    image: docker.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - s3_storage_dev:/data
+    networks:
+      - remote
+    labels:
+      name: "s3"
+      role: "s3 object storage service"
+
+
+networks:
+  remote:
+
+volumes:
+  s3_storage_dev:

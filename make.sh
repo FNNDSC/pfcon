@@ -8,7 +8,7 @@
 #
 #   make.sh                     [-h] [-i] [-s] [-N] [-U]   \
 #                               [-O <docker|swarm|kubernetes>]    \
-#                               [-F <swift|filesystem|fslink|zipfile>]    \
+#                               [-F <swift|s3|filesystem|fslink|zipfile>]    \
 #                               [-S <storeBase>]           \
 #                               [local|fnndsc[:dev]]
 #
@@ -27,6 +27,10 @@
 #   Run full pfcon instantiation operating in-network on Docker using Swift storage:
 #
 #       unmake.sh -N -F swift; sudo rm -fr CHRIS_REMOTE_FS; rm -fr CHRIS_REMOTE_FS; make.sh -N -F swift
+#
+#   Run full pfcon instantiation operating in-network on Docker using S3 storage:
+#
+#       unmake.sh -N -F s3; sudo rm -fr CHRIS_REMOTE_FS; rm -fr CHRIS_REMOTE_FS; make.sh -N -F s3
 #
 #   Run full pfcon instantiation operating in-network on Docker using mounted filesystem with ChRIS links storage:
 #
@@ -70,14 +74,14 @@
 #
 #   -N
 #
-#       Optional set pfcon to operate in-network mode (using a swift storage instead of
+#       Optional set pfcon to operate in-network mode (using a shared storage instead of
 #       a zip file).
 #
-#   -F <swift|filesystem|fslink|zipfile>
+#   -F <swift|s3|filesystem|fslink|zipfile>
 #
-#       Explicitly set the storage environment. This option must be swift, filesystem or
-#       fslink for pfcon operating in-network mode. For pfcon operating in out-of-network
-#       mode it must be set to zipfile (default).
+#       Explicitly set the storage environment. This option must be swift, s3, 
+#       filesystem or fslink for pfcon operating in-network mode. For pfcon 
+#       operating in out-of-network mode it must be set to zipfile (default).
 #
 #   -U
 #
@@ -112,7 +116,7 @@ STORAGE_ENV=zipfile
 HERE=$(pwd)
 
 print_usage () {
-    echo "Usage: ./make.sh [-h] [-i] [-s] [-N] [-F <swift|filesystem|fslink|zipfile>] [-U] [-O <docker|swarm|kubernetes>] [-S <storeBase>] [local|fnndsc[:dev]]"
+    echo "Usage: ./make.sh [-h] [-i] [-s] [-N] [-F <swift|s3|filesystem|fslink|zipfile>] [-U] [-O <docker|swarm|kubernetes>] [-S <storeBase>] [local|fnndsc[:dev]]"
     exit 1
 }
 
@@ -127,7 +131,7 @@ while getopts ":hsiNUF:O:S:" opt; do
         N) b_pfconInNetwork=1
           ;;
         F) STORAGE_ENV=$OPTARG
-           if ! [[ "$STORAGE_ENV" =~ ^(swift|filesystem|fslink|zipfile)$ ]]; then
+           if ! [[ "$STORAGE_ENV" =~ ^(swift|s3|filesystem|fslink|zipfile)$ ]]; then
               echo "Invalid value for option -- F"
               print_usage
            fi
@@ -165,6 +169,7 @@ fi
 declare -a A_CONTAINER=(
     "fnndsc/docker-swift-onlyone^SWIFTREPO"
     "fnndsc/pl-simplefsapp"
+    "docker.io/minio/minio:latest"
 )
 
 title -d 1 "Setting global exports..."
@@ -181,7 +186,7 @@ title -d 1 "Setting global exports..."
     if (( b_pfconInNetwork )) ; then
         echo -e "PFCON_INNETWORK=True"                             | ./boxes.sh
         if [[ $STORAGE_ENV == 'zipfile' ]]; then
-            echo -e "Need to pass '-F <swift|filesystem|fslink>' when PFCON_INNETWORK=True"  | ./boxes.sh
+            echo -e "Need to pass '-F <swift|s3|filesystem|fslink>' when PFCON_INNETWORK=True"  | ./boxes.sh
             exit 1
         fi
     else
@@ -230,6 +235,8 @@ title -d 1 "Building :dev"
     if (( b_pfconInNetwork )) ; then
         if [[ $STORAGE_ENV == 'swift' ]]; then
             CMD="docker compose -f swarm/docker-compose_dev_innetwork.yml build"
+        elif [[ $STORAGE_ENV == 's3' ]]; then
+            CMD="docker compose -f swarm/docker-compose_dev_innetwork_s3.yml build"
         elif [[ "$STORAGE_ENV" =~ ^(filesystem|fslink)$ ]]; then
             CMD="docker compose -f swarm/docker-compose_dev_innetwork_fs.yml build"
         fi
@@ -280,6 +287,9 @@ title -d 1 "Starting pfcon containerized dev environment on $CONTAINER_ENV"
             if [[ $STORAGE_ENV == 'swift' ]]; then
                 echo "docker compose -f swarm/docker-compose_dev_innetwork.yml up -d" | ./boxes.sh ${LightCyan}
                 docker compose -f swarm/docker-compose_dev_innetwork.yml up -d
+            elif [[ $STORAGE_ENV == 's3' ]]; then
+                echo "docker compose -f swarm/docker-compose_dev_innetwork_s3.yml up -d" | ./boxes.sh ${LightCyan}
+                docker compose -f swarm/docker-compose_dev_innetwork_s3.yml up -d
             elif [[ "$STORAGE_ENV" =~ ^(filesystem|fslink)$ ]]; then
                 echo "docker compose -f swarm/docker-compose_dev_innetwork_fs.yml up -d" | ./boxes.sh ${LightCyan}
                 docker compose -f swarm/docker-compose_dev_innetwork_fs.yml up -d
@@ -293,6 +303,9 @@ title -d 1 "Starting pfcon containerized dev environment on $CONTAINER_ENV"
             if [[ $STORAGE_ENV == 'swift' ]]; then
                 echo "docker stack deploy -c swarm/docker-compose_dev_innetwork.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
                 docker stack deploy -c swarm/docker-compose_dev_innetwork.yml pfcon_dev_stack
+            elif [[ $STORAGE_ENV == 's3' ]]; then
+                echo "docker stack deploy -c swarm/docker-compose_dev_innetwork_s3.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
+                docker stack deploy -c swarm/docker-compose_dev_innetwork_s3.yml pfcon_dev_stack
             elif [[ "$STORAGE_ENV" =~ ^(filesystem|fslink)$ ]]; then
                 echo "docker stack deploy -c swarm/docker-compose_dev_innetwork_fs.yml pfcon_dev_stack" | ./boxes.sh ${LightCyan}
                 docker stack deploy -c swarm/docker-compose_dev_innetwork_fs.yml pfcon_dev_stack
@@ -340,12 +353,16 @@ if (( ! b_skipUnitTests )) ; then
     if [[ "$CONTAINER_ENV" =~ ^(docker|swarm)$ ]]; then
         if (( b_pfconInNetwork )) && [[ $STORAGE_ENV == 'swift' ]]; then
             docker exec $pfcon_dev pixi run -e local pytest tests/test_resources_mocked.py tests/test_resources_swift.py tests/compute --color=yes
+        elif (( b_pfconInNetwork )) && [[ $STORAGE_ENV == 's3' ]]; then
+            docker exec $pfcon_dev pixi run -e local pytest tests/test_resources_mocked.py tests/test_resources_s3.py tests/compute --color=yes
         else
             docker exec $pfcon_dev pixi run -e local pytest tests/test_resources_mocked.py tests/test_resources_fslink.py tests/compute --color=yes
         fi
     elif [[ $CONTAINER_ENV == kubernetes ]]; then
         if (( b_pfconInNetwork )) && [[ $STORAGE_ENV == 'swift' ]]; then
             kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources_mocked.py tests/test_resources_swift.py tests/compute --color=yes
+        elif (( b_pfconInNetwork )) && [[ $STORAGE_ENV == 's3' ]]; then
+            kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources_mocked.py tests/test_resources_s3.py tests/compute --color=yes
         else
             kubectl exec $pfcon_dev -- pixi run -e local pytest tests/test_resources_mocked.py tests/test_resources_fslink.py tests/compute --color=yes
         fi

@@ -50,6 +50,19 @@ def _get_swift_config():
     }
 
 
+def _get_s3_config():
+    """Build an S3 config dict from environment variables."""
+    return {
+        'S3_BUCKET_NAME': os.environ['S3_BUCKET_NAME'],
+        'S3_CONNECTION_PARAMS': {
+            'endpoint_url': os.environ['S3_ENDPOINT_URL'],
+            'access_key': os.environ['S3_ACCESS_KEY'],
+            'secret_key': os.environ['S3_SECRET_KEY'],
+            'region_name': os.environ.get('S3_REGION_NAME', 'us-east-1'),
+        }
+    }
+
+
 def do_copy(key_dir):
     """Fetch input files into the storebase key directory."""
     params_file = os.path.join(key_dir, 'job_params.json')
@@ -82,6 +95,16 @@ def do_copy(key_dir):
 
         outgoing_dir = os.path.join(key_dir, 'outgoing')
         os.makedirs(outgoing_dir, exist_ok=True)
+    elif storage_env == 's3':
+        from pfcon.storage.s3_storage import S3Storage
+
+        config = _get_s3_config()
+        storage = S3Storage(config)
+        d_info = storage.store_data(job_id, incoming_dir, input_dirs,
+                                    job_output_path=job_output_path)
+
+        outgoing_dir = os.path.join(key_dir, 'outgoing')
+        os.makedirs(outgoing_dir, exist_ok=True)
     else:
         logger.error(f'Unsupported storage_env: {storage_env}')
         sys.exit(1)
@@ -90,7 +113,7 @@ def do_copy(key_dir):
 
 
 def do_upload(key_dir):
-    """Upload output files from the storebase key directory to Swift."""
+    """Upload output files from the storebase key directory to object storage."""
     params_file = os.path.join(key_dir, 'upload_params.json')
 
     with open(params_file) as f:
@@ -98,18 +121,27 @@ def do_upload(key_dir):
 
     job_id = params['jid']
     job_output_path = params['job_output_path']
+    storage_env = params.get('storage_env', 'swift')
 
     outgoing_dir = os.path.join(key_dir, 'outgoing')
 
-    logger.info(f'Starting Swift upload for job {job_id} to {job_output_path}')
+    logger.info(f'Starting {storage_env} upload for job {job_id} to '
+                f'{job_output_path}')
 
-    from pfcon.storage.swift_storage import SwiftStorage
+    if storage_env == 's3':
+        from pfcon.storage.s3_storage import S3Storage
 
-    config = _get_swift_config()
-    storage = SwiftStorage(config)
+        config = _get_s3_config()
+        storage = S3Storage(config)
+    else:
+        from pfcon.storage.swift_storage import SwiftStorage
+
+        config = _get_swift_config()
+        storage = SwiftStorage(config)
+
     storage.upload_data(job_id, outgoing_dir, job_output_path=job_output_path)
 
-    logger.info(f'Swift upload completed for job {job_id}')
+    logger.info(f'{storage_env} upload completed for job {job_id}')
 
 
 def main():

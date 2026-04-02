@@ -5,6 +5,7 @@ from importlib.metadata import Distribution
 from environs import Env
 
 from .storage.swiftmanager import SwiftManager
+from .storage.s3manager import S3Manager
 from .compute.memsize import Memsize
 from .compute._helpers import get_storebase_from_docker
 
@@ -30,7 +31,7 @@ class Config:
 
         if self.PFCON_INNETWORK:
             self.STORAGE_ENV = env('STORAGE_ENV', 'swift')
-            if self.STORAGE_ENV not in ('swift', 'filesystem', 'fslink'):
+            if self.STORAGE_ENV not in ('swift', 's3', 'filesystem', 'fslink'):
                 raise ValueError(f"Unsupported value '{self.STORAGE_ENV}' for STORAGE_ENV")
         else:
             self.STORAGE_ENV = env('STORAGE_ENV', 'zipfile')
@@ -168,6 +169,17 @@ class DevConfig(Config):
                                             'authurl': SWIFT_AUTH_URL}
             SwiftManager(self.SWIFT_CONTAINER_NAME,
                          self.SWIFT_CONNECTION_PARAMS).create_container()
+        elif self.STORAGE_ENV == 's3':
+            S3_ENDPOINT_URL = self.env('S3_ENDPOINT_URL', 'http://s3-service:9000')
+            S3_ACCESS_KEY = self.env('S3_ACCESS_KEY', 'minioadmin')
+            S3_SECRET_KEY = self.env('S3_SECRET_KEY', 'minioadmin')
+            S3_REGION_NAME = self.env('S3_REGION_NAME', 'us-east-1')
+            self.S3_BUCKET_NAME = 'users'
+            self.S3_CONNECTION_PARAMS = {'endpoint_url': S3_ENDPOINT_URL,
+                                        'access_key': S3_ACCESS_KEY,
+                                        'secret_key': S3_SECRET_KEY,
+                                        'region_name': S3_REGION_NAME}
+            S3Manager(self.S3_BUCKET_NAME, self.S3_CONNECTION_PARAMS).create_container()
 
 
 class ProdConfig(Config):
@@ -225,3 +237,13 @@ class ProdConfig(Config):
             self.SWIFT_CONNECTION_PARAMS = {'user': SWIFT_USERNAME,
                                             'key': SWIFT_KEY,
                                             'authurl': SWIFT_AUTH_URL}
+        elif self.STORAGE_ENV == 's3':
+            S3_ENDPOINT_URL = env('S3_ENDPOINT_URL')
+            S3_ACCESS_KEY = env('S3_ACCESS_KEY')
+            S3_SECRET_KEY = env('S3_SECRET_KEY')
+            S3_REGION_NAME = env('S3_REGION_NAME', 'us-east-1')
+            self.S3_BUCKET_NAME = env('S3_BUCKET_NAME')
+            self.S3_CONNECTION_PARAMS = {'endpoint_url': S3_ENDPOINT_URL,
+                                        'access_key': S3_ACCESS_KEY,
+                                        'secret_key': S3_SECRET_KEY,
+                                        'region_name': S3_REGION_NAME}

@@ -7,7 +7,7 @@
 # SYNPOSIS
 #
 #   unmake.sh                     [-h] [-N] \
-#                                 [-F <swift|filesystem|fslink|zipfile>]   \
+#                                 [-F <swift|s3|filesystem|fslink|zipfile>]   \
 #                                 [-O <docker|swarm|kubernetes>]  \
 #                                 [-S <storeBase>]
 #
@@ -25,6 +25,10 @@
 #   Destroy pfcon dev instance operating in-network on Docker using Swift storage:
 #
 #       unmake.sh -N -F swift
+#
+#   Destroy pfcon dev instance operating in-network on Docker using S3 storage:
+#
+#       unmake.sh -N -F s3
 #
 #   Destroy pfcon dev instance operating in-network on Docker using mounted filesystem
 #   with ChRIS links storage:
@@ -50,16 +54,16 @@
 #
 #   -N
 #
-#       Explicitly set pfcon to operate in-network mode (using a swift storage instead of
+#       Explicitly set pfcon to operate in-network mode (using a shared storage instead of
 #       a zip file).
 #
 #       Optional print usage help.
 #
-#   -F <swift|filesystem|fslink|zipfile>
+#   -F <swift|s3|filesystem|fslink|zipfile>
 #
-#       Explicitly set the storage environment. This option must be swift, filesystem of
-#       fslink for pfcon operating in-network mode. For pfcon operating in out-of-network
-#       mode it must be set to zipfile (default).
+#       Explicitly set the storage environment. This option must be swift, s3, 
+#       filesystem or fslink for pfcon operating in-network mode. For pfcon 
+#       operating in out-of-network mode it must be set to zipfile (default).
 #
 #   -O <docker|swarm|kubernetes>
 #
@@ -79,7 +83,7 @@ CONTAINER_ENV=docker
 STORAGE_ENV=zipfile
 
 print_usage () {
-    echo "Usage: ./unmake.sh [-h] [-N] [-F <swift|filesystem|fslink|zipfile>] [-O <docker|swarm|kubernetes>] [-S <storeBase>]"
+    echo "Usage: ./unmake.sh [-h] [-N] [-F <swift|s3|filesystem|fslink|zipfile>] [-O <docker|swarm|kubernetes>] [-S <storeBase>]"
     exit 1
 }
 
@@ -90,7 +94,7 @@ while getopts ":hNF:O:S:" opt; do
         N) b_pfconInNetwork=1
           ;;
         F) STORAGE_ENV=$OPTARG
-           if ! [[ "$STORAGE_ENV" =~ ^(swift|filesystem|fslink|zipfile)$ ]]; then
+           if ! [[ "$STORAGE_ENV" =~ ^(swift|s3|filesystem|fslink|zipfile)$ ]]; then
               echo "Invalid value for option -- F"
               print_usage
            fi
@@ -122,7 +126,7 @@ title -d 1 "Setting global exports..."
     if (( b_pfconInNetwork )) ; then
         echo -e "PFCON_INNETWORK=True"                             | ./boxes.sh
         if [[ $STORAGE_ENV == 'zipfile' ]]; then
-            echo -e "Need to pass '-F <swift|filesystem|fslink|>' when PFCON_INNETWORK=True"  | ./boxes.sh
+            echo -e "Need to pass '-F <swift|s3|filesystem|fslink|>' when PFCON_INNETWORK=True"  | ./boxes.sh
             exit 1
         fi
     else
@@ -144,6 +148,9 @@ title -d 1 "Destroying pfcon containerized dev environment on $CONTAINER_ENV"
             if [[ $STORAGE_ENV == 'swift' ]]; then
                 echo "docker compose -f swarm/docker-compose_dev_innetwork.yml down -v" | ./boxes.sh ${LightCyan}
                 docker compose -f swarm/docker-compose_dev_innetwork.yml down -v
+            elif [[ $STORAGE_ENV == 's3' ]]; then
+                echo "docker compose -f swarm/docker-compose_dev_innetwork_s3.yml down -v" | ./boxes.sh ${LightCyan}
+                docker compose -f swarm/docker-compose_dev_innetwork_s3.yml down -v
             elif [[ "$STORAGE_ENV" =~ ^(filesystem|fslink)$ ]]; then
                 echo "docker compose -f swarm/docker-compose_dev_innetwork_fs.yml down -v" | ./boxes.sh ${LightCyan}
                 docker compose -f swarm/docker-compose_dev_innetwork_fs.yml down -v
@@ -160,6 +167,10 @@ title -d 1 "Destroying pfcon containerized dev environment on $CONTAINER_ENV"
                 echo "docker volume rm -f pfcon_dev_stack_swift_storage_dev"
                 sleep 15
                 docker volume rm pfcon_dev_stack_swift_storage_dev
+            elif [[ $STORAGE_ENV == 's3' ]]; then
+                echo "docker volume rm -f pfcon_dev_stack_s3_storage_dev"
+                sleep 15
+                docker volume rm pfcon_dev_stack_s3_storage_dev
             fi
         fi
     elif [[ $CONTAINER_ENV == kubernetes ]]; then
@@ -169,6 +180,11 @@ title -d 1 "Destroying pfcon containerized dev environment on $CONTAINER_ENV"
                 kubectl delete -f kubernetes/pfcon_dev_innetwork.yaml
                 echo "Removing swift_storage folder $SOURCEDIR/swift_storage"  | ./boxes.sh
                 rm -fr $SOURCEDIR/swift_storage
+            elif [[ $STORAGE_ENV == 's3' ]]; then
+                echo "kubectl delete -f kubernetes/pfcon_dev_innetwork_s3.yaml"     | ./boxes.sh ${LightCyan}
+                kubectl delete -f kubernetes/pfcon_dev_innetwork_s3.yaml
+                echo "Removing s3_storage folder $SOURCEDIR/s3_storage"  | ./boxes.sh
+                rm -fr $SOURCEDIR/s3_storage
             else
                 echo "kubectl delete -f kubernetes/pfcon_dev_innetwork_fs.yaml"     |  ./boxes.sh ${LightCyan}
                 kubectl delete -f kubernetes/pfcon_dev_innetwork_fs.yaml
