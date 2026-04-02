@@ -12,6 +12,7 @@ from flask_restful import reqparse, abort, Resource
 
 from .storage.zip_file_storage import ZipFileStorage
 from .storage.swift_storage import SwiftStorage
+from .storage.s3_storage import S3Storage
 from .storage.filesystem_storage import FileSystemStorage
 from .storage.fslink_storage import FSLinkStorage
 from .compute.abstractmgr import JobStatus, ManagerException
@@ -175,7 +176,7 @@ class CopyJobList(BaseJobList):
 
         # No-op for storage modes that don't need async copy
         if not (self.pfcon_innetwork
-                and self.storage_env in ('fslink', 'swift')):
+                and self.storage_env in ('fslink', 'swift', 's3')):
             return {'compute': {
                 'jid': job_id,
                 'image': '',
@@ -220,7 +221,7 @@ class CopyJobList(BaseJobList):
         }
 
         # For fslink: inputdir -> storebase root (read-only shared filesystem)
-        # For swift: no input mount needed (copy worker reads from network)
+        # For swift/s3: no input mount needed (copy worker reads from network)
         if self.storage_env == 'fslink':
             if self.compute_volume_type in ('host', 'docker_local_volume'):
                 inputdir_override = app.config.get('STOREBASE')
@@ -229,18 +230,20 @@ class CopyJobList(BaseJobList):
             mounts_dict = self._build_key_mounts(job_id, inputdir_override)
         else:
             mounts_dict = self._build_key_mounts(job_id)
-            mounts_dict['inputdir_source'] = ''  # swift copy reads from network
+            mounts_dict['inputdir_source'] = ''  # swift/s3 copy reads from network
 
         copy_env = []
         if self.storage_env == 'swift':
             copy_env = self._build_swift_env()
+        elif self.storage_env == 's3':
+            copy_env = self._build_s3_env()
 
         job, d_compute = self._schedule_container(
             op_image, copy_cmd, copy_name, resources_dict, copy_env,
             mounts_dict, jid_for_response=job_id, pfcon_user=True)
 
-        # For swift+docker: connect to pfcon's network for Swift DNS
-        if self.storage_env == 'swift' and self.container_env == 'docker':
+        # For swift/s3+docker: connect to pfcon's network for service DNS
+        if self.storage_env in ('swift', 's3') and self.container_env == 'docker':
             connect_to_pfcon_networks(job, app.config.get('PFCON_SELECTOR'))
 
         return {'compute': d_compute}, 201
@@ -286,9 +289,9 @@ class PluginJobList(BaseJobList):
         if exists:
             return {'data': {}, 'compute': response['compute']}, 201
 
-        # For fslink/swift in-network: copy already done by client via
+        # For fslink/swift/s3 in-network: copy already done by client via
         # CopyJobList. Schedule the plugin container directly.
-        if self.pfcon_innetwork and self.storage_env in ('fslink', 'swift'):
+        if self.pfcon_innetwork and self.storage_env in ('fslink', 'swift', 's3'):
             copy_name = job_id + '-copy'
             compute_mgr = get_compute_mgr(self.container_env)
             try:
@@ -306,7 +309,7 @@ class PluginJobList(BaseJobList):
 
             input_dir = 'key-' + job_id + '/incoming'
 
-            if self.storage_env == 'swift':
+            if self.storage_env in ('swift', 's3'):
                 output_dir = 'key-' + job_id + '/outgoing'
                 outgoing_dir = os.path.join(self.storebase_mount, output_dir)
                 os.makedirs(outgoing_dir, exist_ok=True)
@@ -400,11 +403,11 @@ class PluginJobList(BaseJobList):
 
     def _validate_data(self, args):
         if self.pfcon_innetwork:
-            # For fslink/swift the plugin POST never reads input_dirs from args
-            # (data was already staged by the copy worker into key-<jid>/incoming/).
-            # For filesystem storage args.input_dirs[0] is used directly, so it
-            # must be present and non-empty.
-            if self.storage_env not in ('fslink', 'swift'):
+            # For fslink/swift/s3 the plugin POST never reads input_dirs from
+            # args (data was already staged by the copy worker into
+            # key-<jid>/incoming/). For filesystem storage args.input_dirs[0]
+            # is used directly, so it must be present and non-empty.
+            if self.storage_env not in ('fslink', 'swift', 's3'):
                 if not args.input_dirs:
                     abort(400, message='input_dirs: field is required')
             if args.output_dir is None:
@@ -474,7 +477,7 @@ class PluginJobFile(Resource):
             download_name = f'{job_id}.json'
             mimetype = 'application/json'
 
-        elif self.pfcon_innetwork and self.storage_env == 'swift':
+        elif self.pfcon_innetwork and self.storage_env in ('swift', 's3'):
             job_output_path = request.args.get('job_output_path')
 
             if job_output_path:
@@ -484,11 +487,14 @@ class PluginJobFile(Resource):
                 if not os.path.exists(outgoing_dir):
                     os.mkdir(outgoing_dir)
 
-                storage = SwiftStorage(app.config)
+                if self.storage_env == 'swift':
+                    storage = SwiftStorage(app.config)
+                else:
+                    storage = S3Storage(app.config)
                 content = storage.get_output_metadata(
                     job_id, outgoing_dir,
                     job_output_path=job_output_path)
-                
+
                 download_name = f'{job_id}.json'
                 mimetype = 'application/json'
             else:
@@ -543,8 +549,8 @@ class UploadJobList(BaseJobList):
 
         logger.info(f'Received upload job request for {job_id}')
 
-        # No-op for non-Swift storage
-        if not (self.pfcon_innetwork and self.storage_env == 'swift'):
+        # No-op for storage modes that don't need async upload
+        if not (self.pfcon_innetwork and self.storage_env in ('swift', 's3')):
             return {'compute': {
                 'jid': job_id,
                 'image': '',
@@ -580,6 +586,7 @@ class UploadJobList(BaseJobList):
         params = {
             'jid': job_id,
             'job_output_path': job_output_path,
+            'storage_env': self.storage_env,
         }
         params_file = os.path.join(key_dir, 'upload_params.json')
         with open(params_file, 'w') as f:
@@ -598,13 +605,16 @@ class UploadJobList(BaseJobList):
 
         mounts_dict = self._build_key_mounts(job_id)
         mounts_dict['inputdir_source'] = ''  # upload worker needs no input mount
-        upload_env = self._build_swift_env()
+        if self.storage_env == 'swift':
+            upload_env = self._build_swift_env()
+        else:
+            upload_env = self._build_s3_env()
 
         job, d_compute = self._schedule_container(
             op_image, upload_cmd, upload_name, resources_dict, upload_env,
             mounts_dict, jid_for_response=job_id, pfcon_user=True)
 
-        # For docker: connect to pfcon's network for Swift DNS
+        # For docker: connect to pfcon's network for storage service DNS
         if self.container_env == 'docker':
             connect_to_pfcon_networks(job, app.config.get('PFCON_SELECTOR'))
 

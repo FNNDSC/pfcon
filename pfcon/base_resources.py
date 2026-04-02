@@ -65,13 +65,17 @@ class BaseJobList(Resource):
             'container_env': self.container_env,
             'compute_volume_type': self.compute_volume_type,
         }
-        if self.pfcon_innetwork and self.storage_env in ('fslink', 'swift'):
+        if self.pfcon_innetwork and self.storage_env in ('fslink', 'swift', 's3'):
             response['requires_copy_job'] = True
-        
-        if self.pfcon_innetwork and self.storage_env == 'swift':
+
+        if self.pfcon_innetwork and self.storage_env in ('swift', 's3'):
             response['requires_upload_job'] = True
-            response['swift_auth_url'] = (
-                app.config['SWIFT_CONNECTION_PARAMS']['authurl'])
+            if self.storage_env == 'swift':
+                response['swift_auth_url'] = (
+                    app.config['SWIFT_CONNECTION_PARAMS']['authurl'])
+            else:
+                response['s3_endpoint_url'] = (
+                    app.config['S3_CONNECTION_PARAMS']['endpoint_url'])
         return response
 
     def _build_key_mounts(self, job_id, inputdir_source_override=None):
@@ -119,6 +123,18 @@ class BaseJobList(Resource):
             f'SWIFT_USERNAME={swift_params["user"]}',
             f'SWIFT_KEY={swift_params["key"]}',
             f'SWIFT_CONTAINER_NAME={swift_container}',
+        ]
+
+    def _build_s3_env(self):
+        """Return env var list with S3 credentials for op containers."""
+        s3_params = app.config.get('S3_CONNECTION_PARAMS')
+        s3_bucket = app.config.get('S3_BUCKET_NAME')
+        return [
+            f'S3_ENDPOINT_URL={s3_params["endpoint_url"]}',
+            f'S3_ACCESS_KEY={s3_params["access_key"]}',
+            f'S3_SECRET_KEY={s3_params["secret_key"]}',
+            f'S3_REGION_NAME={s3_params["region_name"]}',
+            f'S3_BUCKET_NAME={s3_bucket}',
         ]
 
     def _schedule_container(self, image, cmd, job_name, resources_dict,

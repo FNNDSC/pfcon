@@ -6,6 +6,8 @@ FROM docker.io/library/python:3.13-alpine
 ARG STORAGE_ENV
 RUN if [ "$STORAGE_ENV" = "swift" ]; then \
       pip install --no-cache-dir python-swiftclient; \
+    elif [ "$STORAGE_ENV" = "s3" ]; then \
+      pip install --no-cache-dir boto3; \
     fi
 
 COPY pfcon/__init__.py /app/pfcon/__init__.py

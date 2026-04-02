@@ -96,6 +96,19 @@ jobs:
           type=pep440,pattern={{version}}
           type=pep440,pattern={{major}}.{{minor}}
           type=raw,value=latest,enable={{is_default_branch}}
+    - name: Docker meta (opjob-s3)
+      id: meta-opjob-s3
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          docker.io/fnndsc/pfconopjob-s3
+          ghcr.io/fnndsc/pfconopjob-s3
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=pep440,pattern={{version}}
+          type=pep440,pattern={{major}}.{{minor}}
+          type=raw,value=latest,enable={{is_default_branch}}
 
       # pixi and micromamba don't have ppc64le images available, so to build
       # images for ppc64le, we create conda environments using micromamba
@@ -162,5 +175,17 @@ jobs:
         platforms: linux/amd64,linux/arm64,linux/ppc64le
         tags: ${{ steps.meta-opjob-swift.outputs.tags }}
         labels: ${{ steps.meta-opjob-swift.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    - name: Build and push (opjob-s3)
+      uses: docker/build-push-action@v6
+      with:
+        push: ${{ steps.login-dockerhub.outcome == 'success' && steps.login-ghcr.outcome == 'success' }}
+        context: .
+        file: ./opjob.Dockerfile
+        build-args: STORAGE_ENV=s3
+        platforms: linux/amd64,linux/arm64,linux/ppc64le
+        tags: ${{ steps.meta-opjob-s3.outputs.tags }}
+        labels: ${{ steps.meta-opjob-s3.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
