@@ -30,7 +30,8 @@ class DockerManager(AbstractManager[Container]):
 
     def schedule_job(self, image: Image, command: List[str], name: JobName,
                      resources_dict: ResourcesDict, env: List[str], uid: Optional[int],
-                     gid: Optional[int], mounts_dict: MountsDict) -> Container:
+                     gid: Optional[int], mounts_dict: MountsDict,
+                     extra_labels: Optional[dict] = None) -> Container:
 
         if resources_dict['number_of_workers'] != 1:
             raise ManagerException(
@@ -68,6 +69,8 @@ class DockerManager(AbstractManager[Container]):
         if (s := self.config.get('SHM_SIZE')) is not None:
             shm_size['shm_size'] = s.as_mb()
 
+        labels = {**self.job_labels, **(extra_labels or {})}
+
         return self.__docker.containers.run(
             image=image,
             command=command,
@@ -75,7 +78,7 @@ class DockerManager(AbstractManager[Container]):
             environment=env,
             restart_policy = {'Name': 'no', 'MaximumRetryCount': 0},
             detach=True,
-            labels=self.job_labels,
+            labels=labels,
             **limits,
             **user_spec,
             **shm_size,
