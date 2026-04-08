@@ -240,7 +240,8 @@ class CopyJobList(BaseJobList):
 
         job, d_compute = self._schedule_container(
             op_image, copy_cmd, copy_name, resources_dict, copy_env,
-            mounts_dict, jid_for_response=job_id, pfcon_user=True)
+            mounts_dict, jid_for_response=job_id, pfcon_user=True,
+            job_type='copy')
 
         # For swift/s3+docker: connect to pfcon's network for service DNS
         if self.storage_env in ('swift', 's3') and self.container_env == 'docker':
@@ -397,7 +398,8 @@ class PluginJobList(BaseJobList):
             mounts_dict['outputdir_source'] = output_dir
 
         _, d_compute = self._schedule_container(
-            args.image, cmd, job_id, resources_dict, args.env, mounts_dict)
+            args.image, cmd, job_id, resources_dict, args.env, mounts_dict,
+            job_type='plugin')
 
         return d_compute
 
@@ -612,7 +614,8 @@ class UploadJobList(BaseJobList):
 
         job, d_compute = self._schedule_container(
             op_image, upload_cmd, upload_name, resources_dict, upload_env,
-            mounts_dict, jid_for_response=job_id, pfcon_user=True)
+            mounts_dict, jid_for_response=job_id, pfcon_user=True,
+            job_type='upload')
 
         # For docker: connect to pfcon's network for storage service DNS
         if self.container_env == 'docker':
@@ -718,7 +721,8 @@ class DeleteJobList(BaseJobList):
 
         _, d_compute = self._schedule_container(
             op_image, delete_cmd, delete_name, resources_dict, [],
-            mounts_dict, jid_for_response=job_id, pfcon_user=True)
+            mounts_dict, jid_for_response=job_id, pfcon_user=True,
+            job_type='delete')
 
         return {'compute': d_compute}, 201
 

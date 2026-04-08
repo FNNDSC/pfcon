@@ -139,7 +139,7 @@ class BaseJobList(Resource):
 
     def _schedule_container(self, image, cmd, job_name, resources_dict,
                             env_vars, mounts_dict, jid_for_response=None,
-                            pfcon_user=False):
+                            pfcon_user=False, job_type=None):
         """
         Schedule a container on the compute cluster and return the standard
         response dict.
@@ -160,11 +160,16 @@ class BaseJobList(Resource):
             uid = self.user.get_uid()
             gid = self.user.get_gid()
 
+        extra_labels = {}
+        if job_type:
+            extra_labels['org.chrisproject.job_type'] = job_type
+
         compute_mgr = get_compute_mgr(self.container_env)
         try:
             job = compute_mgr.schedule_job(image, cmd, job_name,
                                            resources_dict, env_vars,
-                                           uid, gid, mounts_dict)
+                                           uid, gid, mounts_dict,
+                                           extra_labels=extra_labels)
         except ManagerException as e:
             logger.error(f'Error from {self.container_env} while scheduling '
                          f'job {job_name}, detail: {str(e)}')

@@ -34,12 +34,12 @@ class KubernetesManager(AbstractManager[V1Job]):
         self.kube_v1_batch_client = k_client.BatchV1Api()
 
     def schedule_job(self, image, command, name, resources_dict, env, uid, gid,
-                     mounts_dict) -> V1Job:
+                     mounts_dict, extra_labels=None) -> V1Job:
         """
         Schedule a new job and return the job object.
         """
         job_instance = self.create_job(image, command, name, resources_dict, env, uid,
-                                       gid, mounts_dict)
+                                       gid, mounts_dict, extra_labels=extra_labels)
         job = self.submit_job(job_instance)
         return job
 
@@ -138,7 +138,7 @@ class KubernetesManager(AbstractManager[V1Job]):
                                                         namespace=job_namespace)
 
     def create_job(self, image, command, name, resources_dict, env_l, uid, gid,
-                   mounts_dict) -> V1Job:
+                   mounts_dict, extra_labels=None) -> V1Job:
         """
         Create and return a new job instance.
         """
@@ -229,7 +229,9 @@ class KubernetesManager(AbstractManager[V1Job]):
         )
 
         pod_template_metadata = None
-        labels_config = self.config.get('JOB_LABELS')
+        labels_config = dict(self.config.get('JOB_LABELS') or {})
+        if extra_labels:
+            labels_config.update(extra_labels)
         if labels_config:
             pod_template_metadata = k_client.V1ObjectMeta(labels=labels_config)
 

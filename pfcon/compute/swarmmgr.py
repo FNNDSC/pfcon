@@ -22,7 +22,7 @@ class SwarmManager(AbstractManager[Service]):
             self.docker_client = docker.from_env(environment=self.config)
 
     def schedule_job(self, image, command, name, resources_dict, env, uid, gid,
-                     mounts_dict) -> Service:
+                     mounts_dict, extra_labels=None) -> Service:
         """
         Schedule a new job and return the job (swarm service) object.
         """

@@ -107,7 +107,8 @@ class AbstractManager(ABC, Generic[J]):
     def schedule_job(self, image: Image, command: List[str], name: JobName,
                      resources_dict: ResourcesDict, env: List[str],
                      uid: Optional[int], gid: Optional[int],
-                     mounts_dict: MountsDict) -> J:
+                     mounts_dict: MountsDict,
+                     extra_labels: Optional[dict] = None) -> J:
         """
         Schedule a new job and return the job object.
         """
