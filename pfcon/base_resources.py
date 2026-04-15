@@ -89,7 +89,7 @@ class BaseJobList(Resource):
         storebase root).
         """
         mounts_dict = {
-            'inputdir_source': '',
+            'inputdir_source': None,
             'inputdir_target': self.str_app_container_inputdir,
             'outputdir_source': '',
             'outputdir_target': self.str_app_container_outputdir,
@@ -162,7 +162,7 @@ class BaseJobList(Resource):
 
         extra_labels = {}
         if job_type:
-            extra_labels['org.chrisproject.job_type'] = job_type
+            extra_labels['job_type'] = job_type
 
         compute_mgr = get_compute_mgr(self.container_env)
         try:

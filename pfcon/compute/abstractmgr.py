@@ -73,9 +73,14 @@ class ResourcesDict(TypedDict):
 
 
 class MountsDict(TypedDict):
-    inputdir_source: str
+    inputdir_source: Optional[str]
     """
-    Absolute path to the source input directory or otherwise a volume name.
+    Source input directory for the input mount.
+
+    - ``None``: no input mount.
+    - ``''`` (empty string): mount the whole volume root (Kubernetes PVC);
+      not valid for host/volume-based Docker bind mounts.
+    - non-empty string: absolute path (host/docker) or sub-path (k8s PVC).
     """
     inputdir_target: str
     """
@@ -98,10 +103,26 @@ class AbstractManager(ABC, Generic[J]):
     information about previously scheduled plugin instances.
     """
 
+    # Map from semantic label name (as emitted by pfcon resources) to the
+    # concrete label key used on this backend. Subclasses override with the
+    # key format idiomatic to their engine (reverse-DNS for Docker,
+    # prefix/name for Kubernetes).
+    LABEL_KEYS: dict = {}
+
     def __init__(self, config_dict: dict = None):
         super().__init__()
 
         self.config = config_dict
+
+    def translate_labels(self, labels: Optional[dict]) -> dict:
+        """
+        Translate a dict of semantic labels (e.g. ``{'job_type': 'plugin'}``)
+        into the concrete label keys for this backend. Unknown keys are
+        passed through unchanged.
+        """
+        if not labels:
+            return {}
+        return {self.LABEL_KEYS.get(k, k): v for k, v in labels.items()}
 
     @abstractmethod
     def schedule_job(self, image: Image, command: List[str], name: JobName,

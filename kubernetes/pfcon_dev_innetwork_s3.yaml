@@ -107,9 +107,9 @@ spec:
     spec:
       serviceAccountName: pfcon
       initContainers:
-        - name: init-swift
+        - name: init-s3
           image: busybox:1.32
-          command: ["sh", "-c", "until wget --spider -S -T 2 http://swift:8080/info 2>&1 | grep '200 OK'; do echo waiting for Swift storage; sleep 2; done"]
+          command: ["sh", "-c", "until wget --spider -S -T 2 http://s3-service:9000/minio/health/live 2>&1 | grep '200 OK'; do echo waiting for S3 storage; sleep 2; done"]
       containers:
         - image: localhost:5000/fnndsc/pfcon:dev
           name: pfcon
@@ -123,7 +123,7 @@ spec:
             - name: PFCON_INNETWORK
               value: "true"
             - name: STORAGE_ENV
-              value: swift
+              value: s3
             - name: COMPUTE_VOLUME_TYPE
               value: kubernetes_pvc
             - name: VOLUME_NAME
@@ -133,9 +133,9 @@ spec:
             - name: CONTAINER_ENV
               value: kubernetes
             - name: PFCON_OP_IMAGE
-              value: ghcr.io/fnndsc/pfconopjob-swift
-            - name: SWIFT_AUTH_URL
-              value: http://swift:8080/auth/v1.0
+              value: ghcr.io/fnndsc/pfconopjob-s3
+            - name: S3_ENDPOINT_URL
+              value: http://s3-service:9000
           command: ["pixi"]
           args: ["run", "python", "-m", "pfcon"]
           volumeMounts:
@@ -161,56 +161,63 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: swift
+  name: s3-service
   labels:
-    app: swift
+    app: s3
     env: production
 spec:
   type: NodePort
   selector:
-    app: swift
+    app: s3
     env: production
   ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30080
+    - name: api
+      port: 9000
+      targetPort: 9000
+      nodePort: 30090
+    - name: console
+      port: 9001
+      targetPort: 9001
+      nodePort: 30091
 
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: swift
+  name: s3
   labels:
-    app: swift
+    app: s3
     env: production
 spec:
   replicas: 1  # stateful service, so only a single replica must be used
   selector:
     matchLabels:
-      app: swift
+      app: s3
       env: production
   template:
     metadata:
-      name: swift
+      name: s3
       labels:
-        app: swift
+        app: s3
         env: production
     spec:
       containers:
-        - name: swift
-          image: fnndsc/docker-swift-onlyone
+        - name: s3
+          image: docker.io/minio/minio:latest
+          args: ["server", "/data", "--console-address", ":9001"]
           ports:
-            - containerPort: 8080
+            - containerPort: 9000
+            - containerPort: 9001
           env:
-            - name: SWIFT_USERNAME
-              value: chris:chris1234
-            - name: SWIFT_KEY
-              value: testing
+            - name: MINIO_ROOT_USER
+              value: minioadmin
+            - name: MINIO_ROOT_PASSWORD
+              value: minioadmin
           volumeMounts:
-            - name: swiftdb
-              mountPath: "/srv"
+            - name: s3db
+              mountPath: "/data"
       volumes:
-        - name: swiftdb
+        - name: s3db
           hostPath:
-            path: ${SOURCEDIR}/swift_storage
+            path: ${SOURCEDIR}/s3_storage

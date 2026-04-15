@@ -15,6 +15,9 @@ class DockerManager(AbstractManager[Container]):
     """
     Interface between pfcon and Docker Engine or Podman API.
     """
+
+    LABEL_KEYS = {'job_type': 'org.chrisproject.job_type'}
+
     def __init__(self, config_dict=None, docker_client: DockerClient = None):
         super().__init__(config_dict)
 
@@ -44,7 +47,7 @@ class DockerManager(AbstractManager[Container]):
             mounts_dict['outputdir_source']: {'bind': mounts_dict['outputdir_target'],
                                               'mode': 'rw'},
         }
-        if mounts_dict['inputdir_source']:
+        if mounts_dict['inputdir_source']:  # None or '' => no input mount
             vol[mounts_dict['inputdir_source']] = {
                 'bind': mounts_dict['inputdir_target'], 'mode': 'ro'}
         volumes = {'volumes': vol}
@@ -69,7 +72,7 @@ class DockerManager(AbstractManager[Container]):
         if (s := self.config.get('SHM_SIZE')) is not None:
             shm_size['shm_size'] = s.as_mb()
 
-        labels = {**self.job_labels, **(extra_labels or {})}
+        labels = {**self.job_labels, **self.translate_labels(extra_labels)}
 
         return self.__docker.containers.run(
             image=image,

@@ -13,6 +13,8 @@ from .abstractmgr import (AbstractManager, ManagerException, JobStatus, JobInfo,
 
 class SwarmManager(AbstractManager[Service]):
 
+    LABEL_KEYS = {'job_type': 'org.chrisproject.job_type'}
+
     def __init__(self, config_dict=None):
         super().__init__(config_dict)
 

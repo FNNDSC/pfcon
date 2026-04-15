@@ -45,7 +45,8 @@ class NewResourcesSwiftTests(TestCase):
             'SWIFT_CONNECTION_PARAMS': {
                 'user': 'chris:chris1234',
                 'key': 'testing',
-                'authurl': 'http://swift_service:8080/auth/v1.0',
+                'authurl': os.environ.get(
+                    'SWIFT_AUTH_URL', 'http://swift_service:8080/auth/v1.0'),
             },
         })
         self.client = self.app.test_client()

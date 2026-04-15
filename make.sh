@@ -316,8 +316,16 @@ title -d 1 "Starting pfcon containerized dev environment on $CONTAINER_ENV"
         fi
     elif [[ $CONTAINER_ENV == kubernetes ]]; then
         if (( b_pfconInNetwork )) ; then
-            echo "envsubst < kubernetes/pfcon_dev_innetwork.yaml | kubectl apply -f -" | ./boxes.sh ${LightCyan}
-            envsubst < kubernetes/pfcon_dev_innetwork.yaml | kubectl apply -f -
+            if [[ $STORAGE_ENV == 'swift' ]]; then
+                echo "envsubst < kubernetes/pfcon_dev_innetwork.yaml | kubectl apply -f -" | ./boxes.sh ${LightCyan}
+                envsubst < kubernetes/pfcon_dev_innetwork.yaml | kubectl apply -f -
+            elif [[ $STORAGE_ENV == 's3' ]]; then
+                echo "envsubst < kubernetes/pfcon_dev_innetwork_s3.yaml | kubectl apply -f -" | ./boxes.sh ${LightCyan}
+                envsubst < kubernetes/pfcon_dev_innetwork_s3.yaml | kubectl apply -f -
+            elif [[ $STORAGE_ENV == 'fslink' ]]; then
+                echo "envsubst < kubernetes/pfcon_dev_innetwork_fs.yaml | kubectl apply -f -" | ./boxes.sh ${LightCyan}
+                envsubst < kubernetes/pfcon_dev_innetwork_fs.yaml | kubectl apply -f -
+            fi
         else
             echo "envsubst < kubernetes/pfcon_dev.yaml | kubectl apply -f -"           | ./boxes.sh ${LightCyan}
             envsubst < kubernetes/pfcon_dev.yaml | kubectl apply -f -
