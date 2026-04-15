@@ -26,6 +26,8 @@ def str_to_v1_local_object_reference(image_pull_secret: str):
 
 class KubernetesManager(AbstractManager[V1Job]):
 
+    LABEL_KEYS = {'job_type': 'chrisproject.org/job-type'}
+
     def __init__(self, config_dict=None):
         super().__init__(config_dict)
 
@@ -194,11 +196,13 @@ class KubernetesManager(AbstractManager[V1Job]):
         )
 
         volume_mount_inputdir = None
-        if mounts_dict['inputdir_source']:
+        if mounts_dict['inputdir_source'] is not None:
+            # empty string sub_path => mount the whole PVC root
+            sub_path = mounts_dict['inputdir_source'] or None
             volume_mount_inputdir = k_client.V1VolumeMount(
                 mount_path=mounts_dict['inputdir_target'],
                 name='storebase',
-                sub_path=mounts_dict['inputdir_source'],
+                sub_path=sub_path,
                 read_only=True
             )
 
@@ -230,8 +234,7 @@ class KubernetesManager(AbstractManager[V1Job]):
 
         pod_template_metadata = None
         labels_config = dict(self.config.get('JOB_LABELS') or {})
-        if extra_labels:
-            labels_config.update(extra_labels)
+        labels_config.update(self.translate_labels(extra_labels))
         if labels_config:
             pod_template_metadata = k_client.V1ObjectMeta(labels=labels_config)
 

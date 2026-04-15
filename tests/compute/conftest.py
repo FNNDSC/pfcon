@@ -7,7 +7,12 @@ from docker import DockerClient
 
 @pytest.fixture(scope='session')
 def docker_client() -> DockerClient:
-    return docker.from_env()
+    try:
+        client = docker.from_env()
+        client.ping()
+    except Exception as e:
+        pytest.skip(f'Docker not available: {e}')
+    return client
 
 
 @pytest.fixture(scope='session')

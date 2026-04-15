@@ -230,7 +230,7 @@ class CopyJobList(BaseJobList):
             mounts_dict = self._build_key_mounts(job_id, inputdir_override)
         else:
             mounts_dict = self._build_key_mounts(job_id)
-            mounts_dict['inputdir_source'] = ''  # swift/s3 copy reads from network
+            mounts_dict['inputdir_source'] = None  # swift/s3 copy reads from network
 
         copy_env = []
         if self.storage_env == 'swift':
@@ -381,7 +381,7 @@ class PluginJobList(BaseJobList):
             'gpu_limit': args.gpu_limit,
         }
         mounts_dict = {
-            'inputdir_source': '',
+            'inputdir_source': None,
             'inputdir_target': self.str_app_container_inputdir,
             'outputdir_source': '',
             'outputdir_target': self.str_app_container_outputdir,
@@ -606,7 +606,7 @@ class UploadJobList(BaseJobList):
         }
 
         mounts_dict = self._build_key_mounts(job_id)
-        mounts_dict['inputdir_source'] = ''  # upload worker needs no input mount
+        mounts_dict['inputdir_source'] = None  # upload worker needs no input mount
         if self.storage_env == 'swift':
             upload_env = self._build_swift_env()
         else:
@@ -717,7 +717,7 @@ class DeleteJobList(BaseJobList):
         }
 
         mounts_dict = self._build_key_mounts(job_id)
-        mounts_dict['inputdir_source'] = ''  # delete worker needs no input mount
+        mounts_dict['inputdir_source'] = None  # delete worker needs no input mount
 
         _, d_compute = self._schedule_container(
             op_image, delete_cmd, delete_name, resources_dict, [],

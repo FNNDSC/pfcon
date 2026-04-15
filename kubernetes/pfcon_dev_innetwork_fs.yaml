@@ -1,4 +1,72 @@
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pfcon
+  labels:
+    app: pfcon
+    env: development
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pfcon
+  labels:
+    app: pfcon
+    env: development
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["get"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pfcon
+  labels:
+    app: pfcon
+    env: development
+subjects:
+  - kind: ServiceAccount
+    name: pfcon
+    namespace: default
+roleRef:
+  kind: Role
+  name: pfcon
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: storebase-pvc
+  labels:
+    app: pfcon
+    env: development
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+
+apiVersion: v1
 kind: Service
 metadata:
   name: pfcon
@@ -37,6 +105,7 @@ spec:
         app: pfcon
         env: development
     spec:
+      serviceAccountName: pfcon
       containers:
         - image: localhost:5000/fnndsc/pfcon:dev
           name: pfcon
@@ -48,17 +117,21 @@ spec:
             - name: APPLICATION_MODE
               value: development
             - name: PFCON_INNETWORK
-              value: true
+              value: "true"
             - name: STORAGE_ENV
               value: ${STORAGE_ENV}
             - name: COMPUTE_VOLUME_TYPE
-            - value: ${COMPUTE_VOLUME_TYPE}
-            - name: STOREBASE
-              value: ${STOREBASE}
+              value: kubernetes_pvc
+            - name: VOLUME_NAME
+              value: storebase-pvc
+            - name: STOREBASE_MOUNT
+              value: /var/local/storeBase
             - name: CONTAINER_ENV
               value: kubernetes
-          command: ["python"]
-          args: ["-m", "pfcon"]
+            - name: PFCON_OP_IMAGE
+              value: ghcr.io/fnndsc/pfconopjob
+          command: ["pixi"]
+          args: ["run", "python", "-m", "pfcon"]
           volumeMounts:
             - mountPath: "/var/local/storeBase"
               name: "storebase"
@@ -68,8 +141,8 @@ spec:
               name: "pfcon-tests"
       volumes:
         - name: "storebase"
-          hostPath:
-            path: ${STOREBASE}
+          persistentVolumeClaim:
+            claimName: storebase-pvc
         - name: "pfcon-source"
           hostPath:
             path: ${SOURCEDIR}/pfcon

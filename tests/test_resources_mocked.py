@@ -50,6 +50,7 @@ class NewResourcesTestBase(TestCase):
 
         env_patch = {
             'APPLICATION_MODE': 'dev',
+            'CONTAINER_ENV': 'docker',
             'COMPUTE_VOLUME_TYPE': 'host',
             'STOREBASE': self.tmpdir,
             'STOREBASE_MOUNT': self.tmpdir,
@@ -135,7 +136,7 @@ class TestCopyJobList(NewResourcesTestBase):
 
         # fslink copy needs input mount (storebase root)
         mounts = mgr.schedule_job.call_args[0][7]
-        self.assertNotEqual(mounts['inputdir_source'], '')
+        self.assertIsNotNone(mounts['inputdir_source'])
 
     def test_post_idempotent_existing_copy(self):
         """If copy container already exists and is running, return
@@ -795,7 +796,7 @@ class TestUploadJobList(NewResourcesTestBase):
 
             # upload worker needs no input mount
             mounts = mgr.schedule_job.call_args[0][7]
-            self.assertEqual(mounts['inputdir_source'], '')
+            self.assertIsNone(mounts['inputdir_source'])
 
             # upload_params.json should exist
             params_file = os.path.join(key_dir, 'upload_params.json')
@@ -984,7 +985,7 @@ class TestDeleteJobList(NewResourcesTestBase):
 
         # delete worker needs no input mount
         mounts = mgr.schedule_job.call_args[0][7]
-        self.assertEqual(mounts['inputdir_source'], '')
+        self.assertIsNone(mounts['inputdir_source'])
 
     def test_post_noop_when_no_key_dir(self):
         """If the key directory doesn't exist, return success immediately."""
