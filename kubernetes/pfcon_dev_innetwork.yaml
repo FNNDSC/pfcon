@@ -212,5 +212,4 @@ spec:
               mountPath: "/srv"
       volumes:
         - name: swiftdb
-          hostPath:
-            path: ${SOURCEDIR}/swift_storage
+          emptyDir: {}

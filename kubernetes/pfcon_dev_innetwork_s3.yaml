@@ -219,5 +219,4 @@ spec:
               mountPath: "/data"
       volumes:
         - name: s3db
-          hostPath:
-            path: ${SOURCEDIR}/s3_storage
+          emptyDir: {}
