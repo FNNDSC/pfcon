@@ -16,7 +16,7 @@ services:
       dockerfile: opjob.Dockerfile
 
   pfcon:
-    image: localhost:5000/fnndsc/pfcon:dev
+    image: localhost:5005/fnndsc/pfcon:dev
     container_name: pfcon
     build:
       context: ..

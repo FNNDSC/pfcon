@@ -59,7 +59,6 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: hostpath
   resources:
     requests:
       storage: 2Gi
@@ -107,7 +106,7 @@ spec:
     spec:
       serviceAccountName: pfcon
       containers:
-        - image: localhost:5000/fnndsc/pfcon:dev
+        - image: localhost:5005/fnndsc/pfcon:dev
           name: pfcon
           stdin: true
           tty: true
@@ -129,7 +128,7 @@ spec:
             - name: CONTAINER_ENV
               value: kubernetes
             - name: PFCON_OP_IMAGE
-              value: ghcr.io/fnndsc/pfconopjob
+              value: ${PFCON_OP_IMAGE}
           command: ["pixi"]
           args: ["run", "python", "-m", "pfcon"]
           volumeMounts:

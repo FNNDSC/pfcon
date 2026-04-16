@@ -205,6 +205,19 @@ title -d 1 "Setting global exports..."
         export COMPUTE_VOLUME_TYPE=$COMPUTE_VOLUME_TYPE
         echo -e "exporting VOLUME_NAME=$VOLUME_NAME "                    | ./boxes.sh
         export SVOLUME_NAME=$VOLUME_NAME
+
+        # Default PFCON_OP_IMAGE per storage env. Override by exporting
+        # PFCON_OP_IMAGE before invoking this script (e.g. to point at a
+        # locally-built image in a local registry during CI).
+        if [ -z ${PFCON_OP_IMAGE+x} ]; then
+            case $STORAGE_ENV in
+                swift) PFCON_OP_IMAGE=ghcr.io/fnndsc/pfconopjob-swift ;;
+                s3)    PFCON_OP_IMAGE=ghcr.io/fnndsc/pfconopjob-s3 ;;
+                *)     PFCON_OP_IMAGE=ghcr.io/fnndsc/pfconopjob ;;
+            esac
+        fi
+        echo -e "exporting PFCON_OP_IMAGE=$PFCON_OP_IMAGE "              | ./boxes.sh
+        export PFCON_OP_IMAGE
     fi
 
     echo -e "exporting STOREBASE=$STOREBASE "                           | ./boxes.sh
@@ -246,6 +259,20 @@ title -d 1 "Building :dev"
     echo "$CMD"                                                    | ./boxes.sh
     echo $CMD | sh                                                 | ./boxes.sh -c
 windowBottom
+
+if [[ $CONTAINER_ENV == kubernetes ]]; then
+    title -d 1 "Pushing pfcon :dev image to localhost:5005"
+        # Only push if a registry is actually listening. On Docker Desktop
+        # Kubernetes the k8s nodes share the host's image store, so a push
+        # isn't needed; on kind (CI) it is.
+        if curl -fsS -o /dev/null --connect-timeout 2 http://localhost:5005/v2/ 2>/dev/null; then
+            echo "docker push --quiet localhost:5005/fnndsc/pfcon:dev" | ./boxes.sh
+            docker push --quiet localhost:5005/fnndsc/pfcon:dev        | ./boxes.sh -c
+        else
+            echo "No registry at localhost:5005 — skipping push."      | ./boxes.sh
+        fi
+    windowBottom
+fi
 
 title -d 1 "Changing permissions to 755 on" "$HERE"
     cd $HERE
