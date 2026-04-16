@@ -18,10 +18,68 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build and run tests
-        run: ./make.sh -i -N -F fslink 
+        run: ./make.sh -i -N -F fslink
       - name: Tear down
         run: |
-          ./unmake.sh -N -F fslink 
+          ./unmake.sh -N -F fslink
+          sudo rm -fr ./CHRIS_REMOTE_FS
+  test-pfcon-k8s:
+    name: tests (pfcon on kubernetes)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start local Docker registry
+        run: |
+          docker run -d --restart=always \
+            -p 127.0.0.1:5005:5000 \
+            --name pfcon-k8s-registry registry:2
+      - name: Write kind config
+        run: |
+          # extraMounts exposes the workspace on the kind node at the same
+          # path, so the pfcon deployment's hostPath mounts of pfcon/ and
+          # tests/ (resolved from $SOURCEDIR by envsubst) work on the node.
+          cat > /tmp/kind-config.yaml <<EOF
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+          - role: control-plane
+            extraMounts:
+            - hostPath: ${{ github.workspace }}
+              containerPath: ${{ github.workspace }}
+          EOF
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: pfcon-k8s
+          config: /tmp/kind-config.yaml
+      - name: Connect registry to kind network
+        run: |
+          docker network connect kind pfcon-k8s-registry
+          # Configure containerd on kind nodes to resolve localhost:5005
+          # to the registry container on the kind docker network.
+          for node in $(kind get nodes --name pfcon-k8s); do
+            docker exec "$node" mkdir -p /etc/containerd/certs.d/localhost:5005
+            docker exec "$node" sh -c 'cat > /etc/containerd/certs.d/localhost:5005/hosts.toml <<TOML
+          [host."http://pfcon-k8s-registry:5000"]
+            capabilities = ["pull", "resolve"]
+          TOML'
+            docker exec "$node" systemctl restart containerd
+          done
+          # Wait for containerd and kubelet to recover after restart.
+          sleep 5
+          kubectl wait --for=condition=Ready nodes --all --timeout=120s
+      - name: Build and push opjob image
+        run: |
+          docker build -f opjob.Dockerfile -t localhost:5005/fnndsc/pfconopjob:dev .
+          docker push localhost:5005/fnndsc/pfconopjob:dev
+      - name: Build and run tests
+        env:
+          PFCON_OP_IMAGE: localhost:5005/fnndsc/pfconopjob:dev
+        run: ./make.sh -i -N -F fslink -O kubernetes
+      - name: Tear down
+        if: always()
+        run: |
+          ./unmake.sh -N -F fslink -O kubernetes
           sudo rm -fr ./CHRIS_REMOTE_FS
   test-cube:
     name: tests (CUBE)
@@ -35,7 +93,7 @@ jobs:
           PFCON_IMAGE: localhost/fnndsc/pfcon
 
   build:
-    needs: [test-pfcon, test-cube]
+    needs: [test-pfcon, test-pfcon-k8s, test-cube]
     runs-on: ubuntu-24.04
     env:
       PIXI_COLOR: always

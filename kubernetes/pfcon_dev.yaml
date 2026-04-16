@@ -38,7 +38,7 @@ spec:
         env: development
     spec:
       containers:
-        - image: localhost:5000/fnndsc/pfcon:dev
+        - image: localhost:5005/fnndsc/pfcon:dev
           name: pfcon
           stdin: true
           tty: true

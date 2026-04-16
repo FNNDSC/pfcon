@@ -59,7 +59,6 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: hostpath
   resources:
     requests:
       storage: 2Gi
@@ -111,7 +110,7 @@ spec:
           image: busybox:1.32
           command: ["sh", "-c", "until wget --spider -S -T 2 http://s3-service:9000/minio/health/live 2>&1 | grep '200 OK'; do echo waiting for S3 storage; sleep 2; done"]
       containers:
-        - image: localhost:5000/fnndsc/pfcon:dev
+        - image: localhost:5005/fnndsc/pfcon:dev
           name: pfcon
           stdin: true
           tty: true
@@ -133,7 +132,7 @@ spec:
             - name: CONTAINER_ENV
               value: kubernetes
             - name: PFCON_OP_IMAGE
-              value: ghcr.io/fnndsc/pfconopjob-s3
+              value: ${PFCON_OP_IMAGE}
             - name: S3_ENDPOINT_URL
               value: http://s3-service:9000
           command: ["pixi"]
